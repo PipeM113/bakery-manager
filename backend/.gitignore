@@ -1,0 +1,11 @@
+# Environment
+.env
+.env.local
+
+# Build artifacts
+tmp/
+
+db/migrations/*seed*
+
+# Binary
+*.exe
