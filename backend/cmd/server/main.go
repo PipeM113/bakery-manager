@@ -41,11 +41,16 @@ func main() {
 		port = "8080"
 	}
 
+	allowedOrigins := []string{"http://localhost:5173"}
+	if frontendURL := os.Getenv("FRONTEND_URL"); frontendURL != "" {
+		allowedOrigins = append(allowedOrigins, frontendURL)
+	}
+
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:5173", "https://*.vercel.app"},
+		AllowedOrigins:   allowedOrigins,
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
 		AllowCredentials: true,
