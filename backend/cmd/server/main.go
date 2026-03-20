@@ -14,6 +14,8 @@ import (
 
 	"github.com/PipeM113/bakery-manager/internal/auth/handler"
 	"github.com/PipeM113/bakery-manager/internal/auth/service"
+	ing_hand "github.com/PipeM113/bakery-manager/internal/ingredients/handler"
+	ing_repo "github.com/PipeM113/bakery-manager/internal/ingredients/repository"
 	mid "github.com/PipeM113/bakery-manager/pkg/middleware"
 )
 
@@ -55,12 +57,16 @@ func main() {
 
 	r.Post("/auth/login", authHandler.Login)
 
-	// rutas protegidas van así:
+	ingredientRepo := ing_repo.NewIngredientRepository(db)
+	ingredientHandler := ing_hand.NewIngredientHandler(ingredientRepo)
+
 	r.Group(func(r chi.Router) {
 		r.Use(mid.AuthMiddleware)
-		r.Get("/ingredients", func(w http.ResponseWriter, r *http.Request) {
-			w.Write([]byte(`{"message":"ok"}`))
-		})
+		r.Get("/ingredients", ingredientHandler.GetAll)
+		r.Post("/ingredients", ingredientHandler.Create)
+		r.Put("/ingredients/{id}", ingredientHandler.Update)
+		r.Delete("/ingredients/{id}", ingredientHandler.Delete)
+		r.Get("/ingredients/{id}/history", ingredientHandler.GetPriceHistory)
 	})
 
 	log.Printf("Servidor corriendo en puerto %s", port)
