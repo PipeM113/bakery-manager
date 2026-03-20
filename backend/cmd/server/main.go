@@ -14,10 +14,12 @@ import (
 
 	"github.com/PipeM113/bakery-manager/internal/auth/handler"
 	"github.com/PipeM113/bakery-manager/internal/auth/service"
-	ing_hand "github.com/PipeM113/bakery-manager/internal/ingredients/handler"
-	ing_repo "github.com/PipeM113/bakery-manager/internal/ingredients/repository"
-	rec_hand "github.com/PipeM113/bakery-manager/internal/recipes/handler"
-	rec_repo "github.com/PipeM113/bakery-manager/internal/recipes/repository"
+	costHandler "github.com/PipeM113/bakery-manager/internal/costs/handler"
+	costService "github.com/PipeM113/bakery-manager/internal/costs/service"
+	ingHand "github.com/PipeM113/bakery-manager/internal/ingredients/handler"
+	ingRepo "github.com/PipeM113/bakery-manager/internal/ingredients/repository"
+	recHand "github.com/PipeM113/bakery-manager/internal/recipes/handler"
+	recRepo "github.com/PipeM113/bakery-manager/internal/recipes/repository"
 	mid "github.com/PipeM113/bakery-manager/pkg/middleware"
 )
 
@@ -59,11 +61,13 @@ func main() {
 
 	r.Post("/auth/login", authHandler.Login)
 
-	ingredientRepo := ing_repo.NewIngredientRepository(db)
-	ingredientHandler := ing_hand.NewIngredientHandler(ingredientRepo)
+	ingredientRepo := ingRepo.NewIngredientRepository(db)
+	ingredientHandler := ingHand.NewIngredientHandler(ingredientRepo)
 
-	recipeRepo := rec_repo.NewRecipeRepository(db)
-	recipeHandler := rec_hand.NewRecipeHandler(recipeRepo)
+	recipeRepo := recRepo.NewRecipeRepository(db)
+	recipeHandler := recHand.NewRecipeHandler(recipeRepo)
+	costSvc := costService.NewCostService(db)
+	costHandler := costHandler.NewCostHandler(costSvc)
 
 	r.Group(func(r chi.Router) {
 		r.Use(mid.AuthMiddleware)
@@ -78,6 +82,8 @@ func main() {
 		r.Post("/recipes/{id}/versions", recipeHandler.CreateVersion)
 		r.Post("/recipes/{id}/scale", recipeHandler.Scale)
 		r.Delete("/recipes/{id}", recipeHandler.Delete)
+		r.Get("/recipes/{id}/cost", costHandler.GetBreakdown)
+		r.Post("/recipes/{id}/cost/simulate", costHandler.Simulate)
 	})
 
 	log.Printf("Servidor corriendo en puerto %s", port)
