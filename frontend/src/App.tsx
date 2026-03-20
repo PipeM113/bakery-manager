@@ -30,6 +30,7 @@ export default function App() {
         <Route path="recipes"     element={<RecipesPage />} />
         <Route path="costs"       element={<CostsPage />} />
       </Route>
+      <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );
 }
