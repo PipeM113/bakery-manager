@@ -1,15 +1,15 @@
 import { NavLink } from "react-router-dom";
 
 const links = [
-  { to: "/ingredients", icon: "⚗", label: "Insumos" },
-  { to: "/recipes",     icon: "✦", label: "Recetas" },
-  { to: "/costs",       icon: "◈", label: "Costos" },
-  { to: "/dashboard",   icon: "◉", label: "Inicio" },
+  { to: "/dashboard",   icon: "◉", label: "Inicio"   },
+  { to: "/ingredients", icon: "⚗", label: "Insumos"  },
+  { to: "/recipes",     icon: "✦", label: "Recetas"  },
+  { to: "/costs",       icon: "◈", label: "Costos"   },
 ];
 
 export default function BottomNav() {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-noir-800 gold-border-b border-t border-gold border-opacity-30 md:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-stone-200 md:hidden shadow-sm">
       <div className="flex justify-around items-center h-16">
         {links.map(({ to, icon, label }) => (
           <NavLink
@@ -17,7 +17,7 @@ export default function BottomNav() {
             to={to}
             className={({ isActive }) =>
               `flex flex-col items-center gap-0.5 px-4 py-2 transition-all duration-200 ${
-                isActive ? "text-gold" : "text-cream-muted"
+                isActive ? "text-gold" : "text-stone-400"
               }`
             }
           >

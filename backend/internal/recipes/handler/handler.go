@@ -176,3 +176,23 @@ func (h *RecipeHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
+
+func (h *RecipeHandler) Update(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	var body repository.Recipe
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, `{"error":"request inválido"}`, http.StatusBadRequest)
+		return
+	}
+	if strings.TrimSpace(body.Name) == "" {
+		http.Error(w, `{"error":"el nombre es requerido"}`, http.StatusBadRequest)
+		return
+	}
+	updated, err := h.repo.Update(r.Context(), id, body)
+	if err != nil {
+		http.Error(w, `{"error":"error actualizando receta"}`, http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(updated)
+}

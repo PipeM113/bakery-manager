@@ -81,6 +81,7 @@ func main() {
 		r.Post("/recipes", recipeHandler.Create)
 		r.Post("/recipes/{id}/versions", recipeHandler.CreateVersion)
 		r.Post("/recipes/{id}/scale", recipeHandler.Scale)
+		r.Put("/recipes/{id}", recipeHandler.Update)
 		r.Delete("/recipes/{id}", recipeHandler.Delete)
 		r.Get("/recipes/{id}/cost", costHandler.GetBreakdown)
 		r.Post("/recipes/{id}/cost/simulate", costHandler.Simulate)

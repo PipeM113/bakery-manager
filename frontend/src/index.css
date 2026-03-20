@@ -5,10 +5,16 @@
 
 @layer base {
   body {
-    @apply bg-noir text-cream font-sans antialiased;
+    @apply bg-vanilla text-stone-800 font-sans antialiased;
+    font-size: 16px;
   }
+
+  input, select, button, textarea {
+    font-size: 16px;
+  }
+
   ::-webkit-scrollbar { width: 4px; }
-  ::-webkit-scrollbar-track { @apply bg-noir-800; }
+  ::-webkit-scrollbar-track { @apply bg-stone-100; }
   ::-webkit-scrollbar-thumb { @apply bg-gold-dark rounded-full; }
 }
 
@@ -16,12 +22,9 @@
   .gold-border {
     border: 1px solid theme('colors.gold.DEFAULT');
   }
-  .gold-border-b {
-    border-bottom: 1px solid theme('colors.gold.DEFAULT');
-  }
   .ornament::before,
   .ornament::after {
     content: '◆';
-    @apply text-gold text-xs mx-2 opacity-60;
+    @apply text-gold text-xs mx-2 opacity-50;
   }
 }

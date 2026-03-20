@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/PipeM113/bakery-manager/internal/costs/domain"
+	"github.com/PipeM113/bakery-manager/internal/shared/kernel"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -37,7 +38,8 @@ func (s *CostService) GetCostBreakdown(ctx context.Context, recipeID string) (do
 	}
 
 	rows, err := s.db.Query(ctx, `
-		SELECT ri.ingredient_id, i.name, ri.quantity, ri.unit, i.price_per_unit
+		SELECT ri.ingredient_id, i.name, ri.quantity, ri.unit,
+		       i.price_per_unit, i.default_unit
 		FROM recipe_ingredients ri
 		JOIN ingredients i ON i.id = ri.ingredient_id
 		WHERE ri.recipe_id = $1`, recipeID)
@@ -49,12 +51,18 @@ func (s *CostService) GetCostBreakdown(ctx context.Context, recipeID string) (do
 	var ingredients []domain.IngredientCost
 	for rows.Next() {
 		var ing domain.IngredientCost
+		var recipeUnit, baseUnit string
 		if err := rows.Scan(
 			&ing.IngredientID, &ing.Name,
-			&ing.Quantity, &ing.Unit, &ing.PricePerUnit,
+			&ing.Quantity, &recipeUnit,
+			&ing.PricePerUnit, &baseUnit,
 		); err != nil {
 			return domain.CostBreakdown{}, fmt.Errorf("scan ingredient: %w", err)
 		}
+
+		// Convertir cantidad a la unidad base del insumo para calcular correctamente
+		ing.Quantity = kernel.ConvertToBase(ing.Quantity, recipeUnit, baseUnit)
+		ing.Unit = baseUnit
 		ingredients = append(ingredients, ing)
 	}
 

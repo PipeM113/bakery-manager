@@ -100,6 +100,27 @@ func (r *RecipeRepository) GetAll(ctx context.Context) ([]Recipe, error) {
 		if err != nil {
 			return nil, fmt.Errorf("scan recipe: %w", err)
 		}
+		// Cargar ingredientes de cada receta
+		ingRows, err := r.db.Query(ctx, `
+			SELECT ri.id, ri.recipe_id, ri.ingredient_id, i.name, ri.quantity, ri.unit
+			FROM recipe_ingredients ri
+			JOIN ingredients i ON i.id = ri.ingredient_id
+			WHERE ri.recipe_id = $1`, rec.ID)
+		if err != nil {
+			return nil, fmt.Errorf("get ingredients: %w", err)
+		}
+		for ingRows.Next() {
+			var ing RecipeIngredient
+			if err := ingRows.Scan(&ing.ID, &ing.RecipeID, &ing.IngredientID, &ing.Name, &ing.Quantity, &ing.Unit); err != nil {
+				ingRows.Close()
+				return nil, fmt.Errorf("scan ingredient: %w", err)
+			}
+			rec.Ingredients = append(rec.Ingredients, ing)
+		}
+		ingRows.Close()
+		if rec.Ingredients == nil {
+			rec.Ingredients = []RecipeIngredient{}
+		}
 		recipes = append(recipes, rec)
 	}
 	return recipes, nil
@@ -146,4 +167,45 @@ func (r *RecipeRepository) GetByID(ctx context.Context, id string) (Recipe, erro
 func (r *RecipeRepository) Delete(ctx context.Context, id string) error {
 	_, err := r.db.Exec(ctx, `DELETE FROM recipes WHERE id = $1`, id)
 	return err
+}
+
+func (r *RecipeRepository) Update(ctx context.Context, id string, recipe Recipe) (Recipe, error) {
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return Recipe{}, fmt.Errorf("begin tx: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	_, err = tx.Exec(ctx, `
+		UPDATE recipes
+		SET name=$1, yield=$2, yield_unit=$3, indirect_cost_pct=$4,
+		    labor_cost_pct=$5, updated_at=NOW()
+		WHERE id=$6`,
+		recipe.Name, recipe.Yield, recipe.YieldUnit,
+		recipe.IndirectCostPct, recipe.LaborCostPct, id,
+	)
+	if err != nil {
+		return Recipe{}, fmt.Errorf("update recipe: %w", err)
+	}
+
+	_, err = tx.Exec(ctx, `DELETE FROM recipe_ingredients WHERE recipe_id=$1`, id)
+	if err != nil {
+		return Recipe{}, fmt.Errorf("delete old ingredients: %w", err)
+	}
+
+	for _, ing := range recipe.Ingredients {
+		_, err = tx.Exec(ctx, `
+			INSERT INTO recipe_ingredients (recipe_id, ingredient_id, quantity, unit)
+			VALUES ($1,$2,$3,$4)`,
+			id, ing.IngredientID, ing.Quantity, ing.Unit,
+		)
+		if err != nil {
+			return Recipe{}, fmt.Errorf("insert ingredient: %w", err)
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return Recipe{}, fmt.Errorf("commit tx: %w", err)
+	}
+	return r.GetByID(ctx, id)
 }

@@ -26,23 +26,33 @@ interface Recipe {
   ingredients: RecipeIngredient[];
 }
 
-const emptyForm = {
-  name: "", yield: 1, yield_unit: "porciones",
+type FormType = {
+  name: string;
+  yield: number | "";
+  yield_unit: string;
+  indirect_cost_pct: number;
+  labor_cost_pct: number;
+  ingredients: RecipeIngredient[];
+};
+
+const emptyForm: FormType = {
+  name: "", yield: "", yield_unit: "porciones",
   indirect_cost_pct: 0.15, labor_cost_pct: 0.30,
-  ingredients: [] as RecipeIngredient[],
+  ingredients: [],
 };
 
 export default function RecipesPage() {
-  const [recipes, setRecipes]         = useState<Recipe[]>([]);
-  const [ingredients, setIngredients] = useState<Ingredient[]>([]);
-  const [loading, setLoading]         = useState(true);
-  const [showForm, setShowForm]       = useState(false);
-  const [form, setForm]               = useState(emptyForm);
-  const [saving, setSaving]           = useState(false);
-  const [error, setError]             = useState("");
-  const [selected, setSelected]       = useState<Recipe | null>(null);
+  const [recipes, setRecipes]             = useState<Recipe[]>([]);
+  const [ingredients, setIngredients]     = useState<Ingredient[]>([]);
+  const [loading, setLoading]             = useState(true);
+  const [showForm, setShowForm]           = useState(false);
+  const [editing, setEditing]             = useState<Recipe | null>(null);
+  const [form, setForm]                   = useState<FormType>(emptyForm);
+  const [saving, setSaving]               = useState(false);
+  const [error, setError]                 = useState("");
+  const [selected, setSelected]           = useState<Recipe | null>(null);
   const [scalePortions, setScalePortions] = useState("");
-  const [scaled, setScaled]           = useState<Recipe | null>(null);
+  const [scaled, setScaled]               = useState<Recipe | null>(null);
 
   const load = () => {
     Promise.all([api.get("/recipes"), api.get("/ingredients")])
@@ -53,7 +63,21 @@ export default function RecipesPage() {
   useEffect(() => { load(); }, []);
 
   const openCreate = () => {
-    setForm({ ...emptyForm, ingredients: [] });
+    setEditing(null);
+    setForm(emptyForm);
+    setError("");
+    setShowForm(true);
+  };
+
+  const openEdit = (r: Recipe) => {
+    setEditing(r);
+    setForm({
+      name: r.name, yield: r.yield, yield_unit: r.yield_unit,
+      indirect_cost_pct: r.indirect_cost_pct, labor_cost_pct: r.labor_cost_pct,
+      ingredients: r.ingredients.map((i) => ({
+        ingredient_id: i.ingredient_id, quantity: i.quantity, unit: i.unit,
+      })),
+    });
     setError("");
     setShowForm(true);
   };
@@ -62,10 +86,8 @@ export default function RecipesPage() {
     if (ingredients.length === 0) return;
     setForm((f) => ({
       ...f,
-      ingredients: [
-        ...f.ingredients,
-        { ingredient_id: ingredients[0].id, quantity: 0, unit: ingredients[0].default_unit },
-      ],
+      ingredients: [...f.ingredients,
+        { ingredient_id: ingredients[0].id, quantity: 0, unit: ingredients[0].default_unit }],
     }));
   };
 
@@ -88,11 +110,17 @@ export default function RecipesPage() {
 
   const handleSave = async () => {
     setError("");
-    if (!form.name.trim()) { setError("El nombre es requerido"); return; }
-    if (form.ingredients.length === 0) { setError("Agrega al menos un ingrediente"); return; }
+    if (!form.name.trim())              { setError("El nombre es requerido"); return; }
+    if (!form.yield || form.yield <= 0) { setError("El rendimiento debe ser mayor a 0"); return; }
+    if (form.ingredients.length === 0)  { setError("Agrega al menos un ingrediente"); return; }
     setSaving(true);
     try {
-      await api.post("/recipes", form);
+      const payload = { ...form, yield: Number(form.yield) };
+      if (editing) {
+        await api.put(`/recipes/${editing.id}`, payload);
+      } else {
+        await api.post("/recipes", payload);
+      }
       setShowForm(false);
       load();
     } catch (e: any) {
@@ -122,54 +150,59 @@ export default function RecipesPage() {
     </div>
   );
 
+  const inputCls = "w-full bg-vanilla-100 border border-stone-200 text-stone-800 px-3 py-2 text-sm font-light focus:outline-none focus:border-gold transition-all";
+
   return (
     <div className="px-6 py-10 max-w-2xl mx-auto md:max-w-none md:px-10">
 
-      {/* Header */}
       <div className="flex items-end justify-between mb-8">
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <div className="h-px w-8 bg-gold opacity-50" />
+            <div className="h-px w-8 bg-gold opacity-40" />
             <span className="text-gold text-xs tracking-[0.3em] uppercase font-light">Recetario</span>
           </div>
-          <h1 className="font-display text-4xl text-cream">Recetas</h1>
+          <h1 className="font-display text-4xl text-stone-800">Recetas</h1>
         </div>
         <button onClick={openCreate}
-          className="bg-gold text-noir text-xs tracking-widest uppercase font-medium px-5 py-3
+          className="bg-gold text-white text-xs tracking-widest uppercase font-medium px-5 py-3
                      hover:bg-gold-light transition-all duration-200">
           + Nueva
         </button>
       </div>
 
-      {/* Lista de recetas */}
       {recipes.length === 0 ? (
-        <p className="text-center text-cream-muted text-sm font-light py-16">No hay recetas aún</p>
+        <p className="text-center text-stone-400 text-sm font-light py-16">No hay recetas aún</p>
       ) : (
         <div className="space-y-2">
           {recipes.map((r) => (
             <div key={r.id}
-              className="bg-noir-700 border border-gold border-opacity-10
-                         hover:border-opacity-30 transition-all duration-200">
+              className="bg-white border border-stone-200 hover:border-gold transition-all duration-200">
               <div className="flex items-center justify-between p-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <p className="text-cream text-sm font-light truncate">{r.name}</p>
+                    <p className="text-stone-800 text-sm font-light truncate">{r.name}</p>
                     <span className={`text-xs px-2 py-0.5 border shrink-0
-                      ${r.is_base ? "text-gold border-gold border-opacity-40" : "text-cream-muted border-cream-muted border-opacity-20"}`}>
+                      ${r.is_base
+                        ? "text-gold border-gold border-opacity-40"
+                        : "text-stone-400 border-stone-200"}`}>
                       {r.is_base ? "Base" : "Versión"}
                     </span>
                   </div>
-                  <p className="text-cream-muted text-xs mt-0.5 font-light">
+                  <p className="text-stone-400 text-xs mt-0.5 font-light">
                     {r.yield} {r.yield_unit} · {r.ingredients?.length || 0} ingredientes
                   </p>
                 </div>
                 <div className="flex items-center gap-3 ml-4">
+                  <button onClick={() => openEdit(r)}
+                    className="text-xs text-stone-400 hover:text-gold tracking-wider transition-colors">
+                    Editar
+                  </button>
                   <button onClick={() => { setSelected(r); setScaled(null); setScalePortions(""); }}
-                    className="text-xs text-cream-muted hover:text-gold tracking-wider transition-colors">
+                    className="text-xs text-stone-400 hover:text-gold tracking-wider transition-colors">
                     Escalar
                   </button>
                   <button onClick={() => handleDelete(r.id)}
-                    className="text-xs text-cream-muted hover:text-terracota-400 tracking-wider transition-colors">
+                    className="text-xs text-stone-400 hover:text-terracota-500 tracking-wider transition-colors">
                     Eliminar
                   </button>
                 </div>
@@ -179,70 +212,59 @@ export default function RecipesPage() {
         </div>
       )}
 
-      {/* Modal formulario nueva receta */}
+      {/* Modal crear/editar */}
       {showForm && (
-        <div className="fixed inset-0 z-50 bg-black bg-opacity-75 flex items-end md:items-center justify-center p-4">
-          <div className="bg-noir-800 border border-gold border-opacity-30 w-full max-w-lg
-                          max-h-[90vh] overflow-y-auto p-6 space-y-5">
+        <div className="fixed inset-0 z-50 bg-stone-800 bg-opacity-40 flex items-end md:items-center justify-center p-4">
+          <div className="bg-white border border-stone-200 w-full max-w-lg
+                          max-h-[90vh] overflow-y-auto p-6 space-y-5 shadow-lg">
             <div className="flex items-center justify-between">
-              <h2 className="font-display text-2xl text-gold">Nueva receta</h2>
-              <button onClick={() => setShowForm(false)} className="text-cream-muted hover:text-cream text-xl">×</button>
+              <h2 className="font-display text-2xl text-stone-800">
+                {editing ? "Editar receta" : "Nueva receta"}
+              </h2>
+              <button onClick={() => setShowForm(false)}
+                className="text-stone-400 hover:text-stone-800 text-xl">×</button>
             </div>
 
-            {/* Nombre */}
             <div>
-              <label className="block text-xs tracking-widest uppercase text-cream-muted mb-1.5 font-light">Nombre</label>
-              <input type="text" value={form.name}
+              <label className="block text-xs tracking-widest uppercase text-stone-400 mb-1.5 font-light">Nombre</label>
+              <input type="text" value={form.name} placeholder="ej. Torta Hojarasca 15 personas"
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="w-full bg-noir-700 border border-gold border-opacity-20 text-cream
-                           px-4 py-2.5 text-sm font-light focus:outline-none focus:border-gold
-                           focus:border-opacity-60 transition-all" />
+                className={inputCls} />
             </div>
 
-            {/* Yield */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs tracking-widest uppercase text-cream-muted mb-1.5 font-light">Rendimiento</label>
-                <input type="number" value={form.yield}
-                  onChange={(e) => setForm({ ...form, yield: parseFloat(e.target.value) || 1 })}
-                  className="w-full bg-noir-700 border border-gold border-opacity-20 text-cream
-                             px-4 py-2.5 text-sm font-light focus:outline-none focus:border-gold
-                             focus:border-opacity-60 transition-all" />
+                <label className="block text-xs tracking-widest uppercase text-stone-400 mb-1.5 font-light">Rendimiento</label>
+                <input type="number" value={form.yield === 0 ? "" : form.yield} placeholder="ej. 15"
+                  onChange={(e) => setForm({ ...form, yield: parseFloat(e.target.value) || "" })}
+                  className={inputCls} />
               </div>
               <div>
-                <label className="block text-xs tracking-widest uppercase text-cream-muted mb-1.5 font-light">Unidad</label>
+                <label className="block text-xs tracking-widest uppercase text-stone-400 mb-1.5 font-light">Unidad</label>
                 <input type="text" value={form.yield_unit}
                   onChange={(e) => setForm({ ...form, yield_unit: e.target.value })}
-                  className="w-full bg-noir-700 border border-gold border-opacity-20 text-cream
-                             px-4 py-2.5 text-sm font-light focus:outline-none focus:border-gold
-                             focus:border-opacity-60 transition-all" />
+                  className={inputCls} />
               </div>
             </div>
 
-            {/* Porcentajes */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs tracking-widest uppercase text-cream-muted mb-1.5 font-light">% Costos indirectos</label>
+                <label className="block text-xs tracking-widest uppercase text-stone-400 mb-1.5 font-light">% Costos indirectos</label>
                 <input type="number" step="0.01" value={form.indirect_cost_pct}
                   onChange={(e) => setForm({ ...form, indirect_cost_pct: parseFloat(e.target.value) || 0 })}
-                  className="w-full bg-noir-700 border border-gold border-opacity-20 text-cream
-                             px-4 py-2.5 text-sm font-light focus:outline-none focus:border-gold
-                             focus:border-opacity-60 transition-all" />
+                  className={inputCls} />
               </div>
               <div>
-                <label className="block text-xs tracking-widest uppercase text-cream-muted mb-1.5 font-light">% Mano de obra</label>
+                <label className="block text-xs tracking-widest uppercase text-stone-400 mb-1.5 font-light">% Mano de obra</label>
                 <input type="number" step="0.01" value={form.labor_cost_pct}
                   onChange={(e) => setForm({ ...form, labor_cost_pct: parseFloat(e.target.value) || 0 })}
-                  className="w-full bg-noir-700 border border-gold border-opacity-20 text-cream
-                             px-4 py-2.5 text-sm font-light focus:outline-none focus:border-gold
-                             focus:border-opacity-60 transition-all" />
+                  className={inputCls} />
               </div>
             </div>
 
-            {/* Ingredientes */}
             <div>
               <div className="flex items-center justify-between mb-3">
-                <label className="text-xs tracking-widest uppercase text-cream-muted font-light">Ingredientes</label>
+                <label className="text-xs tracking-widest uppercase text-stone-400 font-light">Ingredientes</label>
                 <button onClick={addIngredient}
                   className="text-xs text-gold hover:text-gold-light tracking-wider transition-colors">
                   + Agregar
@@ -253,36 +275,31 @@ export default function RecipesPage() {
                   <div key={idx} className="flex gap-2 items-center">
                     <select value={ing.ingredient_id}
                       onChange={(e) => updateIngredient(idx, "ingredient_id", e.target.value)}
-                      className="flex-1 bg-noir-700 border border-gold border-opacity-20 text-cream
-                                 px-3 py-2 text-xs font-light focus:outline-none focus:border-gold
-                                 focus:border-opacity-60 transition-all min-w-0">
-                      {ingredients.map((i) => (
-                        <option key={i.id} value={i.id}>{i.name}</option>
-                      ))}
+                      className="flex-1 bg-vanilla-100 border border-stone-200 text-stone-800
+                                 px-3 py-2 text-xs font-light focus:outline-none focus:border-gold transition-all min-w-0">
+                      {ingredients.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
                     </select>
-                    <input type="number" value={ing.quantity} placeholder="Qty"
+                    <input type="number" value={ing.quantity === 0 ? "" : ing.quantity} placeholder="Qty"
                       onChange={(e) => updateIngredient(idx, "quantity", parseFloat(e.target.value) || 0)}
-                      className="w-20 bg-noir-700 border border-gold border-opacity-20 text-cream
-                                 px-3 py-2 text-xs font-light focus:outline-none focus:border-gold
-                                 focus:border-opacity-60 transition-all" />
+                      className="w-20 bg-vanilla-100 border border-stone-200 text-stone-800
+                                 px-3 py-2 text-xs font-light focus:outline-none focus:border-gold transition-all" />
                     <input type="text" value={ing.unit} placeholder="Und"
                       onChange={(e) => updateIngredient(idx, "unit", e.target.value)}
-                      className="w-16 bg-noir-700 border border-gold border-opacity-20 text-cream
-                                 px-3 py-2 text-xs font-light focus:outline-none focus:border-gold
-                                 focus:border-opacity-60 transition-all" />
+                      className="w-16 bg-vanilla-100 border border-stone-200 text-stone-800
+                                 px-3 py-2 text-xs font-light focus:outline-none focus:border-gold transition-all" />
                     <button onClick={() => removeIngredient(idx)}
-                      className="text-cream-muted hover:text-terracota-400 text-lg shrink-0 transition-colors">×</button>
+                      className="text-stone-400 hover:text-terracota-500 text-lg shrink-0 transition-colors">×</button>
                   </div>
                 ))}
               </div>
             </div>
 
-            {error && <p className="text-red-400 text-xs tracking-wide">{error}</p>}
+            {error && <p className="text-terracota-500 text-xs tracking-wide">{error}</p>}
 
             <button onClick={handleSave} disabled={saving}
-              className="w-full bg-gold text-noir text-xs tracking-widest uppercase font-medium
+              className="w-full bg-gold text-white text-xs tracking-widest uppercase font-medium
                          py-3 hover:bg-gold-light transition-all disabled:opacity-50">
-              {saving ? "Guardando..." : "Guardar receta"}
+              {saving ? "Guardando..." : editing ? "Guardar cambios" : "Guardar receta"}
             </button>
           </div>
         </div>
@@ -290,28 +307,28 @@ export default function RecipesPage() {
 
       {/* Modal escalado */}
       {selected && (
-        <div className="fixed inset-0 z-50 bg-black bg-opacity-75 flex items-end md:items-center justify-center p-4">
-          <div className="bg-noir-800 border border-gold border-opacity-30 w-full max-w-md p-6 space-y-5">
+        <div className="fixed inset-0 z-50 bg-stone-800 bg-opacity-40 flex items-end md:items-center justify-center p-4">
+          <div className="bg-white border border-stone-200 w-full max-w-md p-6 space-y-5 shadow-lg">
             <div className="flex items-center justify-between">
-              <h2 className="font-display text-2xl text-gold">Escalar receta</h2>
-              <button onClick={() => setSelected(null)} className="text-cream-muted hover:text-cream text-xl">×</button>
+              <h2 className="font-display text-2xl text-stone-800">Escalar receta</h2>
+              <button onClick={() => setSelected(null)}
+                className="text-stone-400 hover:text-stone-800 text-xl">×</button>
             </div>
 
-            <p className="text-cream text-sm font-light">{selected.name}</p>
-            <p className="text-cream-muted text-xs">Base: {selected.yield} {selected.yield_unit}</p>
+            <p className="text-stone-800 text-sm font-light">{selected.name}</p>
+            <p className="text-stone-400 text-xs">Base: {selected.yield} {selected.yield_unit}</p>
 
             <div>
-              <label className="block text-xs tracking-widest uppercase text-cream-muted mb-1.5 font-light">
+              <label className="block text-xs tracking-widest uppercase text-stone-400 mb-1.5 font-light">
                 Número de porciones
               </label>
               <div className="flex gap-3">
-                <input type="number" value={scalePortions}
+                <input type="number" value={scalePortions} placeholder="ej. 30"
                   onChange={(e) => { setScalePortions(e.target.value); setScaled(null); }}
-                  className="flex-1 bg-noir-700 border border-gold border-opacity-20 text-cream
-                             px-4 py-2.5 text-sm font-light focus:outline-none focus:border-gold
-                             focus:border-opacity-60 transition-all" />
+                  className="flex-1 bg-vanilla-100 border border-stone-200 text-stone-800
+                             px-4 py-2.5 text-sm font-light focus:outline-none focus:border-gold transition-all" />
                 <button onClick={handleScale}
-                  className="bg-gold text-noir text-xs tracking-widest uppercase font-medium
+                  className="bg-gold text-white text-xs tracking-widest uppercase font-medium
                              px-5 hover:bg-gold-light transition-all">
                   Calcular
                 </button>
@@ -319,16 +336,14 @@ export default function RecipesPage() {
             </div>
 
             {scaled && (
-              <div className="space-y-2 pt-2 border-t border-gold border-opacity-20">
-                <p className="text-xs tracking-widest uppercase text-cream-muted font-light mb-3">
+              <div className="space-y-2 pt-2 border-t border-stone-200">
+                <p className="text-xs tracking-widest uppercase text-stone-400 font-light mb-3">
                   Ingredientes para {scaled.yield} {scaled.yield_unit}
                 </p>
                 {scaled.ingredients.map((ing) => (
                   <div key={ing.ingredient_id} className="flex justify-between items-center">
-                    <span className="text-cream text-sm font-light">{ing.name}</span>
-                    <span className="text-gold text-sm">
-                      {ing.quantity.toFixed(2)} {ing.unit}
-                    </span>
+                    <span className="text-stone-800 text-sm font-light">{ing.name}</span>
+                    <span className="text-gold text-sm">{ing.quantity.toFixed(2)} {ing.unit}</span>
                   </div>
                 ))}
               </div>
