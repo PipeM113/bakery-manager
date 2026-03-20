@@ -9,3 +9,5 @@ db/migrations/*seed*
 
 # Binary
 *.exe
+
+pruebas.txt

@@ -16,6 +16,8 @@ import (
 	"github.com/PipeM113/bakery-manager/internal/auth/service"
 	ing_hand "github.com/PipeM113/bakery-manager/internal/ingredients/handler"
 	ing_repo "github.com/PipeM113/bakery-manager/internal/ingredients/repository"
+	rec_hand "github.com/PipeM113/bakery-manager/internal/recipes/handler"
+	rec_repo "github.com/PipeM113/bakery-manager/internal/recipes/repository"
 	mid "github.com/PipeM113/bakery-manager/pkg/middleware"
 )
 
@@ -60,6 +62,9 @@ func main() {
 	ingredientRepo := ing_repo.NewIngredientRepository(db)
 	ingredientHandler := ing_hand.NewIngredientHandler(ingredientRepo)
 
+	recipeRepo := rec_repo.NewRecipeRepository(db)
+	recipeHandler := rec_hand.NewRecipeHandler(recipeRepo)
+
 	r.Group(func(r chi.Router) {
 		r.Use(mid.AuthMiddleware)
 		r.Get("/ingredients", ingredientHandler.GetAll)
@@ -67,6 +72,12 @@ func main() {
 		r.Put("/ingredients/{id}", ingredientHandler.Update)
 		r.Delete("/ingredients/{id}", ingredientHandler.Delete)
 		r.Get("/ingredients/{id}/history", ingredientHandler.GetPriceHistory)
+		r.Get("/recipes", recipeHandler.GetAll)
+		r.Get("/recipes/{id}", recipeHandler.GetByID)
+		r.Post("/recipes", recipeHandler.Create)
+		r.Post("/recipes/{id}/versions", recipeHandler.CreateVersion)
+		r.Post("/recipes/{id}/scale", recipeHandler.Scale)
+		r.Delete("/recipes/{id}", recipeHandler.Delete)
 	})
 
 	log.Printf("Servidor corriendo en puerto %s", port)

@@ -1,0 +1,149 @@
+package repository
+
+import (
+	"context"
+	"fmt"
+	"time"
+
+	"github.com/jackc/pgx/v5/pgxpool"
+)
+
+type RecipeIngredient struct {
+	ID           string  `json:"id"`
+	RecipeID     string  `json:"recipe_id"`
+	IngredientID string  `json:"ingredient_id"`
+	Name         string  `json:"name"`
+	Quantity     float64 `json:"quantity"`
+	Unit         string  `json:"unit"`
+}
+
+type Recipe struct {
+	ID              string             `json:"id"`
+	UserID          string             `json:"user_id"`
+	ParentID        *string            `json:"parent_id"`
+	Name            string             `json:"name"`
+	Description     string             `json:"description"`
+	Yield           float64            `json:"yield"`
+	YieldUnit       string             `json:"yield_unit"`
+	PhotoURL        *string            `json:"photo_url"`
+	IsBase          bool               `json:"is_base"`
+	IndirectCostPct float64            `json:"indirect_cost_pct"`
+	LaborCostPct    float64            `json:"labor_cost_pct"`
+	Ingredients     []RecipeIngredient `json:"ingredients"`
+	CreatedAt       time.Time          `json:"created_at"`
+	UpdatedAt       time.Time          `json:"updated_at"`
+}
+
+type RecipeRepository struct {
+	db *pgxpool.Pool
+}
+
+func NewRecipeRepository(db *pgxpool.Pool) *RecipeRepository {
+	return &RecipeRepository{db: db}
+}
+
+func (r *RecipeRepository) Create(ctx context.Context, recipe Recipe) (Recipe, error) {
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return Recipe{}, fmt.Errorf("begin tx: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	err = tx.QueryRow(ctx, `
+		INSERT INTO recipes (user_id, parent_id, name, description, yield, yield_unit, photo_url, is_base, indirect_cost_pct, labor_cost_pct)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+		RETURNING id, created_at, updated_at`,
+		recipe.UserID, recipe.ParentID, recipe.Name, recipe.Description,
+		recipe.Yield, recipe.YieldUnit, recipe.PhotoURL, recipe.IsBase,
+		recipe.IndirectCostPct, recipe.LaborCostPct,
+	).Scan(&recipe.ID, &recipe.CreatedAt, &recipe.UpdatedAt)
+	if err != nil {
+		return Recipe{}, fmt.Errorf("insert recipe: %w", err)
+	}
+
+	for i, ing := range recipe.Ingredients {
+		err = tx.QueryRow(ctx, `
+			INSERT INTO recipe_ingredients (recipe_id, ingredient_id, quantity, unit)
+			VALUES ($1,$2,$3,$4) RETURNING id`,
+			recipe.ID, ing.IngredientID, ing.Quantity, ing.Unit,
+		).Scan(&recipe.Ingredients[i].ID)
+		if err != nil {
+			return Recipe{}, fmt.Errorf("insert ingredient: %w", err)
+		}
+		recipe.Ingredients[i].RecipeID = recipe.ID
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return Recipe{}, fmt.Errorf("commit tx: %w", err)
+	}
+	return r.GetByID(ctx, recipe.ID)
+}
+
+func (r *RecipeRepository) GetAll(ctx context.Context) ([]Recipe, error) {
+	rows, err := r.db.Query(ctx, `
+		SELECT id, user_id, parent_id, name, description, yield, yield_unit,
+		       photo_url, is_base, indirect_cost_pct, labor_cost_pct, created_at, updated_at
+		FROM recipes ORDER BY name ASC`)
+	if err != nil {
+		return nil, fmt.Errorf("get all recipes: %w", err)
+	}
+	defer rows.Close()
+
+	var recipes []Recipe
+	for rows.Next() {
+		var rec Recipe
+		err := rows.Scan(
+			&rec.ID, &rec.UserID, &rec.ParentID, &rec.Name, &rec.Description,
+			&rec.Yield, &rec.YieldUnit, &rec.PhotoURL, &rec.IsBase,
+			&rec.IndirectCostPct, &rec.LaborCostPct, &rec.CreatedAt, &rec.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan recipe: %w", err)
+		}
+		recipes = append(recipes, rec)
+	}
+	return recipes, nil
+}
+
+func (r *RecipeRepository) GetByID(ctx context.Context, id string) (Recipe, error) {
+	var rec Recipe
+	err := r.db.QueryRow(ctx, `
+		SELECT id, user_id, parent_id, name, description, yield, yield_unit,
+		       photo_url, is_base, indirect_cost_pct, labor_cost_pct, created_at, updated_at
+		FROM recipes WHERE id = $1`, id,
+	).Scan(
+		&rec.ID, &rec.UserID, &rec.ParentID, &rec.Name, &rec.Description,
+		&rec.Yield, &rec.YieldUnit, &rec.PhotoURL, &rec.IsBase,
+		&rec.IndirectCostPct, &rec.LaborCostPct, &rec.CreatedAt, &rec.UpdatedAt,
+	)
+	if err != nil {
+		return Recipe{}, fmt.Errorf("get recipe: %w", err)
+	}
+
+	rows, err := r.db.Query(ctx, `
+		SELECT ri.id, ri.recipe_id, ri.ingredient_id, i.name, ri.quantity, ri.unit
+		FROM recipe_ingredients ri
+		JOIN ingredients i ON i.id = ri.ingredient_id
+		WHERE ri.recipe_id = $1`, id)
+	if err != nil {
+		return Recipe{}, fmt.Errorf("get recipe ingredients: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var ing RecipeIngredient
+		if err := rows.Scan(&ing.ID, &ing.RecipeID, &ing.IngredientID, &ing.Name, &ing.Quantity, &ing.Unit); err != nil {
+			return Recipe{}, fmt.Errorf("scan ingredient: %w", err)
+		}
+		rec.Ingredients = append(rec.Ingredients, ing)
+	}
+	if rec.Ingredients == nil {
+		rec.Ingredients = []RecipeIngredient{}
+	}
+	return rec, nil
+}
+
+func (r *RecipeRepository) Delete(ctx context.Context, id string) error {
+	_, err := r.db.Exec(ctx, `DELETE FROM recipes WHERE id = $1`, id)
+	return err
+}
