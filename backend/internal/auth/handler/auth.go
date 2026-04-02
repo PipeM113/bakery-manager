@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/PipeM113/bakery-manager/internal/auth/service"
+	"github.com/PipeM113/bakery-manager/pkg/httputil"
 )
 
 type AuthHandler struct {
@@ -27,13 +28,13 @@ type loginResponse struct {
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var req loginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, `{"error":"request inválido"}`, http.StatusBadRequest)
+		httputil.JSONError(w, "request inválido", http.StatusBadRequest)
 		return
 	}
 
 	token, err := h.svc.Login(r.Context(), req.Email, req.Password)
 	if err != nil {
-		http.Error(w, `{"error":"credenciales inválidas"}`, http.StatusUnauthorized)
+		httputil.JSONError(w, "credenciales inválidas", http.StatusUnauthorized)
 		return
 	}
 
