@@ -17,7 +17,7 @@ type Ingredient struct {
 	PricePerUnit   float64   `json:"price_per_unit"`
 	StockQuantity  float64   `json:"stock_quantity"`
 	AlertThreshold float64   `json:"alert_threshold"`
-	Supplier       string    `json:"supplier"`
+	Brand          string    `json:"brand"`
 	CreatedAt      time.Time `json:"created_at"`
 	UpdatedAt      time.Time `json:"updated_at"`
 }
@@ -51,15 +51,15 @@ func (r *IngredientRepository) Create(ctx context.Context, i Ingredient) (Ingred
 	err := r.db.QueryRow(ctx, `
 		INSERT INTO ingredients
 		  (name, default_unit, package_size, package_price, price_per_unit,
-		   stock_quantity, alert_threshold, supplier)
+		   stock_quantity, alert_threshold, brand)
 		VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
 		RETURNING id, name, default_unit, package_size, package_price, price_per_unit,
-		          stock_quantity, alert_threshold, supplier, created_at, updated_at`,
+		          stock_quantity, alert_threshold, brand, created_at, updated_at`,
 		i.Name, i.DefaultUnit, i.PackageSize, i.PackagePrice, i.PricePerUnit,
-		i.StockQuantity, i.AlertThreshold, i.Supplier,
+		i.StockQuantity, i.AlertThreshold, i.Brand,
 	).Scan(
 		&i.ID, &i.Name, &i.DefaultUnit, &i.PackageSize, &i.PackagePrice, &i.PricePerUnit,
-		&i.StockQuantity, &i.AlertThreshold, &i.Supplier,
+		&i.StockQuantity, &i.AlertThreshold, &i.Brand,
 		&i.CreatedAt, &i.UpdatedAt,
 	)
 	if err != nil {
@@ -81,7 +81,7 @@ func (r *IngredientRepository) Create(ctx context.Context, i Ingredient) (Ingred
 func (r *IngredientRepository) GetAll(ctx context.Context) ([]Ingredient, error) {
 	rows, err := r.db.Query(ctx, `
 		SELECT id, name, default_unit, package_size, package_price, price_per_unit,
-		       stock_quantity, alert_threshold, supplier, created_at, updated_at
+		       stock_quantity, alert_threshold, brand, created_at, updated_at
 		FROM ingredients ORDER BY name ASC`)
 	if err != nil {
 		return nil, fmt.Errorf("get all ingredients: %w", err)
@@ -93,7 +93,7 @@ func (r *IngredientRepository) GetAll(ctx context.Context) ([]Ingredient, error)
 		var i Ingredient
 		err := rows.Scan(
 			&i.ID, &i.Name, &i.DefaultUnit, &i.PackageSize, &i.PackagePrice, &i.PricePerUnit,
-			&i.StockQuantity, &i.AlertThreshold, &i.Supplier,
+			&i.StockQuantity, &i.AlertThreshold, &i.Brand,
 			&i.CreatedAt, &i.UpdatedAt,
 		)
 		if err != nil {
@@ -108,11 +108,11 @@ func (r *IngredientRepository) GetByID(ctx context.Context, id string) (Ingredie
 	var i Ingredient
 	err := r.db.QueryRow(ctx, `
 		SELECT id, name, default_unit, package_size, package_price, price_per_unit,
-		       stock_quantity, alert_threshold, supplier, created_at, updated_at
+		       stock_quantity, alert_threshold, brand, created_at, updated_at
 		FROM ingredients WHERE id = $1`, id,
 	).Scan(
 		&i.ID, &i.Name, &i.DefaultUnit, &i.PackageSize, &i.PackagePrice, &i.PricePerUnit,
-		&i.StockQuantity, &i.AlertThreshold, &i.Supplier,
+		&i.StockQuantity, &i.AlertThreshold, &i.Brand,
 		&i.CreatedAt, &i.UpdatedAt,
 	)
 	if err != nil {
@@ -136,15 +136,15 @@ func (r *IngredientRepository) Update(ctx context.Context, i Ingredient) (Ingred
 		UPDATE ingredients
 		SET name=$1, default_unit=$2, package_size=$3, package_price=$4,
 		    price_per_unit=$5, stock_quantity=$6, alert_threshold=$7,
-		    supplier=$8, updated_at=NOW()
+		    brand=$8, updated_at=NOW()
 		WHERE id=$9
 		RETURNING id, name, default_unit, package_size, package_price, price_per_unit,
-		          stock_quantity, alert_threshold, supplier, created_at, updated_at`,
+		          stock_quantity, alert_threshold, brand, created_at, updated_at`,
 		i.Name, i.DefaultUnit, i.PackageSize, i.PackagePrice, i.PricePerUnit,
-		i.StockQuantity, i.AlertThreshold, i.Supplier, i.ID,
+		i.StockQuantity, i.AlertThreshold, i.Brand, i.ID,
 	).Scan(
 		&i.ID, &i.Name, &i.DefaultUnit, &i.PackageSize, &i.PackagePrice, &i.PricePerUnit,
-		&i.StockQuantity, &i.AlertThreshold, &i.Supplier,
+		&i.StockQuantity, &i.AlertThreshold, &i.Brand,
 		&i.CreatedAt, &i.UpdatedAt,
 	)
 	if err != nil {
