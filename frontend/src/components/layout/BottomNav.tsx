@@ -1,10 +1,14 @@
 import { NavLink } from "react-router-dom";
 
 const links = [
-  { to: "/dashboard",   icon: "◉", label: "Inicio"   },
-  { to: "/ingredients", icon: "⚗", label: "Insumos"  },
-  { to: "/recipes",     icon: "✦", label: "Recetas"  },
-  { to: "/costs",       icon: "◈", label: "Costos"   },
+  { to: "/dashboard",      icon: "◉", label: "Dashboard"   },
+  { to: "/ingredients",    icon: "⚗", label: "Insumos"     },
+  { to: "/recipes",        icon: "✦", label: "Recetas"     },
+  { to: "/costs",          icon: "◈", label: "Costos"      },
+  { to: "/fixed-costs",    icon: "⊟", label: "Fijos"       },
+  { to: "/sales",          icon: "⊕", label: "Ventas"      },
+  { to: "/expenses",       icon: "◷", label: "Gastos"      },
+  { to: "/profitability",  icon: "◈", label: "Rentabilidad"},
 ];
 
 export default function BottomNav() {
