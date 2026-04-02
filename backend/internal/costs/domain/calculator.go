@@ -1,5 +1,7 @@
 package domain
 
+import "math"
+
 type IngredientCost struct {
 	IngredientID string  `json:"ingredient_id"`
 	Name         string  `json:"name"`
@@ -20,6 +22,13 @@ type CostBreakdown struct {
 	LaborCosts       float64          `json:"labor_costs"`
 	TotalCost        float64          `json:"total_cost"`
 	CostPerPortion   float64          `json:"cost_per_portion"`
+	MarginPct        float64          `json:"margin_pct"`
+	SuggestedPrice   float64          `json:"suggested_price"`
+}
+
+// ceilTo500 redondea hacia arriba al múltiplo de 500 más cercano.
+func ceilTo500(price float64) float64 {
+	return math.Ceil(price/500) * 500
 }
 
 type PriceSuggestion struct {
@@ -32,7 +41,7 @@ type PriceSuggestion struct {
 func Calculate(
 	recipeID, recipeName string,
 	yield float64, yieldUnit string,
-	indirectPct, laborPct float64,
+	indirectPct, laborPct, marginPct float64,
 	ingredients []IngredientCost,
 ) CostBreakdown {
 	var ingredientsTotal float64
@@ -50,6 +59,11 @@ func Calculate(
 		costPerPortion = totalCost / yield
 	}
 
+	suggestedPrice := 0.0
+	if costPerPortion > 0 {
+		suggestedPrice = ceilTo500(costPerPortion * (1 + marginPct))
+	}
+
 	return CostBreakdown{
 		RecipeID:         recipeID,
 		RecipeName:       recipeName,
@@ -61,6 +75,8 @@ func Calculate(
 		LaborCosts:       laborCosts,
 		TotalCost:        totalCost,
 		CostPerPortion:   costPerPortion,
+		MarginPct:        marginPct,
+		SuggestedPrice:   suggestedPrice,
 	}
 }
 

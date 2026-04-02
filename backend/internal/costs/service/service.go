@@ -17,7 +17,16 @@ func NewCostService(db *pgxpool.Pool) *CostService {
 	return &CostService{db: db}
 }
 
-func (s *CostService) GetCostBreakdown(ctx context.Context, recipeID string) (domain.CostBreakdown, error) {
+// CostParams permite sobrescribir los porcentajes almacenados en la receta.
+// Si un valor es 0, se usa el valor guardado en la receta (indirect/labor)
+// o se usa 0 como margen (margin_pct).
+type CostParams struct {
+	IndirectCostPct float64
+	LaborCostPct    float64
+	MarginPct       float64
+}
+
+func (s *CostService) GetCostBreakdown(ctx context.Context, recipeID string, params CostParams) (domain.CostBreakdown, error) {
 	var recipe struct {
 		Name            string
 		Yield           float64
@@ -61,15 +70,28 @@ func (s *CostService) GetCostBreakdown(ctx context.Context, recipeID string) (do
 		}
 
 		// Convertir cantidad a la unidad base del insumo para calcular correctamente
-		ing.Quantity = kernel.ConvertToBase(ing.Quantity, recipeUnit, baseUnit)
+		converted, err := kernel.ConvertToBase(ing.Quantity, recipeUnit, baseUnit)
+		if err != nil {
+			return domain.CostBreakdown{}, fmt.Errorf("ingrediente %q: %w", ing.Name, err)
+		}
+		ing.Quantity = converted
 		ing.Unit = baseUnit
 		ingredients = append(ingredients, ing)
+	}
+
+	indirectPct := recipe.IndirectCostPct
+	if params.IndirectCostPct > 0 {
+		indirectPct = params.IndirectCostPct
+	}
+	laborPct := recipe.LaborCostPct
+	if params.LaborCostPct > 0 {
+		laborPct = params.LaborCostPct
 	}
 
 	return domain.Calculate(
 		recipeID, recipe.Name,
 		recipe.Yield, recipe.YieldUnit,
-		recipe.IndirectCostPct, recipe.LaborCostPct,
+		indirectPct, laborPct, params.MarginPct,
 		ingredients,
 	), nil
 }
