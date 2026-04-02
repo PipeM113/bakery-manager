@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS sale_ingredients;
+DROP TABLE IF EXISTS sales;
