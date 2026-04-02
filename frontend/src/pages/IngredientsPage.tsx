@@ -1,34 +1,10 @@
-import { useEffect, useState } from "react";
-import api from "../services/api";
-
-interface Ingredient {
-  id: string;
-  name: string;
-  default_unit: string;
-  package_size: number;
-  package_price: number;
-  price_per_unit: number;
-  stock_quantity: number;
-  alert_threshold: number;
-  supplier: string;
-}
+import { useEffect, useRef, useState } from "react";
+import IngredientImportModal from "../components/IngredientImportModal";
+import { ingredientService } from "../api/ingredientService";
+import type { IIngredient, IngredientFormData } from "../types/ingredient";
+import { emptyIngredientForm } from "../types/ingredient";
 
 const UNITS = ["gr", "kg", "ml", "lt", "und"];
-
-type FormType = {
-  name: string;
-  default_unit: string;
-  package_size: number | "";
-  package_price: number | "";
-  stock_quantity: number | "";
-  alert_threshold: number | "";
-  supplier: string;
-};
-
-const emptyForm: FormType = {
-  name: "", default_unit: "gr", package_size: "",
-  package_price: "", stock_quantity: "", alert_threshold: "", supplier: "",
-};
 
 const clp = (n: number) =>
   `$${Math.round(n).toLocaleString("es-CL")}`;
@@ -54,22 +30,40 @@ function PriceDisplay({ price, unit }: { price: number; unit: string }) {
 }
 
 export default function IngredientsPage() {
-  const [ingredients, setIngredients] = useState<Ingredient[]>([]);
+  const [ingredients, setIngredients] = useState<IIngredient[]>([]);
   const [search, setSearch]           = useState("");
   const [showForm, setShowForm]       = useState(false);
-  const [editing, setEditing]         = useState<Ingredient | null>(null);
-  const [form, setForm]               = useState<FormType>(emptyForm);
+  const [editing, setEditing]         = useState<IIngredient | null>(null);
+  const [form, setForm]               = useState<IngredientFormData>(emptyIngredientForm);
   const [loading, setLoading]         = useState(true);
   const [saving, setSaving]           = useState(false);
   const [error, setError]             = useState("");
+  const [showImport, setShowImport]   = useState(false);
+  const [exporting, setExporting]     = useState(false);
+  const [successMsg, setSuccessMsg]   = useState("");
+  const successTimer                  = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const load = () => {
-    api.get("/ingredients")
-      .then((r) => setIngredients(r.data))
+    ingredientService.getAll()
+      .then(setIngredients)
       .finally(() => setLoading(false));
   };
 
   useEffect(() => { load(); }, []);
+
+  // ESC closes modal
+  useEffect(() => {
+    if (!showForm) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") setShowForm(false); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [showForm]);
+
+  const showSuccess = (msg: string) => {
+    setSuccessMsg(msg);
+    if (successTimer.current) clearTimeout(successTimer.current);
+    successTimer.current = setTimeout(() => setSuccessMsg(""), 3000);
+  };
 
   const filtered = ingredients.filter((i) =>
     i.name.toLowerCase().includes(search.toLowerCase())
@@ -77,12 +71,12 @@ export default function IngredientsPage() {
 
   const openCreate = () => {
     setEditing(null);
-    setForm(emptyForm);
+    setForm(emptyIngredientForm);
     setError("");
     setShowForm(true);
   };
 
-  const openEdit = (i: Ingredient) => {
+  const openEdit = (i: IIngredient) => {
     setEditing(i);
     setForm({
       name:            i.name,
@@ -91,7 +85,7 @@ export default function IngredientsPage() {
       package_price:   i.package_price,
       stock_quantity:  i.stock_quantity,
       alert_threshold: i.alert_threshold,
-      supplier:        i.supplier,
+      brand:        i.brand,
     });
     setError("");
     setShowForm(true);
@@ -104,21 +98,13 @@ export default function IngredientsPage() {
       setError("El precio del paquete es requerido"); return;
     }
     setSaving(true);
-    const pkgSize  = Number(form.package_size)  || 1;
-    const pkgPrice = Number(form.package_price) || 0;
-    const payload  = {
-      ...form,
-      package_size:    pkgSize,
-      package_price:   pkgPrice,
-      price_per_unit:  pkgPrice / pkgSize,
-      stock_quantity:  Number(form.stock_quantity)   || 0,
-      alert_threshold: Number(form.alert_threshold)  || 0,
-    };
     try {
       if (editing) {
-        await api.put(`/ingredients/${editing.id}`, payload);
+        await ingredientService.update(editing.id, form);
+        showSuccess("✅ Insumo actualizado");
       } else {
-        await api.post("/ingredients", payload);
+        await ingredientService.create(form);
+        showSuccess("✅ Insumo creado");
       }
       setShowForm(false);
       load();
@@ -129,9 +115,27 @@ export default function IngredientsPage() {
     }
   };
 
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const blob = await ingredientService.exportExcel();
+      const date = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `insumos_${date}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const handleDelete = async (id: string) => {
     if (!confirm("¿Eliminar este insumo?")) return;
-    await api.delete(`/ingredients/${id}`);
+    await ingredientService.delete(id);
     load();
   };
 
@@ -151,6 +155,13 @@ export default function IngredientsPage() {
   return (
     <div className="px-6 py-10 max-w-2xl mx-auto md:max-w-none md:px-10">
 
+      {/* Success toast */}
+      {successMsg && (
+        <div className="fixed top-4 right-4 z-50 bg-white border border-green-200 text-green-800 px-4 py-3 text-sm font-light shadow-md">
+          {successMsg}
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-end justify-between mb-8">
         <div>
@@ -160,11 +171,23 @@ export default function IngredientsPage() {
           </div>
           <h1 className="font-display text-4xl text-stone-800">Insumos</h1>
         </div>
-        <button onClick={openCreate}
-          className="bg-gold text-white text-xs tracking-widest uppercase font-medium px-5 py-3
-                     hover:bg-gold-light transition-all duration-200">
-          + Nuevo
-        </button>
+        <div className="flex gap-2">
+          <button onClick={handleExport} disabled={exporting}
+            className="border border-stone-200 text-stone-600 text-xs tracking-widest uppercase font-medium px-4 py-3
+                       hover:border-gold hover:text-gold transition-all duration-200 disabled:opacity-50">
+            {exporting ? "Exportando..." : "Exportar Excel"}
+          </button>
+          <button onClick={() => setShowImport(true)}
+            className="border border-stone-200 text-stone-600 text-xs tracking-widest uppercase font-medium px-4 py-3
+                       hover:border-gold hover:text-gold transition-all duration-200">
+            Importar Excel
+          </button>
+          <button onClick={openCreate}
+            className="bg-gold text-white text-xs tracking-widest uppercase font-medium px-5 py-3
+                       hover:bg-gold-light transition-all duration-200">
+            + Nuevo
+          </button>
+        </div>
       </div>
 
       {/* Búsqueda */}
@@ -202,7 +225,7 @@ export default function IngredientsPage() {
                   <PriceDisplay price={i.price_per_unit} unit={i.default_unit} />
                   <p className="text-stone-400 text-xs font-light mt-0.5">
                     Envase: {i.package_size} {i.default_unit} · {clp(i.package_price)}
-                    {i.supplier && <span className="ml-2">· {i.supplier}</span>}
+                    {i.brand && <span className="ml-2">· {i.brand}</span>}
                   </p>
                 </div>
                 <div className="flex items-center gap-3 ml-4">
@@ -221,9 +244,20 @@ export default function IngredientsPage() {
         </div>
       )}
 
+      {/* Import Modal */}
+      {showImport && (
+        <IngredientImportModal
+          onClose={() => setShowImport(false)}
+          onSuccess={() => { setShowImport(false); load(); }}
+        />
+      )}
+
       {/* Modal */}
       {showForm && (
-        <div className="fixed inset-0 z-50 bg-stone-800 bg-opacity-40 flex items-end md:items-center justify-center p-4">
+        <div
+          className="fixed inset-0 z-50 bg-stone-800 bg-opacity-40 flex items-end md:items-center justify-center p-4"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowForm(false); }}
+        >
           <div className="bg-white border border-stone-200 w-full max-w-xs p-4 space-y-3 shadow-lg">
             <div className="flex items-center justify-between">
               <h2 className="font-display text-lg text-stone-800">
@@ -262,9 +296,9 @@ export default function IngredientsPage() {
             ))}
 
             <div>
-              <label className="block text-xs tracking-widest uppercase text-stone-400 mb-1 font-light">Proveedor</label>
-              <input type="text" value={form.supplier} placeholder="ej. Colun, Jumbo, Lider"
-                onChange={(e) => setForm({ ...form, supplier: e.target.value })}
+              <label className="block text-xs tracking-widest uppercase text-stone-400 mb-1 font-light">Marca</label>
+              <input type="text" value={form.brand} placeholder="ej. Colun, Lider, Santa Isabel"
+                onChange={(e) => setForm({ ...form, brand: e.target.value })}
                 className="w-full bg-vanilla-100 border border-stone-200 text-stone-800
                            px-3 py-1.5 text-sm font-light focus:outline-none focus:border-gold transition-all" />
             </div>

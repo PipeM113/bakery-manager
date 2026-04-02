@@ -1,35 +1,26 @@
 import { useEffect, useState } from "react";
-import api from "../services/api";
-
-interface Ingredient {
-  id: string;
-  name: string;
-  stock_quantity: number;
-  alert_threshold: number;
-  default_unit: string;
-}
-
-interface Recipe {
-  id: string;
-  name: string;
-  yield: number;
-  yield_unit: string;
-  is_base: boolean;
-}
+import { ingredientService } from "../api/ingredientService";
+import { recipeService } from "../api/recipeService";
+import { useAuth } from "../context/AuthContext";
+import type { IIngredient } from "../types/ingredient";
+import type { IRecipe } from "../types/recipe";
 
 export default function DashboardPage() {
-  const [ingredients, setIngredients] = useState<Ingredient[]>([]);
-  const [recipes, setRecipes]         = useState<Recipe[]>([]);
+  const { userName } = useAuth();
+  const [ingredients, setIngredients] = useState<IIngredient[]>([]);
+  const [recipes, setRecipes]         = useState<IRecipe[]>([]);
   const [loading, setLoading]         = useState(true);
 
   useEffect(() => {
-    Promise.all([api.get("/ingredients"), api.get("/recipes")])
-      .then(([ing, rec]) => { setIngredients(ing.data); setRecipes(rec.data); })
+    Promise.all([ingredientService.getAll(), recipeService.getAll()])
+      .then(([ings, recs]) => { setIngredients(ings); setRecipes(recs); })
       .finally(() => setLoading(false));
   }, []);
 
   const alerts      = ingredients.filter((i) => i.alert_threshold > 0 && i.stock_quantity < i.alert_threshold);
   const baseRecipes = recipes.filter((r) => r.is_base);
+  const words     = userName.split(" ");
+  const firstName = words.length > 2 ? words.slice(0, -2).join(" ") : words[0] ?? "";
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center">
@@ -45,7 +36,7 @@ export default function DashboardPage() {
           <div className="h-px w-8 bg-gold opacity-40" />
           <span className="text-gold text-xs tracking-[0.3em] uppercase font-light">Panel principal</span>
         </div>
-        <h1 className="font-display text-4xl text-stone-800">Bienvenida, Angeles</h1>
+        <h1 className="font-display text-4xl text-stone-800">Bienvenida{firstName ? `, ${firstName}` : ""}</h1>
       </div>
 
       {alerts.length > 0 && (
