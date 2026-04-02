@@ -4,9 +4,12 @@ import BottomNav from "./BottomNav";
 
 export default function AppLayout() {
   return (
-    <div className="flex min-h-screen">
+    <div className="min-h-screen">
       <Sidebar />
-      <main className="flex-1 pb-20 md:pb-0 overflow-y-auto">
+      <main
+        className="pb-20 md:pb-0 overflow-y-auto min-h-screen"
+        style={{ marginLeft: "var(--sidebar-width, 0)" }}
+      >
         <Outlet />
       </main>
       <BottomNav />

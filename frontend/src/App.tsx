@@ -6,6 +6,10 @@ import IngredientsPage from "./pages/IngredientsPage";
 import RecipesPage from "./pages/RecipesPage";
 import CostsPage from "./pages/CostsPage";
 import DashboardPage from "./pages/DashboardPage";
+import FixedCostsPage from "./pages/FixedCostsPage";
+import SalesPage from "./pages/SalesPage";
+import ExpensesPage from "./pages/ExpensesPage";
+import ProfitabilityPage from "./pages/ProfitabilityPage";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
@@ -28,7 +32,11 @@ export default function App() {
         <Route path="dashboard"   element={<DashboardPage />} />
         <Route path="ingredients" element={<IngredientsPage />} />
         <Route path="recipes"     element={<RecipesPage />} />
-        <Route path="costs"       element={<CostsPage />} />
+        <Route path="costs"        element={<CostsPage />} />
+        <Route path="fixed-costs"  element={<FixedCostsPage />} />
+        <Route path="sales"        element={<SalesPage />} />
+        <Route path="expenses"        element={<ExpensesPage />} />
+        <Route path="profitability"   element={<ProfitabilityPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
