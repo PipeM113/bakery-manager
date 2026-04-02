@@ -27,6 +27,7 @@ type Recipe struct {
 	YieldUnit       string             `json:"yield_unit"`
 	PhotoURL        *string            `json:"photo_url"`
 	IsBase          bool               `json:"is_base"`
+	ScaleFactor     float64            `json:"scale_factor"`
 	IndirectCostPct float64            `json:"indirect_cost_pct"`
 	LaborCostPct    float64            `json:"labor_cost_pct"`
 	Ingredients     []RecipeIngredient `json:"ingredients"`
@@ -49,13 +50,16 @@ func (r *RecipeRepository) Create(ctx context.Context, recipe Recipe) (Recipe, e
 	}
 	defer tx.Rollback(ctx)
 
+	if recipe.ScaleFactor == 0 {
+		recipe.ScaleFactor = 1.0
+	}
 	err = tx.QueryRow(ctx, `
-		INSERT INTO recipes (user_id, parent_id, name, description, yield, yield_unit, photo_url, is_base, indirect_cost_pct, labor_cost_pct)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+		INSERT INTO recipes (user_id, parent_id, name, description, yield, yield_unit, photo_url, is_base, scale_factor, indirect_cost_pct, labor_cost_pct)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
 		RETURNING id, created_at, updated_at`,
 		recipe.UserID, recipe.ParentID, recipe.Name, recipe.Description,
 		recipe.Yield, recipe.YieldUnit, recipe.PhotoURL, recipe.IsBase,
-		recipe.IndirectCostPct, recipe.LaborCostPct,
+		recipe.ScaleFactor, recipe.IndirectCostPct, recipe.LaborCostPct,
 	).Scan(&recipe.ID, &recipe.CreatedAt, &recipe.UpdatedAt)
 	if err != nil {
 		return Recipe{}, fmt.Errorf("insert recipe: %w", err)
@@ -82,7 +86,7 @@ func (r *RecipeRepository) Create(ctx context.Context, recipe Recipe) (Recipe, e
 func (r *RecipeRepository) GetAll(ctx context.Context) ([]Recipe, error) {
 	rows, err := r.db.Query(ctx, `
 		SELECT id, user_id, parent_id, name, description, yield, yield_unit,
-		       photo_url, is_base, indirect_cost_pct, labor_cost_pct, created_at, updated_at
+		       photo_url, is_base, scale_factor, indirect_cost_pct, labor_cost_pct, created_at, updated_at
 		FROM recipes ORDER BY name ASC`)
 	if err != nil {
 		return nil, fmt.Errorf("get all recipes: %w", err)
@@ -95,7 +99,7 @@ func (r *RecipeRepository) GetAll(ctx context.Context) ([]Recipe, error) {
 		err := rows.Scan(
 			&rec.ID, &rec.UserID, &rec.ParentID, &rec.Name, &rec.Description,
 			&rec.Yield, &rec.YieldUnit, &rec.PhotoURL, &rec.IsBase,
-			&rec.IndirectCostPct, &rec.LaborCostPct, &rec.CreatedAt, &rec.UpdatedAt,
+			&rec.ScaleFactor, &rec.IndirectCostPct, &rec.LaborCostPct, &rec.CreatedAt, &rec.UpdatedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("scan recipe: %w", err)
@@ -130,12 +134,12 @@ func (r *RecipeRepository) GetByID(ctx context.Context, id string) (Recipe, erro
 	var rec Recipe
 	err := r.db.QueryRow(ctx, `
 		SELECT id, user_id, parent_id, name, description, yield, yield_unit,
-		       photo_url, is_base, indirect_cost_pct, labor_cost_pct, created_at, updated_at
+		       photo_url, is_base, scale_factor, indirect_cost_pct, labor_cost_pct, created_at, updated_at
 		FROM recipes WHERE id = $1`, id,
 	).Scan(
 		&rec.ID, &rec.UserID, &rec.ParentID, &rec.Name, &rec.Description,
 		&rec.Yield, &rec.YieldUnit, &rec.PhotoURL, &rec.IsBase,
-		&rec.IndirectCostPct, &rec.LaborCostPct, &rec.CreatedAt, &rec.UpdatedAt,
+		&rec.ScaleFactor, &rec.IndirectCostPct, &rec.LaborCostPct, &rec.CreatedAt, &rec.UpdatedAt,
 	)
 	if err != nil {
 		return Recipe{}, fmt.Errorf("get recipe: %w", err)
@@ -164,28 +168,39 @@ func (r *RecipeRepository) GetByID(ctx context.Context, id string) (Recipe, erro
 	return rec, nil
 }
 
-func (r *RecipeRepository) Delete(ctx context.Context, id string) error {
-	_, err := r.db.Exec(ctx, `DELETE FROM recipes WHERE id = $1`, id)
-	return err
+func (r *RecipeRepository) Delete(ctx context.Context, id, userID string) error {
+	tag, err := r.db.Exec(ctx, `DELETE FROM recipes WHERE id = $1 AND user_id = $2`, id, userID)
+	if err != nil {
+		return fmt.Errorf("delete recipe: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return fmt.Errorf("recipe not found or not owned by user")
+	}
+	return nil
 }
 
-func (r *RecipeRepository) Update(ctx context.Context, id string, recipe Recipe) (Recipe, error) {
+func (r *RecipeRepository) Update(ctx context.Context, id, userID string, recipe Recipe) (Recipe, error) {
 	tx, err := r.db.Begin(ctx)
 	if err != nil {
 		return Recipe{}, fmt.Errorf("begin tx: %w", err)
 	}
 	defer tx.Rollback(ctx)
 
-	_, err = tx.Exec(ctx, `
+	tag, err := tx.Exec(ctx, `
 		UPDATE recipes
-		SET name=$1, yield=$2, yield_unit=$3, indirect_cost_pct=$4,
-		    labor_cost_pct=$5, updated_at=NOW()
-		WHERE id=$6`,
-		recipe.Name, recipe.Yield, recipe.YieldUnit,
-		recipe.IndirectCostPct, recipe.LaborCostPct, id,
+		SET name=$1, description=$2, yield=$3, yield_unit=$4, indirect_cost_pct=$5,
+		    labor_cost_pct=$6,
+		    scale_factor=CASE WHEN $8 > 0 THEN $8 ELSE scale_factor END,
+		    updated_at=NOW()
+		WHERE id=$7 AND user_id=$9`,
+		recipe.Name, recipe.Description, recipe.Yield, recipe.YieldUnit,
+		recipe.IndirectCostPct, recipe.LaborCostPct, id, recipe.ScaleFactor, userID,
 	)
 	if err != nil {
 		return Recipe{}, fmt.Errorf("update recipe: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return Recipe{}, fmt.Errorf("recipe not found or not owned by user")
 	}
 
 	_, err = tx.Exec(ctx, `DELETE FROM recipe_ingredients WHERE recipe_id=$1`, id)
@@ -208,4 +223,38 @@ func (r *RecipeRepository) Update(ctx context.Context, id string, recipe Recipe)
 		return Recipe{}, fmt.Errorf("commit tx: %w", err)
 	}
 	return r.GetByID(ctx, id)
+}
+
+func (r *RecipeRepository) UpdatePhotoURL(ctx context.Context, id string, photoURL string) error {
+	_, err := r.db.Exec(ctx, `UPDATE recipes SET photo_url=$1, updated_at=NOW() WHERE id=$2`, photoURL, id)
+	return err
+}
+
+func (r *RecipeRepository) SaveScaled(ctx context.Context, recipeID string, scaleFactor float64, newName string) (Recipe, error) {
+	original, err := r.GetByID(ctx, recipeID)
+	if err != nil {
+		return Recipe{}, fmt.Errorf("get original recipe: %w", err)
+	}
+
+	scaled := Recipe{
+		UserID:          original.UserID,
+		ParentID:        &recipeID,
+		Name:            newName,
+		Description:     original.Description,
+		Yield:           original.Yield * scaleFactor,
+		YieldUnit:       original.YieldUnit,
+		PhotoURL:        original.PhotoURL,
+		IsBase:          false,
+		ScaleFactor:     scaleFactor,
+		IndirectCostPct: original.IndirectCostPct,
+		LaborCostPct:    original.LaborCostPct,
+	}
+	for _, ing := range original.Ingredients {
+		scaled.Ingredients = append(scaled.Ingredients, RecipeIngredient{
+			IngredientID: ing.IngredientID,
+			Quantity:     ing.Quantity * scaleFactor,
+			Unit:         ing.Unit,
+		})
+	}
+	return r.Create(ctx, scaled)
 }
