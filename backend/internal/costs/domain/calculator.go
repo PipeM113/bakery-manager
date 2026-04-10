@@ -12,18 +12,19 @@ type IngredientCost struct {
 }
 
 type CostBreakdown struct {
-	RecipeID         string           `json:"recipe_id"`
-	RecipeName       string           `json:"recipe_name"`
-	Yield            float64          `json:"yield"`
-	YieldUnit        string           `json:"yield_unit"`
-	Ingredients      []IngredientCost `json:"ingredients"`
-	IngredientsTotal float64          `json:"ingredients_total"`
-	IndirectCosts    float64          `json:"indirect_costs"`
-	LaborCosts       float64          `json:"labor_costs"`
-	TotalCost        float64          `json:"total_cost"`
-	CostPerPortion   float64          `json:"cost_per_portion"`
-	MarginPct        float64          `json:"margin_pct"`
-	SuggestedPrice   float64          `json:"suggested_price"`
+	RecipeID            string           `json:"recipe_id"`
+	RecipeName          string           `json:"recipe_name"`
+	Yield               float64          `json:"yield"`
+	YieldUnit           string           `json:"yield_unit"`
+	Ingredients         []IngredientCost `json:"ingredients"`
+	IngredientsTotal    float64          `json:"ingredients_total"`
+	IndirectCosts       float64          `json:"indirect_costs"`
+	LaborCosts          float64          `json:"labor_costs"`
+	SubtotalSinMargen   float64          `json:"subtotal_sin_margen"`
+	TotalCost           float64          `json:"total_cost"`
+	CostPerPortion      float64          `json:"cost_per_portion"`
+	MarginPct           float64          `json:"margin_pct"`
+	SuggestedPrice      float64          `json:"suggested_price"`
 }
 
 // ceilTo500 redondea hacia arriba al múltiplo de 500 más cercano.
@@ -56,27 +57,25 @@ func Calculate(
 
 	costPerPortion := 0.0
 	if yield > 0 {
-		costPerPortion = totalCost / yield
+		costPerPortion = (totalCost / yield) * (1 + marginPct)
 	}
 
-	suggestedPrice := 0.0
-	if costPerPortion > 0 {
-		suggestedPrice = ceilTo500(costPerPortion * (1 + marginPct))
-	}
+	suggestedPrice := costPerPortion * yield
 
 	return CostBreakdown{
-		RecipeID:         recipeID,
-		RecipeName:       recipeName,
-		Yield:            yield,
-		YieldUnit:        yieldUnit,
-		Ingredients:      ingredients,
-		IngredientsTotal: ingredientsTotal,
-		IndirectCosts:    indirectCosts,
-		LaborCosts:       laborCosts,
-		TotalCost:        totalCost,
-		CostPerPortion:   costPerPortion,
-		MarginPct:        marginPct,
-		SuggestedPrice:   suggestedPrice,
+		RecipeID:          recipeID,
+		RecipeName:        recipeName,
+		Yield:             yield,
+		YieldUnit:         yieldUnit,
+		Ingredients:       ingredients,
+		IngredientsTotal:  ingredientsTotal,
+		IndirectCosts:     indirectCosts,
+		LaborCosts:        laborCosts,
+		SubtotalSinMargen: totalCost,
+		TotalCost:         totalCost,
+		CostPerPortion:    costPerPortion,
+		MarginPct:         marginPct,
+		SuggestedPrice:    suggestedPrice,
 	}
 }
 
