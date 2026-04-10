@@ -148,6 +148,49 @@ func (h *RecipeHandler) Scale(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(recipe)
 }
 
+func (h *RecipeHandler) SaveAs(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+
+	var req struct {
+		Portions float64 `json:"portions"`
+		NewName  string  `json:"new_name"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httputil.JSONError(w, "request inválido", http.StatusBadRequest)
+		return
+	}
+	if req.Portions < 1 {
+		httputil.JSONError(w, "porciones debe ser al menos 1", http.StatusBadRequest)
+		return
+	}
+	req.NewName = strings.TrimSpace(req.NewName)
+	if req.NewName == "" {
+		httputil.JSONError(w, "el nombre es requerido", http.StatusBadRequest)
+		return
+	}
+
+	original, err := h.repo.GetByID(r.Context(), id)
+	if err != nil {
+		httputil.JSONError(w, "receta no encontrada", http.StatusNotFound)
+		return
+	}
+	if original.Yield <= 0 {
+		httputil.JSONError(w, "la receta original no tiene rendimiento válido", http.StatusBadRequest)
+		return
+	}
+
+	scaleFactor := req.Portions / original.Yield
+	recipe, err := h.repo.SaveScaled(r.Context(), id, scaleFactor, req.NewName)
+	if err != nil {
+		httputil.JSONError(w, "error guardando receta", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(recipe)
+}
+
 func (h *RecipeHandler) SaveScaled(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 

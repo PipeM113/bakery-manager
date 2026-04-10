@@ -30,6 +30,7 @@ type Recipe struct {
 	ScaleFactor     float64            `json:"scale_factor"`
 	IndirectCostPct float64            `json:"indirect_cost_pct"`
 	LaborCostPct    float64            `json:"labor_cost_pct"`
+	MarginPct       float64            `json:"margin_pct"`
 	Ingredients     []RecipeIngredient `json:"ingredients"`
 	CreatedAt       time.Time          `json:"created_at"`
 	UpdatedAt       time.Time          `json:"updated_at"`
@@ -54,12 +55,12 @@ func (r *RecipeRepository) Create(ctx context.Context, recipe Recipe) (Recipe, e
 		recipe.ScaleFactor = 1.0
 	}
 	err = tx.QueryRow(ctx, `
-		INSERT INTO recipes (user_id, parent_id, name, description, yield, yield_unit, photo_url, is_base, scale_factor, indirect_cost_pct, labor_cost_pct)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+		INSERT INTO recipes (user_id, parent_id, name, description, yield, yield_unit, photo_url, is_base, scale_factor, indirect_cost_pct, labor_cost_pct, margin_pct)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
 		RETURNING id, created_at, updated_at`,
 		recipe.UserID, recipe.ParentID, recipe.Name, recipe.Description,
 		recipe.Yield, recipe.YieldUnit, recipe.PhotoURL, recipe.IsBase,
-		recipe.ScaleFactor, recipe.IndirectCostPct, recipe.LaborCostPct,
+		recipe.ScaleFactor, recipe.IndirectCostPct, recipe.LaborCostPct, recipe.MarginPct,
 	).Scan(&recipe.ID, &recipe.CreatedAt, &recipe.UpdatedAt)
 	if err != nil {
 		return Recipe{}, fmt.Errorf("insert recipe: %w", err)
@@ -86,7 +87,7 @@ func (r *RecipeRepository) Create(ctx context.Context, recipe Recipe) (Recipe, e
 func (r *RecipeRepository) GetAll(ctx context.Context) ([]Recipe, error) {
 	rows, err := r.db.Query(ctx, `
 		SELECT id, user_id, parent_id, name, description, yield, yield_unit,
-		       photo_url, is_base, scale_factor, indirect_cost_pct, labor_cost_pct, created_at, updated_at
+		       photo_url, is_base, scale_factor, indirect_cost_pct, labor_cost_pct, margin_pct, created_at, updated_at
 		FROM recipes ORDER BY name ASC`)
 	if err != nil {
 		return nil, fmt.Errorf("get all recipes: %w", err)
@@ -99,7 +100,7 @@ func (r *RecipeRepository) GetAll(ctx context.Context) ([]Recipe, error) {
 		err := rows.Scan(
 			&rec.ID, &rec.UserID, &rec.ParentID, &rec.Name, &rec.Description,
 			&rec.Yield, &rec.YieldUnit, &rec.PhotoURL, &rec.IsBase,
-			&rec.ScaleFactor, &rec.IndirectCostPct, &rec.LaborCostPct, &rec.CreatedAt, &rec.UpdatedAt,
+			&rec.ScaleFactor, &rec.IndirectCostPct, &rec.LaborCostPct, &rec.MarginPct, &rec.CreatedAt, &rec.UpdatedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("scan recipe: %w", err)
@@ -134,12 +135,12 @@ func (r *RecipeRepository) GetByID(ctx context.Context, id string) (Recipe, erro
 	var rec Recipe
 	err := r.db.QueryRow(ctx, `
 		SELECT id, user_id, parent_id, name, description, yield, yield_unit,
-		       photo_url, is_base, scale_factor, indirect_cost_pct, labor_cost_pct, created_at, updated_at
+		       photo_url, is_base, scale_factor, indirect_cost_pct, labor_cost_pct, margin_pct, created_at, updated_at
 		FROM recipes WHERE id = $1`, id,
 	).Scan(
 		&rec.ID, &rec.UserID, &rec.ParentID, &rec.Name, &rec.Description,
 		&rec.Yield, &rec.YieldUnit, &rec.PhotoURL, &rec.IsBase,
-		&rec.ScaleFactor, &rec.IndirectCostPct, &rec.LaborCostPct, &rec.CreatedAt, &rec.UpdatedAt,
+		&rec.ScaleFactor, &rec.IndirectCostPct, &rec.LaborCostPct, &rec.MarginPct, &rec.CreatedAt, &rec.UpdatedAt,
 	)
 	if err != nil {
 		return Recipe{}, fmt.Errorf("get recipe: %w", err)
@@ -228,6 +229,22 @@ func (r *RecipeRepository) Update(ctx context.Context, id, userID string, recipe
 func (r *RecipeRepository) UpdatePhotoURL(ctx context.Context, id string, photoURL string) error {
 	_, err := r.db.Exec(ctx, `UPDATE recipes SET photo_url=$1, updated_at=NOW() WHERE id=$2`, photoURL, id)
 	return err
+}
+
+func (r *RecipeRepository) UpdateCosts(ctx context.Context, id string, indirectPct, laborPct, marginPct float64) error {
+	tag, err := r.db.Exec(ctx, `
+		UPDATE recipes
+		SET indirect_cost_pct=$1, labor_cost_pct=$2, margin_pct=$3, updated_at=NOW()
+		WHERE id=$4`,
+		indirectPct, laborPct, marginPct, id,
+	)
+	if err != nil {
+		return fmt.Errorf("update costs: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return fmt.Errorf("recipe not found")
+	}
+	return nil
 }
 
 func (r *RecipeRepository) SaveScaled(ctx context.Context, recipeID string, scaleFactor float64, newName string) (Recipe, error) {
