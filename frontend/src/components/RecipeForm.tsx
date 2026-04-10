@@ -7,14 +7,19 @@ interface Props {
   editing: IRecipe | null;
   ingredients: IIngredientOption[];
   onSave: (data: RecipeFormData) => Promise<void>;
+  onSaveAs?: (data: RecipeFormData, versionName: string) => Promise<void>;
   onClose: () => void;
 }
 
-export default function RecipeForm({ editing, ingredients, onSave, onClose }: Props) {
+export default function RecipeForm({ editing, ingredients, onSave, onSaveAs, onClose }: Props) {
   const [form, setForm] = useState<RecipeFormData>(emptyRecipeForm);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [descriptionTouched, setDescriptionTouched] = useState(false);
+  const [showVersionModal, setShowVersionModal] = useState(false);
+  const [versionName, setVersionName] = useState("");
+  const [savingAs, setSavingAs] = useState(false);
+  const [versionError, setVersionError] = useState("");
 
   const handleClose = useCallback(() => onClose(), [onClose]);
 
@@ -72,12 +77,17 @@ export default function RecipeForm({ editing, ingredients, onSave, onClose }: Pr
     setForm((f) => ({ ...f, ingredients: f.ingredients.filter((_, i) => i !== idx) }));
   };
 
+  const validateForm = (): boolean => {
+    if (!form.name.trim()) { setError("El nombre es requerido"); return false; }
+    if (!form.description.trim()) { setDescriptionTouched(true); setError("La descripción es obligatoria para generar cotización"); return false; }
+    if (!form.yield || form.yield <= 0) { setError("El rendimiento debe ser mayor a 0"); return false; }
+    if (form.ingredients.length === 0) { setError("Agrega al menos un ingrediente"); return false; }
+    return true;
+  };
+
   const handleSave = async () => {
     setError("");
-    if (!form.name.trim()) { setError("El nombre es requerido"); return; }
-    if (!form.description.trim()) { setDescriptionTouched(true); setError("La descripción es obligatoria para generar cotización"); return; }
-    if (!form.yield || form.yield <= 0) { setError("El rendimiento debe ser mayor a 0"); return; }
-    if (form.ingredients.length === 0) { setError("Agrega al menos un ingrediente"); return; }
+    if (!validateForm()) return;
     setSaving(true);
     try {
       await onSave(form);
@@ -85,6 +95,29 @@ export default function RecipeForm({ editing, ingredients, onSave, onClose }: Pr
       setError(e.response?.data?.error || "Error al guardar");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const openVersionModal = () => {
+    setError("");
+    if (!validateForm()) return;
+    setVersionName("");
+    setVersionError("");
+    setShowVersionModal(true);
+  };
+
+  const handleConfirmSaveAs = async () => {
+    const name = versionName.trim();
+    if (!name) { setVersionError("El nombre de la versión es requerido"); return; }
+    setSavingAs(true);
+    setVersionError("");
+    try {
+      await onSaveAs!(form, name);
+      setShowVersionModal(false);
+    } catch (e: any) {
+      setVersionError(e.response?.data?.error || "Error al crear versión");
+    } finally {
+      setSavingAs(false);
     }
   };
 
@@ -126,14 +159,22 @@ export default function RecipeForm({ editing, ingredients, onSave, onClose }: Pr
           <textarea
             value={form.description}
             placeholder="ej. Torta de hojarasca con manjar y crema, rinde 15 porciones"
+            maxLength={500}
             onChange={(e) => { setForm({ ...form, description: e.target.value }); if (descriptionTouched && e.target.value.trim()) setError(""); }}
             onBlur={() => { setDescriptionTouched(true); if (!form.description.trim()) setError("La descripción es obligatoria para generar cotización"); }}
             rows={2}
             className={`w-full bg-vanilla-100 border text-stone-800 px-3 py-2 text-sm font-light focus:outline-none transition-all resize-none ${descriptionTouched && !form.description.trim() ? "border-terracota-500 focus:border-terracota-500" : "border-stone-200 focus:border-gold"}`}
           />
-          {descriptionTouched && !form.description.trim() && (
-            <p className="text-terracota-500 text-xs mt-1 tracking-wide">La descripción es obligatoria para generar cotización</p>
-          )}
+          <div className="flex justify-between items-start mt-1">
+            {descriptionTouched && !form.description.trim() ? (
+              <p className="text-terracota-500 text-xs tracking-wide">La descripción es obligatoria para generar cotización</p>
+            ) : (
+              <span />
+            )}
+            <p className={`text-xs ${form.description.length >= 500 ? "text-red-500" : form.description.length > 450 ? "text-orange-500" : "text-stone-400"}`}>
+              {form.description.length}/500
+            </p>
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
@@ -224,14 +265,80 @@ export default function RecipeForm({ editing, ingredients, onSave, onClose }: Pr
 
         {error && <p className="text-terracota-500 text-xs tracking-wide">{error}</p>}
 
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="w-full bg-gold text-white text-xs tracking-widest uppercase font-medium py-3 hover:bg-gold-light transition-all disabled:opacity-50"
-        >
-          {saving ? "Guardando..." : editing ? "Guardar cambios" : "Guardar receta"}
-        </button>
+        {editing && onSaveAs ? (
+          <div className="flex gap-2">
+            <button
+              onClick={openVersionModal}
+              disabled={saving || savingAs}
+              className="flex-1 border border-stone-200 text-stone-600 text-xs tracking-widest uppercase font-medium py-3 hover:border-gold hover:text-gold transition-all disabled:opacity-50"
+            >
+              Guardar como...
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={saving || savingAs}
+              className="flex-1 bg-gold text-white text-xs tracking-widest uppercase font-medium py-3 hover:bg-gold-light transition-all disabled:opacity-50"
+            >
+              {saving ? "Guardando..." : "Guardar"}
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="w-full bg-gold text-white text-xs tracking-widest uppercase font-medium py-3 hover:bg-gold-light transition-all disabled:opacity-50"
+          >
+            {saving ? "Guardando..." : editing ? "Guardar cambios" : "Guardar receta"}
+          </button>
+        )}
       </div>
+
+      {showVersionModal && (
+        <div className="fixed inset-0 z-[60] bg-stone-800 bg-opacity-60 flex items-center justify-center p-4">
+          <div className="bg-white border border-stone-200 w-full max-w-sm p-6 space-y-4 shadow-xl">
+            <div className="flex items-center justify-between">
+              <h3 className="font-display text-xl text-stone-800">Guardar como nueva versión</h3>
+              <button
+                onClick={() => setShowVersionModal(false)}
+                className="text-stone-400 hover:text-stone-800 text-xl"
+              >
+                ×
+              </button>
+            </div>
+
+            <p className="text-stone-500 text-xs font-light leading-relaxed">
+              Se creará una copia de la receta con los cambios actuales. La receta original no se modificará.
+            </p>
+
+            <div>
+              <label className="block text-xs tracking-widest uppercase text-stone-400 mb-1.5 font-light">
+                Nombre de la versión
+              </label>
+              <input
+                type="text"
+                value={versionName}
+                onChange={(e) => { setVersionName(e.target.value); if (versionError) setVersionError(""); }}
+                placeholder="ej. 12 porciones, sin gluten, versión verano"
+                className="w-full bg-vanilla-100 border border-stone-200 text-stone-800 px-3 py-2 text-sm font-light focus:outline-none focus:border-gold transition-all"
+                autoFocus
+                onKeyDown={(e) => { if (e.key === "Enter") handleConfirmSaveAs(); if (e.key === "Escape") setShowVersionModal(false); }}
+              />
+            </div>
+
+            {versionError && (
+              <p className="text-terracota-500 text-xs tracking-wide">{versionError}</p>
+            )}
+
+            <button
+              onClick={handleConfirmSaveAs}
+              disabled={savingAs}
+              className="w-full bg-gold text-white text-xs tracking-widest uppercase font-medium py-3 hover:bg-gold-light transition-all disabled:opacity-50"
+            >
+              {savingAs ? "Creando versión..." : "Crear versión"}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

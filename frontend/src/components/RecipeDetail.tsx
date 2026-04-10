@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import type { IRecipe } from "../types/recipe";
 import { recipeService } from "../api/recipeService";
 import RecipePhotoUpload from "./RecipePhotoUpload";
@@ -20,14 +20,6 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onSaved }: Props
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [photoUrl, setPhotoUrl] = useState<string | null>(recipe.photo_url);
   const [showPhotoUpload, setShowPhotoUpload] = useState(false);
-
-  const handleClose = useCallback(() => onClose(), [onClose]);
-
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === "Escape" && !showSaveModal) handleClose(); };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [handleClose, showSaveModal]);
 
   const factor = recipe.yield > 0 ? targetYield / recipe.yield : 1;
   const isScaled = Math.abs(factor - 1) > 0.001;
@@ -61,10 +53,7 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onSaved }: Props
 
   return (
     <>
-      <div
-        className="fixed inset-0 z-50 bg-stone-800 bg-opacity-40 flex items-end md:items-center justify-center p-4"
-        onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}
-      >
+      <div className="fixed inset-0 z-50 bg-stone-800 bg-opacity-40 flex items-end md:items-center justify-center p-4">
         <div className="bg-white border border-stone-200 w-full max-w-lg max-h-[90vh] overflow-y-auto p-6 space-y-5 shadow-lg">
           <div className="flex items-center justify-between">
             <h2 className="font-display text-2xl text-stone-800 truncate pr-4">{recipe.name}</h2>

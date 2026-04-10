@@ -20,6 +20,7 @@ export interface IRecipe {
   scale_factor: number;
   indirect_cost_pct: number;
   labor_cost_pct: number;
+  margin_pct: number;
   ingredients: IRecipeIngredient[];
   created_at: string;
   updated_at: string;

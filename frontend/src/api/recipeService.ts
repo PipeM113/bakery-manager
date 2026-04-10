@@ -32,6 +32,16 @@ export const recipeService = {
     await api.delete(`/recipes/${id}`);
   },
 
+  createVersion: async (parentId: string, versionName: string, form: RecipeFormData): Promise<IRecipe> => {
+    const { data } = await api.post<IRecipe>("/recipes", {
+      ...form,
+      name: versionName,
+      yield: Number(form.yield),
+      parent_id: parentId,
+    });
+    return data;
+  },
+
   saveScaled: async (id: string, scaleFactor: number, newName: string): Promise<IRecipe> => {
     const { data } = await api.post<IRecipe>(`/recipes/${id}/save-scaled`, {
       scale_factor: scaleFactor,
