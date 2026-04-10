@@ -51,13 +51,6 @@ export default function IngredientsPage() {
 
   useEffect(() => { load(); }, []);
 
-  // ESC closes modal
-  useEffect(() => {
-    if (!showForm) return;
-    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") setShowForm(false); };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [showForm]);
 
   const showSuccess = (msg: string) => {
     setSuccessMsg(msg);
@@ -256,7 +249,6 @@ export default function IngredientsPage() {
       {showForm && (
         <div
           className="fixed inset-0 z-50 bg-stone-800 bg-opacity-40 flex items-end md:items-center justify-center p-4"
-          onClick={(e) => { if (e.target === e.currentTarget) setShowForm(false); }}
         >
           <div className="bg-white border border-stone-200 w-full max-w-xs p-4 space-y-3 shadow-lg">
             <div className="flex items-center justify-between">

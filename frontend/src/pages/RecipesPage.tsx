@@ -46,6 +46,12 @@ export default function RecipesPage() {
     load();
   };
 
+  const handleSaveAs = async (data: RecipeFormData, versionName: string) => {
+    await recipeService.createVersion(editing!.id, versionName, data);
+    setShowForm(false);
+    load();
+  };
+
   const handleDelete = async (id: string) => {
     if (!confirm("¿Eliminar esta receta?")) return;
     await recipeService.delete(id);
@@ -90,6 +96,7 @@ export default function RecipesPage() {
           editing={editing}
           ingredients={ingredients}
           onSave={handleSave}
+          onSaveAs={editing ? handleSaveAs : undefined}
           onClose={() => setShowForm(false)}
         />
       )}

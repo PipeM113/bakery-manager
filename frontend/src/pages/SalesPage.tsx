@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { saleService } from "../api/saleService";
 import { recipeService } from "../api/recipeService";
 import { ingredientService } from "../api/ingredientService";
+import { quotationService, type IQuotation } from "../api/quotationService";
 import type { ISale } from "../types/sale";
 import type { IRecipe } from "../types/recipe";
 import type { IIngredient } from "../types/ingredient";
@@ -11,6 +12,18 @@ const clp = (n: number) => `$${Math.round(n).toLocaleString("es-CL")}`;
 
 const today = () => new Date().toISOString().slice(0, 10);
 
+const STATUS_LABEL: Record<IQuotation["status"], string> = {
+  pending:   "Pendiente",
+  confirmed: "Confirmada",
+  cancelled: "Cancelada",
+};
+
+const STATUS_STYLE: Record<IQuotation["status"], string> = {
+  pending:   "bg-amber-50 text-amber-700 border border-amber-200",
+  confirmed: "bg-green-50 text-green-700 border border-green-200",
+  cancelled: "bg-red-50 text-red-500 border border-red-200 line-through",
+};
+
 interface IngredientPreview {
   name: string;
   quantity_used: number;
@@ -18,6 +31,8 @@ interface IngredientPreview {
   available: number;
   insufficient: boolean;
 }
+
+type QuotationStatusFilter = IQuotation["status"] | "";
 
 export default function SalesPage() {
   const [sales, setSales]           = useState<ISale[]>([]);
@@ -49,31 +64,32 @@ export default function SalesPage() {
   const [successMsg, setSuccessMsg] = useState("");
   const successTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Quotations
+  const [quotations, setQuotations]       = useState<IQuotation[]>([]);
+  const [quotationFilter, setQuotationFilter] = useState<QuotationStatusFilter>("");
+  const [quotationTab, setQuotationTab]   = useState<"quotations" | "sales">("quotations");
+
   const showSuccess = (msg: string) => {
     setSuccessMsg(msg);
     if (successTimer.current) clearTimeout(successTimer.current);
     successTimer.current = setTimeout(() => setSuccessMsg(""), 3000);
   };
 
-  // ESC closes confirmation modal
-  useEffect(() => {
-    if (!confirming) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") { setConfirming(false); setPreview(null); }
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [confirming]);
-
   const loadSales = (from = filterFrom, to = filterTo) =>
     saleService.getAll(from || undefined, to || undefined)
       .then(setSales)
       .catch(() => setError("Error cargando ventas"));
 
+  const loadQuotations = (status: QuotationStatusFilter = quotationFilter) =>
+    quotationService.getAll(status || undefined)
+      .then(setQuotations)
+      .catch(() => setError("Error cargando cotizaciones"));
+
   useEffect(() => {
     recipeService.getAll().then(setRecipes).catch(() => setError("Error cargando recetas"));
     ingredientService.getAll().then(setIngredients).catch(() => {});
     loadSales();
+    loadQuotations();
   }, []);
 
   // Recompute stock issues whenever recipe or quantity changes
@@ -115,6 +131,11 @@ export default function SalesPage() {
 
   const handleFilter = () => loadSales(filterFrom, filterTo);
 
+  const handleQuotationFilterChange = (status: QuotationStatusFilter) => {
+    setQuotationFilter(status);
+    loadQuotations(status);
+  };
+
   const buildPreview = (): IngredientPreview[] => {
     const recipe = recipes.find((r) => r.id === recipeId);
     if (!recipe) return [];
@@ -152,7 +173,6 @@ export default function SalesPage() {
         notes,
       });
       setSales((prev) => [sale, ...prev]);
-      // Refresh ingredient stock after sale
       ingredientService.getAll().then(setIngredients).catch(() => {});
       showSuccess("✅ Venta registrada");
       setRecipeId("");
@@ -187,8 +207,36 @@ export default function SalesPage() {
     }
   };
 
+  const handleConfirmQuotation = async (id: string) => {
+    try {
+      await quotationService.confirm(id);
+      setQuotations((prev) =>
+        prev.map((q) => q.id === id ? { ...q, status: "confirmed" } : q)
+      );
+      showSuccess("✅ Cotización confirmada");
+    } catch {
+      setError("Error confirmando cotización");
+    }
+  };
+
+  const handleCancelQuotation = async (id: string) => {
+    try {
+      await quotationService.cancel(id);
+      setQuotations((prev) =>
+        prev.map((q) => q.id === id ? { ...q, status: "cancelled" } : q)
+      );
+      showSuccess("Cotización cancelada");
+    } catch {
+      setError("Error cancelando cotización");
+    }
+  };
+
   const totalRevenue = sales.reduce((sum, s) => sum + s.total_price, 0);
   const hasStockIssue = stockIssues.length > 0;
+
+  const displayedQuotations = quotationFilter
+    ? quotations.filter((q) => q.status === quotationFilter)
+    : quotations;
 
   return (
     <div className="px-6 py-10 max-w-4xl mx-auto md:max-w-none md:px-10">
@@ -213,12 +261,15 @@ export default function SalesPage() {
 
       {/* Confirmation Modal */}
       {confirming && preview && (
-        <div
-          className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4"
-          onClick={(e) => { if (e.target === e.currentTarget) { setConfirming(false); setPreview(null); } }}
-        >
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
           <div className="bg-white border border-stone-200 p-8 max-w-md w-full">
-            <h2 className="font-display text-2xl text-stone-800 mb-4">Confirmar Venta</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-display text-2xl text-stone-800">Confirmar Venta</h2>
+              <button
+                onClick={() => { setConfirming(false); setPreview(null); }}
+                className="text-stone-400 hover:text-stone-800 text-xl leading-none"
+              >×</button>
+            </div>
             <p className="text-sm text-stone-500 font-light mb-4">
               Se descontará el siguiente stock:
             </p>
@@ -403,84 +454,196 @@ export default function SalesPage() {
         </button>
       </form>
 
-      {/* Sales list */}
-      <div className="bg-white border border-stone-200">
-        <div className="px-6 py-4 border-b border-stone-100 flex flex-col sm:flex-row sm:items-center gap-3">
-          <h2 className="font-display text-xl text-stone-800 mr-auto">Historial</h2>
+      {/* Tabs: Cotizaciones / Historial de ventas */}
+      <div className="flex border-b border-stone-200 mb-6">
+        <button
+          onClick={() => setQuotationTab("quotations")}
+          className={`px-5 py-2.5 text-xs tracking-widest uppercase font-medium transition-all
+            ${quotationTab === "quotations"
+              ? "border-b-2 border-gold text-gold"
+              : "text-stone-400 hover:text-stone-600"}`}
+        >
+          Cotizaciones
+        </button>
+        <button
+          onClick={() => setQuotationTab("sales")}
+          className={`px-5 py-2.5 text-xs tracking-widest uppercase font-medium transition-all
+            ${quotationTab === "sales"
+              ? "border-b-2 border-gold text-gold"
+              : "text-stone-400 hover:text-stone-600"}`}
+        >
+          Historial de ventas
+        </button>
+      </div>
 
-          {/* Date filters */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <input
-              type="date"
-              value={filterFrom}
-              onChange={(e) => setFilterFrom(e.target.value)}
-              className="bg-vanilla-100 border border-stone-200 text-stone-700 px-3 py-1.5
-                         text-xs font-light focus:outline-none focus:border-gold transition-all"
-            />
-            <span className="text-stone-400 text-xs">–</span>
-            <input
-              type="date"
-              value={filterTo}
-              onChange={(e) => setFilterTo(e.target.value)}
-              className="bg-vanilla-100 border border-stone-200 text-stone-700 px-3 py-1.5
-                         text-xs font-light focus:outline-none focus:border-gold transition-all"
-            />
-            <button
-              onClick={handleFilter}
-              className="text-xs tracking-widest uppercase font-medium px-4 py-1.5
-                         border border-stone-200 text-stone-500 hover:border-gold hover:text-gold transition-all"
-            >
-              Filtrar
-            </button>
+      {/* Quotations panel */}
+      {quotationTab === "quotations" && (
+        <div className="bg-white border border-stone-200">
+          <div className="px-6 py-4 border-b border-stone-100 flex flex-col sm:flex-row sm:items-center gap-3">
+            <h2 className="font-display text-xl text-stone-800 mr-auto">Cotizaciones</h2>
+            {/* Status filter */}
+            <div className="flex gap-1.5 flex-wrap">
+              {(["", "pending", "confirmed", "cancelled"] as QuotationStatusFilter[]).map((s) => (
+                <button
+                  key={s}
+                  onClick={() => handleQuotationFilterChange(s)}
+                  className={`text-xs tracking-widest uppercase font-medium px-3 py-1.5 border transition-all
+                    ${quotationFilter === s
+                      ? "bg-gold text-white border-gold"
+                      : "border-stone-200 text-stone-400 hover:border-gold hover:text-gold"}`}
+                >
+                  {s === "" ? "Todas" : STATUS_LABEL[s as IQuotation["status"]]}
+                </button>
+              ))}
+            </div>
           </div>
 
-          {sales.length > 0 && (
-            <span className="text-xs text-stone-400 font-light whitespace-nowrap">
-              Total: <span className="text-gold font-medium">{clp(totalRevenue)}</span>
-            </span>
+          {displayedQuotations.length === 0 ? (
+            <p className="text-stone-400 text-sm font-light text-center py-10">
+              No hay cotizaciones
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-stone-100">
+                    <th className="text-left px-6 py-3 text-xs tracking-widest uppercase text-stone-400 font-light">Fecha</th>
+                    <th className="text-left px-6 py-3 text-xs tracking-widest uppercase text-stone-400 font-light">Cliente</th>
+                    <th className="text-left px-6 py-3 text-xs tracking-widest uppercase text-stone-400 font-light">Producto</th>
+                    <th className="text-right px-6 py-3 text-xs tracking-widest uppercase text-stone-400 font-light">Monto</th>
+                    <th className="text-center px-6 py-3 text-xs tracking-widest uppercase text-stone-400 font-light">Estado</th>
+                    <th className="px-6 py-3" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {displayedQuotations.map((q) => (
+                    <tr key={q.id} className="border-b border-stone-100 last:border-0 hover:bg-vanilla-100 transition-colors">
+                      <td className="px-6 py-4 text-stone-600 font-light whitespace-nowrap">
+                        {new Date(q.created_at).toLocaleDateString("es-CL")}
+                      </td>
+                      <td className={`px-6 py-4 font-light ${q.status === "cancelled" ? "line-through text-stone-400" : "text-stone-800"}`}>
+                        {q.client_name}
+                      </td>
+                      <td className={`px-6 py-4 font-light ${q.status === "cancelled" ? "line-through text-stone-400" : "text-stone-600"}`}>
+                        {q.recipe_name}
+                      </td>
+                      <td className={`px-6 py-4 text-right font-medium ${q.status === "cancelled" ? "text-stone-300" : "text-stone-800"}`}>
+                        {clp(q.final_price)}
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded-sm ${STATUS_STYLE[q.status]}`}>
+                          {STATUS_LABEL[q.status]}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-right whitespace-nowrap">
+                        {q.status === "pending" && (
+                          <div className="flex gap-2 justify-end">
+                            <button
+                              onClick={() => handleConfirmQuotation(q.id)}
+                              className="text-xs tracking-widest uppercase font-medium px-3 py-1.5
+                                         bg-green-600 text-white hover:bg-green-700 transition-all"
+                            >
+                              Confirmar venta
+                            </button>
+                            <button
+                              onClick={() => handleCancelQuotation(q.id)}
+                              className="text-xs tracking-widest uppercase font-medium px-3 py-1.5
+                                         border border-stone-200 text-stone-400 hover:border-red-400 hover:text-red-500 transition-all"
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
+      )}
 
-        {sales.length === 0 ? (
-          <p className="text-stone-400 text-sm font-light text-center py-10">
-            No hay ventas registradas
-          </p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-stone-100">
-                  <th className="text-left px-6 py-3 text-xs tracking-widest uppercase text-stone-400 font-light">Fecha</th>
-                  <th className="text-left px-6 py-3 text-xs tracking-widest uppercase text-stone-400 font-light">Receta</th>
-                  <th className="text-right px-6 py-3 text-xs tracking-widest uppercase text-stone-400 font-light">Cant.</th>
-                  <th className="text-right px-6 py-3 text-xs tracking-widest uppercase text-stone-400 font-light">P. Unit.</th>
-                  <th className="text-right px-6 py-3 text-xs tracking-widest uppercase text-stone-400 font-light">Total</th>
-                  <th className="px-6 py-3" />
-                </tr>
-              </thead>
-              <tbody>
-                {sales.map((s) => (
-                  <tr key={s.id} className="border-b border-stone-100 last:border-0 hover:bg-vanilla-100 transition-colors">
-                    <td className="px-6 py-4 text-stone-600 font-light whitespace-nowrap">{s.sale_date}</td>
-                    <td className="px-6 py-4 text-stone-800 font-light">{s.recipe_name}</td>
-                    <td className="px-6 py-4 text-right text-stone-600 font-light">{s.quantity_sold}</td>
-                    <td className="px-6 py-4 text-right text-stone-600 font-light">{clp(s.unit_price)}</td>
-                    <td className="px-6 py-4 text-right font-medium text-stone-800">{clp(s.total_price)}</td>
-                    <td className="px-6 py-4 text-right">
-                      <button
-                        onClick={() => handleDelete(s.id)}
-                        className="text-xs text-stone-400 hover:text-red-500 tracking-widest uppercase transition-colors"
-                      >
-                        Eliminar
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      {/* Sales history panel */}
+      {quotationTab === "sales" && (
+        <div className="bg-white border border-stone-200">
+          <div className="px-6 py-4 border-b border-stone-100 flex flex-col sm:flex-row sm:items-center gap-3">
+            <h2 className="font-display text-xl text-stone-800 mr-auto">Historial</h2>
+
+            {/* Date filters */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <input
+                type="date"
+                value={filterFrom}
+                onChange={(e) => setFilterFrom(e.target.value)}
+                className="bg-vanilla-100 border border-stone-200 text-stone-700 px-3 py-1.5
+                           text-xs font-light focus:outline-none focus:border-gold transition-all"
+              />
+              <span className="text-stone-400 text-xs">–</span>
+              <input
+                type="date"
+                value={filterTo}
+                onChange={(e) => setFilterTo(e.target.value)}
+                className="bg-vanilla-100 border border-stone-200 text-stone-700 px-3 py-1.5
+                           text-xs font-light focus:outline-none focus:border-gold transition-all"
+              />
+              <button
+                onClick={handleFilter}
+                className="text-xs tracking-widest uppercase font-medium px-4 py-1.5
+                           border border-stone-200 text-stone-500 hover:border-gold hover:text-gold transition-all"
+              >
+                Filtrar
+              </button>
+            </div>
+
+            {sales.length > 0 && (
+              <span className="text-xs text-stone-400 font-light whitespace-nowrap">
+                Total: <span className="text-gold font-medium">{clp(totalRevenue)}</span>
+              </span>
+            )}
           </div>
-        )}
-      </div>
+
+          {sales.length === 0 ? (
+            <p className="text-stone-400 text-sm font-light text-center py-10">
+              No hay ventas registradas
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-stone-100">
+                    <th className="text-left px-6 py-3 text-xs tracking-widest uppercase text-stone-400 font-light">Fecha</th>
+                    <th className="text-left px-6 py-3 text-xs tracking-widest uppercase text-stone-400 font-light">Receta</th>
+                    <th className="text-right px-6 py-3 text-xs tracking-widest uppercase text-stone-400 font-light">Cant.</th>
+                    <th className="text-right px-6 py-3 text-xs tracking-widest uppercase text-stone-400 font-light">P. Unit.</th>
+                    <th className="text-right px-6 py-3 text-xs tracking-widest uppercase text-stone-400 font-light">Total</th>
+                    <th className="px-6 py-3" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {sales.map((s) => (
+                    <tr key={s.id} className="border-b border-stone-100 last:border-0 hover:bg-vanilla-100 transition-colors">
+                      <td className="px-6 py-4 text-stone-600 font-light whitespace-nowrap">{s.sale_date}</td>
+                      <td className="px-6 py-4 text-stone-800 font-light">{s.recipe_name}</td>
+                      <td className="px-6 py-4 text-right text-stone-600 font-light">{s.quantity_sold}</td>
+                      <td className="px-6 py-4 text-right text-stone-600 font-light">{clp(s.unit_price)}</td>
+                      <td className="px-6 py-4 text-right font-medium text-stone-800">{clp(s.total_price)}</td>
+                      <td className="px-6 py-4 text-right">
+                        <button
+                          onClick={() => handleDelete(s.id)}
+                          className="text-xs text-stone-400 hover:text-red-500 tracking-widest uppercase transition-colors"
+                        >
+                          Eliminar
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

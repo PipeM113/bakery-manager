@@ -3,9 +3,17 @@ import { recipeService } from "../api/recipeService";
 import type { IRecipe } from "../types/recipe";
 import QuotationGenerator from "../components/QuotationGenerator";
 
+type ToastState = { msg: string; ok: boolean } | null;
+
 export default function CostsPage() {
   const [recipes, setRecipes]   = useState<IRecipe[]>([]);
   const [selected, setSelected] = useState<string>("");
+  const [toast, setToast]       = useState<ToastState>(null);
+
+  const showToast = (msg: string, ok: boolean) => {
+    setToast({ msg, ok });
+    setTimeout(() => setToast(null), ok ? 1500 : 4000);
+  };
 
   useEffect(() => { recipeService.getAll().then(setRecipes); }, []);
 
@@ -13,6 +21,13 @@ export default function CostsPage() {
 
   return (
     <div className="px-6 py-10 max-w-2xl mx-auto md:max-w-none md:px-10">
+
+      {toast && (
+        <div className={`fixed top-4 right-4 z-50 px-4 py-2 text-xs tracking-widest uppercase font-medium text-white transition-all
+          ${toast.ok ? "bg-stone-700" : "bg-terracota-500"}`}>
+          {toast.msg}
+        </div>
+      )}
 
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
@@ -43,7 +58,12 @@ export default function CostsPage() {
             <h2 className="font-display text-xl text-stone-800">Cotización</h2>
             <div className="flex-1 h-px bg-stone-200" />
           </div>
-          <QuotationGenerator key={recipe.id} recipe={recipe} />
+          <QuotationGenerator
+            key={recipe.id}
+            recipe={recipe}
+            deferredSave
+            onDeferredSaveDone={(ok) => showToast(ok ? "Costos guardados" : "Error al guardar costos", ok)}
+          />
         </div>
       )}
     </div>
