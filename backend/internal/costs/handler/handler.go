@@ -29,12 +29,22 @@ func parseQueryFloat(r *http.Request, key string) float64 {
 	return v
 }
 
+func parseQueryInt(r *http.Request, key string) int {
+	v, err := strconv.Atoi(r.URL.Query().Get(key))
+	if err != nil {
+		return 0
+	}
+	return v
+}
+
 func (h *CostHandler) GetBreakdown(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	params := service.CostParams{
 		IndirectCostPct: parseQueryFloat(r, "indirect_cost_pct"),
 		LaborCostPct:    parseQueryFloat(r, "labor_cost_pct"),
 		MarginPct:       parseQueryFloat(r, "margin_pct"),
+		ExtraCharge:     parseQueryInt(r, "extra_charge"),
+		DeliveryCost:    parseQueryInt(r, "delivery_cost"),
 	}
 	breakdown, err := h.svc.GetCostBreakdown(r.Context(), id, params)
 	if err != nil {
@@ -53,10 +63,12 @@ func (h *CostHandler) GetCosts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]float64{
+	json.NewEncoder(w).Encode(map[string]interface{}{
 		"indirect_cost_pct": recipe.IndirectCostPct,
 		"labor_cost_pct":    recipe.LaborCostPct,
 		"margin_pct":        recipe.MarginPct,
+		"extra_charge":      recipe.ExtraCharge,
+		"delivery_cost":     recipe.DeliveryCost,
 	})
 }
 
@@ -67,6 +79,8 @@ func (h *CostHandler) UpdateCosts(w http.ResponseWriter, r *http.Request) {
 		IndirectCostPct float64 `json:"indirect_cost_pct"`
 		LaborCostPct    float64 `json:"labor_cost_pct"`
 		MarginPct       float64 `json:"margin_pct"`
+		ExtraCharge     int     `json:"extra_charge"`
+		DeliveryCost    int     `json:"delivery_cost"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		httputil.JSONError(w, "request inválido", http.StatusBadRequest)
@@ -76,17 +90,23 @@ func (h *CostHandler) UpdateCosts(w http.ResponseWriter, r *http.Request) {
 		httputil.JSONError(w, "los valores no pueden ser negativos", http.StatusBadRequest)
 		return
 	}
+	if req.ExtraCharge < 0 || req.DeliveryCost < 0 {
+		httputil.JSONError(w, "los cobros no pueden ser negativos", http.StatusBadRequest)
+		return
+	}
 
-	if err := h.recipeRepo.UpdateCosts(r.Context(), id, req.IndirectCostPct, req.LaborCostPct, req.MarginPct); err != nil {
+	if err := h.recipeRepo.UpdateCosts(r.Context(), id, req.IndirectCostPct, req.LaborCostPct, req.MarginPct, req.ExtraCharge, req.DeliveryCost); err != nil {
 		httputil.JSONError(w, "error actualizando costos", http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]float64{
+	json.NewEncoder(w).Encode(map[string]interface{}{
 		"indirect_cost_pct": req.IndirectCostPct,
 		"labor_cost_pct":    req.LaborCostPct,
 		"margin_pct":        req.MarginPct,
+		"extra_charge":      req.ExtraCharge,
+		"delivery_cost":     req.DeliveryCost,
 	})
 }
 

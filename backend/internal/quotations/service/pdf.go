@@ -14,16 +14,16 @@ import (
 )
 
 type QuoteData struct {
-	RecipeName  string
-	ClientName  string
-	Description string
-	Yield       float64
-	YieldUnit   string
-	PhotoURL    *string
-	TotalCost   float64
-	MarginPct   float64
-	FinalPrice  float64
-	Date        time.Time
+	RecipeName   string
+	ClientName   string
+	Description  string
+	Yield        float64
+	YieldUnit    string
+	PhotoURL     *string
+	BasePrice    float64  // price with margin, before delivery (may not be rounded)
+	DeliveryCost float64  // delivery cost (multiple of 500), shown if > 0
+	FinalPrice   float64  // final rounded total (ceilTo500)
+	Date         time.Time
 }
 
 // Business contact constants – edit here to update all PDFs.
@@ -135,15 +135,63 @@ func GenerateQuotePDF(data QuoteData) (*bytes.Buffer, error) {
 	pdf.CellFormat(infoColW, 5, tr(fmt.Sprintf("Rendimiento: %.0f %s", data.Yield, data.YieldUnit)), "", 0, "L", false, 0, "")
 	rightColH += 5 + gap
 
-	// Price label
+	// Price section: show delivery breakdown if delivery > 0
 	priceY := blockStartY + rightColH
-	pdf.SetFont("Helvetica", "", 8)
-	pdf.SetTextColor(160, 155, 150)
-	pdf.SetXY(infoColX, priceY)
-	pdf.CellFormat(infoColW, 4, "PRECIO TOTAL", "", 0, "L", false, 0, "")
-	rightColH += 4 + smallGap
 
-	// Price value (gold, large)
+	if data.DeliveryCost > 0 {
+		// Base price line
+		pdf.SetFont("Helvetica", "", 8)
+		pdf.SetTextColor(160, 155, 150)
+		pdf.SetXY(infoColX, priceY)
+		pdf.CellFormat(infoColW, 4, "PRECIO BASE", "", 0, "L", false, 0, "")
+		rightColH += 4 + smallGap
+
+		basePriceY := blockStartY + rightColH
+		pdf.SetFont("Helvetica", "", 14)
+		pdf.SetTextColor(80, 75, 70)
+		pdf.SetXY(infoColX, basePriceY)
+		pdf.CellFormat(infoColW, 7, formatCLP(data.BasePrice), "", 0, "L", false, 0, "")
+		rightColH += 7 + smallGap
+
+		// Delivery line
+		deliveryY := blockStartY + rightColH
+		pdf.SetFont("Helvetica", "", 8)
+		pdf.SetTextColor(160, 155, 150)
+		pdf.SetXY(infoColX, deliveryY)
+		pdf.CellFormat(infoColW, 4, tr("+ ENVIO"), "", 0, "L", false, 0, "")
+		rightColH += 4
+
+		deliveryValY := blockStartY + rightColH
+		pdf.SetFont("Helvetica", "", 10)
+		pdf.SetTextColor(80, 75, 70)
+		pdf.SetXY(infoColX, deliveryValY)
+		pdf.CellFormat(infoColW, 5, formatCLP(data.DeliveryCost), "", 0, "L", false, 0, "")
+		rightColH += 5 + smallGap
+
+		// Divider
+		divY := blockStartY + rightColH
+		pdf.SetDrawColor(180, 140, 60)
+		pdf.SetLineWidth(0.3)
+		pdf.Line(infoColX, divY, infoColX+infoColW, divY)
+		rightColH += smallGap + 1
+
+		// Total label
+		totalLabelY := blockStartY + rightColH
+		pdf.SetFont("Helvetica", "", 8)
+		pdf.SetTextColor(160, 155, 150)
+		pdf.SetXY(infoColX, totalLabelY)
+		pdf.CellFormat(infoColW, 4, "TOTAL", "", 0, "L", false, 0, "")
+		rightColH += 4 + smallGap
+	} else {
+		// No delivery: just show "PRECIO TOTAL" label
+		pdf.SetFont("Helvetica", "", 8)
+		pdf.SetTextColor(160, 155, 150)
+		pdf.SetXY(infoColX, priceY)
+		pdf.CellFormat(infoColW, 4, "PRECIO TOTAL", "", 0, "L", false, 0, "")
+		rightColH += 4 + smallGap
+	}
+
+	// Final price value (gold, large)
 	priceValY := blockStartY + rightColH
 	pdf.SetFont("Helvetica", "B", 22)
 	pdf.SetTextColor(180, 140, 60)

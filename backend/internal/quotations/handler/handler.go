@@ -3,7 +3,6 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
-	"math"
 	"net/http"
 	"strings"
 	"time"
@@ -42,6 +41,8 @@ type generateRequest struct {
 	MarginPct       float64 `json:"margin_pct"`
 	IndirectCostPct float64 `json:"indirect_cost_pct"`
 	LaborCostPct    float64 `json:"labor_cost_pct"`
+	ExtraCharge     int     `json:"extra_charge"`
+	DeliveryCost    int     `json:"delivery_cost"`
 }
 
 func (h *QuotationHandler) Generate(w http.ResponseWriter, r *http.Request) {
@@ -88,25 +89,28 @@ func (h *QuotationHandler) Generate(w http.ResponseWriter, r *http.Request) {
 		IndirectCostPct: req.IndirectCostPct,
 		LaborCostPct:    req.LaborCostPct,
 		MarginPct:       req.MarginPct,
+		ExtraCharge:     req.ExtraCharge,
+		DeliveryCost:    req.DeliveryCost,
 	})
 	if err != nil {
 		httputil.JSONError(w, "error calculando costos", http.StatusInternalServerError)
 		return
 	}
 
-	finalPrice := math.Ceil(breakdown.TotalCost*(1+req.MarginPct)/500) * 500
+	// SuggestedPrice already includes ceilTo500 + extra_charge + delivery_cost
+	finalPrice := breakdown.SuggestedPrice
 
 	buf, err := quoteSvc.GenerateQuotePDF(quoteSvc.QuoteData{
-		RecipeName:  recipe.Name,
-		ClientName:  req.ClientName,
-		Description: recipe.Description,
-		Yield:       recipe.Yield,
-		YieldUnit:   recipe.YieldUnit,
-		PhotoURL:    recipe.PhotoURL,
-		TotalCost:   breakdown.TotalCost,
-		MarginPct:   req.MarginPct,
-		FinalPrice:  finalPrice,
-		Date:        time.Now(),
+		RecipeName:   recipe.Name,
+		ClientName:   req.ClientName,
+		Description:  recipe.Description,
+		Yield:        recipe.Yield,
+		YieldUnit:    recipe.YieldUnit,
+		PhotoURL:     recipe.PhotoURL,
+		BasePrice:    breakdown.BasePrice,
+		DeliveryCost: breakdown.DeliveryCost,
+		FinalPrice:   finalPrice,
+		Date:         time.Now(),
 	})
 	if err != nil {
 		httputil.JSONError(w, "error generando PDF", http.StatusInternalServerError)

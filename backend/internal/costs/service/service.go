@@ -17,13 +17,15 @@ func NewCostService(db *pgxpool.Pool) *CostService {
 	return &CostService{db: db}
 }
 
-// CostParams permite sobrescribir los porcentajes almacenados en la receta.
-// Si un valor es 0, se usa el valor guardado en la receta (indirect/labor)
-// o se usa 0 como margen (margin_pct).
+// CostParams allows overriding stored recipe percentages and extra charges.
+// IndirectCostPct/LaborCostPct: if 0, stored recipe values are used.
+// MarginPct, ExtraCharge, DeliveryCost: always used as-is (0 is valid).
 type CostParams struct {
 	IndirectCostPct float64
 	LaborCostPct    float64
 	MarginPct       float64
+	ExtraCharge     int
+	DeliveryCost    int
 }
 
 func (s *CostService) GetCostBreakdown(ctx context.Context, recipeID string, params CostParams) (domain.CostBreakdown, error) {
@@ -69,7 +71,6 @@ func (s *CostService) GetCostBreakdown(ctx context.Context, recipeID string, par
 			return domain.CostBreakdown{}, fmt.Errorf("scan ingredient: %w", err)
 		}
 
-		// Convertir cantidad a la unidad base del insumo para calcular correctamente
 		converted, err := kernel.ConvertToBase(ing.Quantity, recipeUnit, baseUnit)
 		if err != nil {
 			return domain.CostBreakdown{}, fmt.Errorf("ingrediente %q: %w", ing.Name, err)
@@ -92,6 +93,7 @@ func (s *CostService) GetCostBreakdown(ctx context.Context, recipeID string, par
 		recipeID, recipe.Name,
 		recipe.Yield, recipe.YieldUnit,
 		indirectPct, laborPct, params.MarginPct,
+		params.ExtraCharge, params.DeliveryCost,
 		ingredients,
 	), nil
 }
