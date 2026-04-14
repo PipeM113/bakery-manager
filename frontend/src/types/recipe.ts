@@ -21,6 +21,8 @@ export interface IRecipe {
   indirect_cost_pct: number;
   labor_cost_pct: number;
   margin_pct: number;
+  extra_charge: number;
+  delivery_cost: number;
   ingredients: IRecipeIngredient[];
   created_at: string;
   updated_at: string;

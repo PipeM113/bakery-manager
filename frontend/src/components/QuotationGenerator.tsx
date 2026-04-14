@@ -29,18 +29,26 @@ interface CostBreakdown {
   total_cost: number;
   margin_pct: number;
   cost_per_portion: number;
-  suggested_price: number;
+  base_price: number;    // total_cost*(1+margin), before extra/delivery/rounding
+  extra_charge: number;  // hidden surcharge
+  delivery_cost: number; // visible delivery charge
+  suggested_price: number; // ceilTo500(base_price + extra + delivery)
 }
 
 type ToastState = { msg: string; ok: boolean } | null;
 
 const clp = (n: number) => `$${Math.round(n).toLocaleString("es-CL")}`;
 
+// Fix 6: round up to nearest 500
+const ceilTo500 = (n: number) => n === 0 ? 0 : Math.ceil(n / 500) * 500;
+
 export default function QuotationGenerator({ recipe, deferredSave = false, onDeferredSaveDone }: Props) {
   const [indirectPct, setIndirectPct] = useState(String(Math.round(recipe.indirect_cost_pct * 100)));
   const [laborPct, setLaborPct]       = useState(String(Math.round(recipe.labor_cost_pct * 100)));
   const [margin, setMargin]           = useState(String(Math.round(recipe.margin_pct * 100)));
   const [portions, setPortions]       = useState(String(Math.round(recipe.yield)));
+  const [extraCharge, setExtraCharge] = useState(String(recipe.extra_charge ?? 0));
+  const [deliveryCost, setDeliveryCost] = useState(String(recipe.delivery_cost ?? 0));
   const [breakdown, setBreakdown]     = useState<CostBreakdown | null>(null);
   const [, setLoading]                = useState(false);
   const [clientName, setClientName]   = useState("");
@@ -56,19 +64,20 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Refs for deferred save (used when deferredSave=true)
-  const hasChangesRef   = useRef(false);
-  const recipeIdRef     = useRef(recipe.id);
-  const onSaveDoneRef   = useRef(onDeferredSaveDone);
+  // Refs for deferred save
+  const hasChangesRef    = useRef(false);
+  const recipeIdRef      = useRef(recipe.id);
+  const onSaveDoneRef    = useRef(onDeferredSaveDone);
   const deferredCostsRef = useRef({
-    indirect: recipe.indirect_cost_pct,
-    labor:    recipe.labor_cost_pct,
-    margin:   recipe.margin_pct,
+    indirect:     recipe.indirect_cost_pct,
+    labor:        recipe.labor_cost_pct,
+    margin:       recipe.margin_pct,
+    extraCharge:  recipe.extra_charge ?? 0,
+    deliveryCost: recipe.delivery_cost ?? 0,
   });
-  // Keep callback ref current (safe since key= remounts on recipe change)
   onSaveDoneRef.current = onDeferredSaveDone;
 
-  // Save on unmount when deferredSave=true (handles: recipe change + tab navigation)
+  // Save on unmount when deferredSave=true
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!deferredSave) return;
@@ -78,23 +87,27 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
         indirect_cost_pct: deferredCostsRef.current.indirect,
         labor_cost_pct:    deferredCostsRef.current.labor,
         margin_pct:        deferredCostsRef.current.margin,
+        extra_charge:      deferredCostsRef.current.extraCharge,
+        delivery_cost:     deferredCostsRef.current.deliveryCost,
       })
         .then(() => onSaveDoneRef.current?.(true))
         .catch(() => onSaveDoneRef.current?.(false));
     };
-  }, []); // intentional empty deps — relies on refs to read latest values
+  }, []); // intentional empty deps — relies on refs
 
-  const indirectNum = parseFloat(indirectPct || "0") / 100;
-  const laborNum    = parseFloat(laborPct    || "0") / 100;
-  const marginNum   = parseFloat(margin      || "0") / 100;
-  const portionsNum = Math.max(1, Math.round(parseFloat(portions || "1")));
+  const indirectNum     = parseFloat(indirectPct || "0") / 100;
+  const laborNum        = parseFloat(laborPct    || "0") / 100;
+  const marginNum       = parseFloat(margin      || "0") / 100;
+  const portionsNum     = Math.max(1, Math.round(parseFloat(portions || "1")));
+  const extraChargeNum  = Math.max(0, parseInt(extraCharge  || "0", 10));
+  const deliveryCostNum = Math.max(0, parseInt(deliveryCost || "0", 10));
 
-  // Adjusted per-portion cost and final price based on temporary portions
+  // Fix 6: adjusted portions price with rounding + extras
   const adjustedCostPerPortion = breakdown
     ? (breakdown.subtotal_sin_margen / portionsNum) * (1 + marginNum)
     : null;
   const adjustedFinalPrice = adjustedCostPerPortion !== null
-    ? adjustedCostPerPortion * portionsNum
+    ? ceilTo500(adjustedCostPerPortion * portionsNum + extraChargeNum + deliveryCostNum)
     : null;
 
   const portionsChanged = breakdown && portionsNum !== Math.round(breakdown.yield);
@@ -104,20 +117,22 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
     setTimeout(() => setToast(null), 2500);
   };
 
-  const saveCosts = (indirect: number, labor: number, marginVal: number) => {
+  const saveCosts = (indirect: number, labor: number, marginVal: number, extra: number, delivery: number) => {
     api.put(`/recipes/${recipe.id}/costs`, {
       indirect_cost_pct: indirect,
       labor_cost_pct:    labor,
       margin_pct:        marginVal,
+      extra_charge:      extra,
+      delivery_cost:     delivery,
     })
       .then(() => showToast("Guardado", true))
       .catch(() => showToast("Error al guardar", false));
   };
 
-  const scheduleSave = (indirect: number, labor: number, marginVal: number) => {
+  const scheduleSave = (indirect: number, labor: number, marginVal: number, extra: number, delivery: number) => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
-      saveCosts(indirect, labor, marginVal);
+      saveCosts(indirect, labor, marginVal, extra, delivery);
     }, 500);
   };
 
@@ -127,6 +142,8 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
       indirect_cost_pct: String(indirectNum),
       labor_cost_pct:    String(laborNum),
       margin_pct:        String(marginNum),
+      extra_charge:      String(extraChargeNum),
+      delivery_cost:     String(deliveryCostNum),
     });
     api.get<CostBreakdown>(`/recipes/${recipe.id}/cost?${params}`)
       .then(({ data }) => setBreakdown(data))
@@ -134,19 +151,23 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
   };
 
   useEffect(() => {
-    const newIndirect = String(Math.round(recipe.indirect_cost_pct * 100));
-    const newLabor    = String(Math.round(recipe.labor_cost_pct * 100));
-    const newMargin   = String(Math.round(recipe.margin_pct * 100));
+    const newIndirect  = String(Math.round(recipe.indirect_cost_pct * 100));
+    const newLabor     = String(Math.round(recipe.labor_cost_pct * 100));
+    const newMargin    = String(Math.round(recipe.margin_pct * 100));
+    const newExtra     = String(recipe.extra_charge ?? 0);
+    const newDelivery  = String(recipe.delivery_cost ?? 0);
     setIndirectPct(newIndirect);
     setLaborPct(newLabor);
     setMargin(newMargin);
+    setExtraCharge(newExtra);
+    setDeliveryCost(newDelivery);
     setPortions(String(Math.round(recipe.yield)));
     fetchBreakdown();
-  }, [recipe.id]);
+  }, [recipe.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const recalcDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const scheduleRecalc = (indirect: number, labor: number, marginVal: number) => {
+  const scheduleRecalc = (indirect: number, labor: number, marginVal: number, extra: number, delivery: number) => {
     if (recalcDebounceRef.current) clearTimeout(recalcDebounceRef.current);
     recalcDebounceRef.current = setTimeout(() => {
       setLoading(true);
@@ -154,6 +175,8 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
         indirect_cost_pct: String(indirect),
         labor_cost_pct:    String(labor),
         margin_pct:        String(marginVal),
+        extra_charge:      String(extra),
+        delivery_cost:     String(delivery),
       });
       api.get<CostBreakdown>(`/recipes/${recipe.id}/cost?${params}`)
         .then(({ data }) => setBreakdown(data))
@@ -165,13 +188,9 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
     setIndirectPct(val);
     const n = parseFloat(val || "0") / 100;
     if (n >= 0) {
-      if (deferredSave) {
-        deferredCostsRef.current.indirect = n;
-        hasChangesRef.current = true;
-      } else {
-        scheduleSave(n, laborNum, marginNum);
-      }
-      scheduleRecalc(n, laborNum, marginNum);
+      if (deferredSave) { deferredCostsRef.current.indirect = n; hasChangesRef.current = true; }
+      else scheduleSave(n, laborNum, marginNum, extraChargeNum, deliveryCostNum);
+      scheduleRecalc(n, laborNum, marginNum, extraChargeNum, deliveryCostNum);
     }
   };
 
@@ -179,13 +198,9 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
     setLaborPct(val);
     const n = parseFloat(val || "0") / 100;
     if (n >= 0) {
-      if (deferredSave) {
-        deferredCostsRef.current.labor = n;
-        hasChangesRef.current = true;
-      } else {
-        scheduleSave(indirectNum, n, marginNum);
-      }
-      scheduleRecalc(indirectNum, n, marginNum);
+      if (deferredSave) { deferredCostsRef.current.labor = n; hasChangesRef.current = true; }
+      else scheduleSave(indirectNum, n, marginNum, extraChargeNum, deliveryCostNum);
+      scheduleRecalc(indirectNum, n, marginNum, extraChargeNum, deliveryCostNum);
     }
   };
 
@@ -194,13 +209,38 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
     setNoDescError(false);
     const n = parseFloat(val || "0") / 100;
     if (n >= 0) {
-      if (deferredSave) {
-        deferredCostsRef.current.margin = n;
-        hasChangesRef.current = true;
-      } else {
-        scheduleSave(indirectNum, laborNum, n);
-      }
-      scheduleRecalc(indirectNum, laborNum, n);
+      if (deferredSave) { deferredCostsRef.current.margin = n; hasChangesRef.current = true; }
+      else scheduleSave(indirectNum, laborNum, n, extraChargeNum, deliveryCostNum);
+      scheduleRecalc(indirectNum, laborNum, n, extraChargeNum, deliveryCostNum);
+    }
+  };
+
+  const handleExtraChargeChange = (val: string) => {
+    setExtraCharge(val);
+    const n = Math.max(0, parseInt(val || "0", 10));
+    if (deferredSave) { deferredCostsRef.current.extraCharge = n; hasChangesRef.current = true; }
+    else scheduleSave(indirectNum, laborNum, marginNum, n, deliveryCostNum);
+    scheduleRecalc(indirectNum, laborNum, marginNum, n, deliveryCostNum);
+  };
+
+  const handleDeliveryCostChange = (val: string) => {
+    setDeliveryCost(val);
+    // defer rounding until blur
+    const n = Math.max(0, parseInt(val || "0", 10));
+    if (deferredSave) { deferredCostsRef.current.deliveryCost = n; hasChangesRef.current = true; }
+    else scheduleSave(indirectNum, laborNum, marginNum, extraChargeNum, n);
+    scheduleRecalc(indirectNum, laborNum, marginNum, extraChargeNum, n);
+  };
+
+  const handleDeliveryCostBlur = () => {
+    // Fix 6: round delivery cost up to nearest 500 on blur
+    const n = Math.max(0, parseInt(deliveryCost || "0", 10));
+    const rounded = ceilTo500(n);
+    if (rounded !== n) {
+      setDeliveryCost(String(rounded));
+      if (deferredSave) { deferredCostsRef.current.deliveryCost = rounded; hasChangesRef.current = true; }
+      else scheduleSave(indirectNum, laborNum, marginNum, extraChargeNum, rounded);
+      scheduleRecalc(indirectNum, laborNum, marginNum, extraChargeNum, rounded);
     }
   };
 
@@ -245,6 +285,8 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
         margin_pct:        marginNum,
         indirect_cost_pct: indirectNum,
         labor_cost_pct:    laborNum,
+        extra_charge:      extraChargeNum,
+        delivery_cost:     deliveryCostNum,
       });
       const url  = URL.createObjectURL(blob);
       const a    = document.createElement("a");
@@ -274,7 +316,7 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
         </div>
       )}
 
-      {/* Save-as modal */}
+      {/* Save-as modal – Fix 3: no backdrop click */}
       {showSaveModal && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black bg-opacity-40">
           <div className="bg-white border border-stone-200 shadow-lg p-6 w-full max-w-sm space-y-4">
@@ -418,6 +460,27 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
             </span>
             <span className="text-stone-700 text-sm font-medium">{clp(breakdown.cost_per_portion)}</span>
           </div>
+
+          {/* Fix 5+6: extras breakdown before final price */}
+          <div className="flex justify-between items-center">
+            <span className="text-stone-400 text-xs tracking-wide font-light">Base con margen</span>
+            <span className="text-stone-700 text-sm font-light">{clp(breakdown.base_price)}</span>
+          </div>
+          {breakdown.extra_charge > 0 && (
+            <div className="flex justify-between items-center">
+              <span className="text-stone-400 text-xs tracking-wide font-light">
+                + Cobro extra <span className="text-stone-300">(oculto en cotización)</span>
+              </span>
+              <span className="text-stone-500 text-sm font-light">{clp(breakdown.extra_charge)}</span>
+            </div>
+          )}
+          {breakdown.delivery_cost > 0 && (
+            <div className="flex justify-between items-center">
+              <span className="text-stone-400 text-xs tracking-wide font-light">+ Envío</span>
+              <span className="text-stone-700 text-sm font-light">{clp(breakdown.delivery_cost)}</span>
+            </div>
+          )}
+
           <div className="flex justify-between items-center bg-vanilla-100 border border-gold border-opacity-30 px-3 py-2 mt-1">
             <span className="text-gold text-xs tracking-wide font-medium uppercase tracking-widest">
               Precio final torta completa
@@ -495,6 +558,47 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
             />
           </div>
         </div>
+
+        {/* Fix 5: additional charges section */}
+        <div className="border border-stone-200 p-4 space-y-3 bg-vanilla-100">
+          <p className="text-xs tracking-widest uppercase text-stone-400 font-light">Costos adicionales</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs tracking-widest uppercase text-stone-400 mb-1.5 font-light">
+                Cobro extra
+              </label>
+              <input
+                type="number"
+                value={extraCharge}
+                min="0"
+                step="1"
+                placeholder="ej. 3000"
+                onChange={(e) => handleExtraChargeChange(e.target.value)}
+                className="w-full bg-white border border-stone-200 text-stone-800
+                           px-3 py-2 text-sm font-light focus:outline-none focus:border-gold transition-all"
+              />
+              <p className="text-stone-400 text-xs mt-1 font-light">No visible en cotización</p>
+            </div>
+            <div>
+              <label className="block text-xs tracking-widest uppercase text-stone-400 mb-1.5 font-light">
+                Costo de envío
+              </label>
+              <input
+                type="number"
+                value={deliveryCost}
+                min="0"
+                step="500"
+                placeholder="ej. 2000"
+                onChange={(e) => handleDeliveryCostChange(e.target.value)}
+                onBlur={handleDeliveryCostBlur}
+                className="w-full bg-white border border-stone-200 text-stone-800
+                           px-3 py-2 text-sm font-light focus:outline-none focus:border-gold transition-all"
+              />
+              <p className="text-stone-400 text-xs mt-1 font-light">Múltiplos de 500</p>
+            </div>
+          </div>
+        </div>
+
         {noDescError && (
           <p className="text-terracota-500 text-xs tracking-wide">
             La receta no tiene descripción. Agrégala antes de generar la cotización.

@@ -6,6 +6,8 @@ export interface QuotationRequest {
   margin_pct:        number;
   indirect_cost_pct: number;
   labor_cost_pct:    number;
+  extra_charge:      number;
+  delivery_cost:     number;
 }
 
 export interface IQuotation {
