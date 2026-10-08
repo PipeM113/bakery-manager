@@ -1,6 +1,6 @@
 # ADR-001: bakery-manager usa el esquema `manager` del Supabase del sitio, desplegado en Vercel
 
-- **Estado:** Propuesto (borrador de Claude; Felipe aprueba, edita o rechaza)
+- **Estado:** Aceptado (Felipe, 2026-10-08; el borrador lo redactó Claude)
 - **Fecha:** 2026-10-08
 
 ## Contexto
