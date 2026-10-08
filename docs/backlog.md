@@ -13,15 +13,16 @@ Ordenado por sprint. Cada sprint sigue el mismo método: contrato, reglas de ace
 
 ## Sprint 1, vivo en Vercel
 
-- [ ] Handler de Vercel en `api/`, manteniendo `cmd/server` para desarrollo local, y `vercel.json`.
-- [ ] pgx compatible con el pooler de transacciones (sin prepared statements), con límite de conexiones y timeouts.
-- [ ] CORS con lista de orígenes por variable de entorno (hoy hay un solo `FRONTEND_URL`); quitar `AllowCredentials`, el token va en el header.
-- [ ] Exigir `JWT_SECRET` al arrancar (hoy un secreto vacío podría aceptar tokens; probarlo).
+- [x] Handler de Vercel en `backend/api/`, manteniendo `cmd/server` para desarrollo local (S1a). Falta `vercel.json` (S1b).
+- [x] pgx compatible con el pooler de transacciones (modo `Exec`), con límite de conexiones y timeouts (S1a). Falta probarlo contra el pooler real.
+- [x] CORS con lista de orígenes por `CORS_ORIGINS`, sin `AllowCredentials` (S1a).
+- [x] Exigir `JWT_SECRET` de al menos 32 caracteres al arrancar, inyectado en el middleware (S1a).
 - [ ] Migraciones dentro del esquema `manager`, con la tabla de control en ese esquema, RLS activado y sin tocar `public`. Revisar `CREATE EXTENSION pgcrypto` en Supabase.
 - [ ] Rol de base de datos propio del manager, con permisos solo sobre `manager`.
 - [ ] Frontend: URL de la API por variable de entorno y rewrite de SPA (ya existen; verificar con el build).
 - [ ] Runbook `docs/despliegue.md`, con el respaldo manual del esquema.
 - [ ] Verificar en el log del primer despliegue la versión de Go.
+- [ ] **Primer usuario:** no hay registro en la API; sin un usuario en `manager.users` nadie puede iniciar sesión. Herramienta para generar el hash de la contraseña sin que pase por el chat, y paso en el runbook.
 
 ## Sprint 2, dinero
 

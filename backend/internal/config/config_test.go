@@ -87,7 +87,7 @@ func TestAC1_JWTSecretMustHaveAtLeast32Characters(t *testing.T) {
 				if !strings.Contains(err.Error(), "JWT_SECRET") || !strings.Contains(err.Error(), "32") {
 					t.Errorf("the error should name JWT_SECRET and the minimum 32: %v", err)
 				}
-				if c.secret != "" && strings.Contains(err.Error(), strings.TrimSpace(c.secret)) {
+				if trimmed := strings.TrimSpace(c.secret); trimmed != "" && strings.Contains(err.Error(), trimmed) {
 					t.Errorf("the error repeats the secret: %v", err)
 				}
 			}
