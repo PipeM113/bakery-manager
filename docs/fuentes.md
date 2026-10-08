@@ -15,6 +15,7 @@ Consultadas el 2026-10-08. Precios y límites cambian: reverificar antes de deci
 | Supabase: Row Level Security (2026-10-08) | https://supabase.com/docs/guides/database/postgres/row-level-security | RLS debe estar activado en las tablas de un esquema expuesto. Las claves de servicio saltan RLS y nunca van al navegador. |
 | Acciones de GitHub (heredada, 2026-10-03) | releases de https://github.com/actions/checkout | `actions/checkout` v7.0.1, commit `3d3c42e5aac5ba805825da76410c181273ba90b1`. Se fija por SHA completo en el CI. |
 | Go y su toolchain (observación propia, 2026-10-08) | comprobado en la sesión de trabajo | Con Go 1.24.7 instalado y `go 1.25.0` en `go.mod`, el comando `go` baja y usa el toolchain 1.25.0 solo (`GOTOOLCHAIN=auto`). El CI se apoya en esto. |
+| GitHub Actions: primera ejecución del CI (observación propia, 2026-10-08) | check `backend-tests` del PR #1 de `PipeM113/bakery-manager` | El job terminó con conclusión `success` en unos 40 s (vet y tests con Postgres 16 de servicio). Por lo tanto el runner `ubuntu-24.04` trae Go y usa el toolchain que pide `go.mod`. No leí el log del job; la conclusión sale del estado del check. |
 | Defecto de redondeo con `float64` (observación propia, 2026-10-08) | script aparte y `TestAC2_KnownDefectFloatDriftRaisesThePriceStep` | Insumos $1.000, mano de obra 20%, margen 25%, rinde 9: el precio exacto es $1.500, pero `float64` calcula 1500,000000000000227 y `ceilTo500` lo sube a $2.000. Hay otras combinaciones con el mismo problema. |
 
 ## No verificado todavía
@@ -22,6 +23,5 @@ Consultadas el 2026-10-08. Precios y límites cambian: reverificar antes de deci
 - Versiones de Go soportadas por Vercel y cuál usa por defecto (Felipe cree que la última; confirmarlo en el log del primer despliegue).
 - Que un solo `api/index.go` que envuelva el router chi, con un rewrite de todas las rutas, funcione en Vercel. Es una inferencia a partir de la firma verificada.
 - Comportamiento exacto de pgx 5.8.0 contra el pooler de transacciones (qué modo de ejecución usar). Verificar en el código de la librería y con una prueba en el Sprint 1.
-- Que el runner `ubuntu-24.04` de GitHub Actions traiga Go preinstalado y baje el toolchain 1.25.0; se sabrá en la primera ejecución del CI.
 - Ley 21.719 (datos personales, Chile): vigencia y obligaciones, antes de la etapa 3. Las cotizaciones guardan nombres de clientes.
 - Interpretación de Vercel sobre "uso comercial" para una herramienta interna.
