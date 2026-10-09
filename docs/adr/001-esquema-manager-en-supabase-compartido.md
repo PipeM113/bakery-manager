@@ -50,7 +50,8 @@ Opción A, con el backend y el frontend en dos proyectos de Vercel (igual que el
 3. **Login propio entre la etapa 0 y la 1.** Token HS256 con secreto compartido y sin límite de intentos de login. Mitigación mínima: exigir `JWT_SECRET` al arrancar (Sprint 1). El resto se reemplaza en la etapa 1, no se repara.
 4. **Pooler.** El backend en Vercel usa el pooler de transacciones, así que pgx debe funcionar sin prepared statements (Sprint 1). Las migraciones se corren por el pooler de sesión o la conexión directa.
 5. **Datos personales.** Las cotizaciones guardan nombres de clientes. La Ley 21.719 está sin verificar (pendiente antes de la etapa 3).
-6. **Alcance.** Este ADR no cambia el login ni toca el sitio; solo fija dónde vive el manager.
+6. **Fotos en Supabase Storage (decisión del 2026-10-09, reemplaza a Cloudinary).** Para subir archivos desde el backend hace falta una clave secreta de Supabase (o claves S3), que según la documentación da acceso completo al proyecto y se salta RLS. En un proyecto compartido con el sitio Angeles Bakery, una filtración de esa variable en Vercel expondría también los datos del sitio. Mitigaciones: una clave secreta propia para el manager (la documentación recomienda una por componente), guardada solo en las variables del proyecto backend de Vercel y nunca en el repo, el chat ni el frontend; bucket con límite de tamaño y tipos permitidos; poder revocarla sin afectar al sitio. Alternativa de fondo, si el riesgo no se acepta: un proyecto de Supabase separado para el manager (Free permite 2 proyectos activos). La Etapa 1 (identidad única) permitirá subir con el token del usuario y RLS, sin clave secreta.
+7. **Alcance.** Este ADR no cambia el login ni toca el sitio; solo fija dónde vive el manager.
 
 ## Supuestos
 
