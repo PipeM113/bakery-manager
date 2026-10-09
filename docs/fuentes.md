@@ -18,6 +18,12 @@ Consultadas el 2026-10-08. Precios y límites cambian: reverificar antes de deci
 | Go y su toolchain (observación propia, 2026-10-08) | comprobado en la sesión de trabajo | Con Go 1.24.7 instalado y `go 1.25.0` en `go.mod`, el comando `go` baja y usa el toolchain 1.25.0 solo (`GOTOOLCHAIN=auto`). El CI se apoya en esto. |
 | GitHub Actions: primera ejecución del CI (observación propia, 2026-10-08) | check `backend-tests` del PR #1 de `PipeM113/bakery-manager` | El job terminó con conclusión `success` en unos 40 s (vet y tests con Postgres 16 de servicio). Por lo tanto el runner `ubuntu-24.04` trae Go y usa el toolchain que pide `go.mod`. No leí el log del job; la conclusión sale del estado del check. |
 | Defecto de redondeo con `float64` (observación propia, 2026-10-08) | script aparte y `TestAC2_KnownDefectFloatDriftRaisesThePriceStep` | Insumos $1.000, mano de obra 20%, margen 25%, rinde 9: el precio exacto es $1.500, pero `float64` calcula 1500,000000000000227 y `ceilTo500` lo sube a $2.000. Hay otras combinaciones con el mismo problema. |
+| Supabase Storage: buckets (2026-10-09) | https://supabase.com/docs/guides/storage/buckets/fundamentals | Un bucket público permite leer con la URL a cualquiera; subir, borrar y mover siguen exigiendo autorización. Las restricciones de tamaño y tipos se definen por bucket. |
+| Supabase Storage: límites (2026-10-09) | https://supabase.com/docs/guides/storage/uploads/file-limits | En Free el límite global de archivo no puede superar 50 MB; el del bucket no puede superar el global. |
+| Supabase Storage: tamaño total (2026-10-09) | https://supabase.com/docs/guides/platform/manage-your-usage/storage-size | Free incluye 1 GB de almacenamiento. |
+| Supabase: claves de API (2026-10-09) | https://supabase.com/docs/guides/getting-started/api-keys | Las claves secretas (`sb_secret_...`) dan acceso completo al proyecto y se saltan RLS; solo para backend; se recomienda una por componente; se rotan creando otra y borrando la comprometida. |
+| Supabase Storage: control de acceso (2026-10-09) | https://supabase.com/docs/guides/storage/security/access-control | Una clave de servicio se salta las políticas de Storage. Sin ella, subir exige una política `INSERT` en `storage.objects`. |
+| Vercel Blob (2026-10-09, descartado) | https://vercel.com/docs/vercel-blob/private-storage | Existe acceso público y privado; el SDK oficial es de JavaScript. No se encontraron límites ni precios de Hobby ni un cliente oficial para Go. |
 
 ## No verificado todavía
 
@@ -26,3 +32,5 @@ Consultadas el 2026-10-08. Precios y límites cambian: reverificar antes de deci
 - Comportamiento exacto de pgx 5.8.0 contra el pooler de transacciones (qué modo de ejecución usar). Verificar en el código de la librería y con una prueba en el Sprint 1.
 - Ley 21.719 (datos personales, Chile): vigencia y obligaciones, antes de la etapa 3. Las cotizaciones guardan nombres de clientes.
 - Interpretación de Vercel sobre "uso comercial" para una herramienta interna.
+- Contrato REST de subida de Supabase Storage (ruta, cabeceras, respuesta, forma de la URL pública): se verifica en el spike del Sprint 1c.
+- Precio y límites de egreso de Supabase Storage en Free: no consultados.
