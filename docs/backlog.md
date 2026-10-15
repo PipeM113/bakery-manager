@@ -13,16 +13,16 @@ Ordenado por sprint. Cada sprint sigue el mismo método: contrato, reglas de ace
 
 ## Sprint 1, vivo en Vercel
 
-- [x] Handler de Vercel en `backend/api/`, manteniendo `cmd/server` para desarrollo local (S1a). Falta `vercel.json` (S1b).
+- [x] Handler de Vercel en `backend/api/`, manteniendo `cmd/server` para desarrollo local (S1a). `backend/vercel.json` agregado en S1b.
 - [x] pgx compatible con el pooler de transacciones (modo `Exec`), con límite de conexiones y timeouts (S1a). Falta probarlo contra el pooler real.
 - [x] CORS con lista de orígenes por `CORS_ORIGINS`, sin `AllowCredentials` (S1a).
 - [x] Exigir `JWT_SECRET` de al menos 32 caracteres al arrancar, inyectado en el middleware (S1a).
-- [ ] Migraciones dentro del esquema `manager`, con la tabla de control en ese esquema, RLS activado y sin tocar `public`. Revisar `CREATE EXTENSION pgcrypto` en Supabase.
-- [ ] Rol de base de datos propio del manager, con permisos solo sobre `manager`.
-- [ ] Frontend: URL de la API por variable de entorno y rewrite de SPA (ya existen; verificar con el build).
-- [ ] Runbook `docs/despliegue.md`, con el respaldo manual del esquema.
-- [ ] Verificar en el log del primer despliegue la versión de Go.
-- [ ] **Primer usuario:** no hay registro en la API; sin un usuario en `manager.users` nadie puede iniciar sesión. Herramienta para generar el hash de la contraseña sin que pase por el chat, y paso en el runbook.
+- [x] Migraciones dentro del esquema `manager`, con la tabla de control en ese esquema, RLS activado (migración 15) y sin tocar `public`; pgcrypto lo instala el script de setup (S1b). Falta correrlo en Supabase real.
+- [x] Rol `manager_app` con permisos solo sobre `manager` (`backend/db/setup/01_manager_schema.sql`, S1b). Falta aplicarlo en Supabase real.
+- [x] Frontend: el build falla sin `VITE_API_URL` y ya no cae a localhost; job de CI del frontend (S1b).
+- [x] Runbook `docs/despliegue.md`, con el respaldo manual del esquema (S1b).
+- [ ] Verificar en el log del primer despliegue la versión de Go y los demás puntos de "Verificación en el mundo real" de `docs/despliegue.md` (los ejecuta Felipe).
+- [x] **Primer usuario (`cmd/hashpassword` y paso del runbook, S1b):** no hay registro en la API; sin un usuario en `manager.users` nadie puede iniciar sesión. Herramienta para generar el hash de la contraseña sin que pase por el chat, y paso en el runbook.
 
 ## Sprint 2, dinero
 
