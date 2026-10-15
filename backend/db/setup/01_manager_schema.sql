@@ -13,11 +13,17 @@ BEGIN
     CREATE ROLE manager_app LOGIN PASSWORD '__MANAGER_APP_PASSWORD__'
       NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS;
   ELSE
-    ALTER ROLE manager_app WITH LOGIN PASSWORD '__MANAGER_APP_PASSWORD__'
-      NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS;
+    -- Only the password: a role without SUPERUSER may not mention the SUPERUSER attribute,
+    -- not even to say NOSUPERUSER. The attributes were fixed when the role was created.
+    ALTER ROLE manager_app WITH LOGIN PASSWORD '__MANAGER_APP_PASSWORD__';
   END IF;
 END
 $$;
+
+-- Creating a schema for another role needs the right to SET ROLE to it. On Supabase the
+-- admin (postgres) is not a superuser and gets only ADMIN OPTION on a role it creates, so
+-- grant itself the membership first (no-op if it already has it).
+GRANT manager_app TO CURRENT_USER;
 
 CREATE SCHEMA IF NOT EXISTS manager AUTHORIZATION manager_app;
 
