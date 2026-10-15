@@ -6,12 +6,12 @@ import (
 	"os"
 	"strings"
 
-	"github.com/PipeM113/bakery-manager/internal/app"
+	"github.com/PipeM113/bakery-manager/pkg/serverless"
 )
 
 // The application is built on the first request from the environment variables of the
 // Vercel project, and reused while the instance lives.
-var serve = app.NewLazyHandler(os.Getenv)
+var serve = serverless.NewLazyHandler(os.Getenv)
 
 // Handler serves every route. Depending on how the rewrite hands over the path, it may
 // arrive as /ingredients or as /api/ingredients; both reach the same route.
