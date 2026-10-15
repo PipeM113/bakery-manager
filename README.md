@@ -27,6 +27,22 @@ go test -count=1 ./...
 
 Esas credenciales son solo de la base desechable de pruebas. Para apagarla: `docker compose -f infra/docker-compose.yml down -v`.
 
+Los tests de `backend/internal/deploy` ensayan el procedimiento de despliegue y bajan la herramienta `migrate` con `go run`, así que necesitan red y un usuario de Postgres con permiso para crear roles.
+
+## Probar el frontend
+
+```bash
+cd frontend
+npm ci
+VITE_API_URL=https://api.example.test npm test
+```
+
+El build de producción falla si falta `VITE_API_URL` (ver `frontend/.env.example`).
+
+## Despliegue
+
+Supabase + Vercel, paso a paso en [`docs/despliegue.md`](docs/despliegue.md).
+
 ## Desarrollo local
 
 Copia `backend/.env.example` a `backend/.env` y complétalo con valores tuyos. Nunca se sube al repositorio. Los secretos van solo en variables de entorno.

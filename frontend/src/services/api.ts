@@ -1,7 +1,8 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:8080",
+  // The localhost default only exists in dev; production builds fail without VITE_API_URL.
+  baseURL: import.meta.env.VITE_API_URL || (import.meta.env.DEV ? "http://localhost:8080" : undefined),
 });
 
 api.interceptors.request.use((config) => {
