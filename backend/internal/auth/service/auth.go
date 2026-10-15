@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -19,11 +18,14 @@ type User struct {
 }
 
 type AuthService struct {
-	db *pgxpool.Pool
+	db        *pgxpool.Pool
+	jwtSecret []byte
 }
 
-func NewAuthService(db *pgxpool.Pool) *AuthService {
-	return &AuthService{db: db}
+// NewAuthService takes the JWT secret explicitly: it is validated once at startup, so
+// the service never reads the environment while handling a request.
+func NewAuthService(db *pgxpool.Pool, jwtSecret string) *AuthService {
+	return &AuthService{db: db, jwtSecret: []byte(jwtSecret)}
 }
 
 func (s *AuthService) Login(ctx context.Context, email, password string) (string, error) {
@@ -49,7 +51,7 @@ func (s *AuthService) Login(ctx context.Context, email, password string) (string
 		"exp":  time.Now().Add(24 * time.Hour).Unix(),
 	})
 
-	signed, err := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
+	signed, err := token.SignedString(s.jwtSecret)
 	if err != nil {
 		return "", fmt.Errorf("error generando token")
 	}

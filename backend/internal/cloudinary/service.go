@@ -15,13 +15,18 @@ type Service struct {
 }
 
 func NewService() (*Service, error) {
-	cloudinaryURL := os.Getenv("CLOUDINARY_URL")
+	return NewServiceFromURL(os.Getenv("CLOUDINARY_URL"))
+}
+
+// NewServiceFromURL builds the client from an explicit URL (the config package reads it).
+// The error never repeats the URL: it carries the API secret.
+func NewServiceFromURL(cloudinaryURL string) (*Service, error) {
 	if cloudinaryURL == "" {
 		return nil, fmt.Errorf("CLOUDINARY_URL no está configurada")
 	}
 	client, err := cld.NewFromURL(cloudinaryURL)
 	if err != nil {
-		return nil, fmt.Errorf("inicializar cloudinary: %w", err)
+		return nil, fmt.Errorf("CLOUDINARY_URL no es válida")
 	}
 	return &Service{client: client}, nil
 }
