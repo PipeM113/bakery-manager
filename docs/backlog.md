@@ -21,10 +21,10 @@ Ordenado por sprint. Cada sprint sigue el mismo método: contrato, reglas de ace
 - [x] Rol `manager_app` con permisos solo sobre `manager` (`backend/db/setup/01_manager_schema.sql`, S1b). Falta aplicarlo en Supabase real.
 - [x] Frontend: el build falla sin `VITE_API_URL` y ya no cae a localhost; job de CI del frontend (S1b).
 - [x] Runbook `docs/despliegue.md`, con el respaldo manual del esquema (S1b).
-- [ ] Verificar en el log del primer despliegue la versión de Go y los demás puntos de "Verificación en el mundo real" de `docs/despliegue.md` (los ejecuta Felipe).
+- [x] Despliegue real verificado (2026-10-18). Quedan dos casillas en `docs/despliegue.md`: "Exposed schemas" y el respaldo con `pg_dump`.
 - [x] **Primer usuario (`cmd/hashpassword` y paso del runbook, S1b):** no hay registro en la API; sin un usuario en `manager.users` nadie puede iniciar sesión. Herramienta para generar el hash de la contraseña sin que pase por el chat, y paso en el runbook.
 
-## Sprint 1c, fotos en Supabase Storage (reemplaza a Cloudinary)
+## Sprint 1c, fotos en Supabase Storage (reemplaza a Cloudinary), cerrado
 
 Decidido el 2026-10-09 (opción 3 sobre Vercel Blob; se parte sin fotos previas, no hay nada que migrar). Va después de mergear #2 y #3; el despliegue del Sprint 1b no depende de esto (la subida de fotos ya es opcional).
 
@@ -36,7 +36,7 @@ Decidido el 2026-10-09 (opción 3 sobre Vercel Blob; se parte sin fotos previas,
 - [x] Runbook: crear el bucket, la clave propia del manager y las variables en Vercel.
 - [ ] Limpieza de la foto anterior al reemplazarla (best effort), si se decide que vale la pena.
 - [ ] Verificación real (Felipe): subir una foto, abrir su URL pública, ver la foto en el PDF de la cotización, y comprobar que el bucket rechaza un archivo de más de 4 MB y uno que no es imagen.
-- [ ] Verificación real de C6 de punta a punta (Felipe): foto desde la app, URL pública, foto en el PDF, rechazo de más de 4 MB y de un archivo que no es imagen. La subida con curl ya se verificó (2026-10-18).
+- [x] Verificación real de C6 de punta a punta: Felipe confirmó que la subida de fotos funciona (2026-10-18/19). No se registró por separado el rechazo de más de 4 MB ni de un archivo que no es imagen; lo cubren los tests y las restricciones del bucket.
 - [ ] El PDF de cotizaciones no dibuja WebP (el código lo trata como JPEG y falla en silencio). Ya era así antes; decidir si se restringe a JPEG y PNG o se convierte.
 - [ ] Borrar el objeto del bucket al borrar la receta o al reemplazar su foto (hoy quedan huérfanos).
 

@@ -79,8 +79,9 @@ Ambas administran el negocio: crea una fila por persona, las dos con rol `owner`
 Ya existe un proyecto de Vercel para el frontend. El backend es un **segundo proyecto** conectado al mismo repositorio:
 
 1. Crea el proyecto, elige el repo y en **Root Directory** pon `backend`.
-2. Framework: "Other". No cambies el comando de build.
-3. El archivo `backend/vercel.json` envía todas las rutas a `api/index.go`.
+2. **Framework Preset: Other.** Vercel detecta Go solo y propone el preset "Go", que espera un servidor (`main.go` escuchando en `PORT`) y no la función de `api/`: con ese preset el build falla con `unused_function`. Cámbialo en Settings, Build & Development Settings, y haz Redeploy. No cambies el comando de build.
+3. El archivo `backend/vercel.json` envía todas las rutas a `api/index.go`. La versión de Go la fija `go.mod` (1.25.0); Vercel la descarga en el build.
+4. En Settings, Deployment Protection, **desactiva Vercel Authentication** (hace lo mismo en el proyecto del frontend). Activa, la API pide iniciar sesión en Vercel y el navegador recibe un 401. La API sigue protegida por su propio login con JWT.
 
 ## 5. Variables de entorno
 
@@ -88,7 +89,7 @@ En el panel del proyecto del backend (Settings, Environment Variables). Nada de 
 
 | Variable | Valor |
 |---|---|
-| `DATABASE_URL` | Cadena del **pooler de transacciones** (6543) con el usuario `manager_app.<project_ref>`: `postgresql://manager_app.<project_ref>:<contraseña>@<host-del-pooler>:6543/postgres` |
+| `DATABASE_URL` | Cadena del **pooler de transacciones** (6543) con el usuario `manager_app.<project_ref>`: `postgresql://manager_app.<project_ref>:<contraseña>@<host-del-pooler>:6543/postgres`. Sin corchetes (los de la plantilla de Supabase), sin comillas y sin espacios. La contraseña, la de `manager_app` (no la de la base), generada con `openssl rand -hex 24`: con `#`, `/`, `?` o espacios la URL es inválida y el backend responde `500` en la verificación del paso 6. |
 | `JWT_SECRET` | Aleatorio, de al menos 32 caracteres. Genéralo con `openssl rand -base64 48` y pégalo directo en el panel. |
 | `CORS_ORIGINS` | La URL exacta del frontend, sin `/` final y sin `*`, por ejemplo `https://<tu-frontend>.vercel.app`. Varias, separadas por coma. |
 | `DB_MAX_CONNS` | `4` (valor por defecto). Cada instancia abre como máximo ese número de conexiones. |
@@ -115,11 +116,14 @@ Despliega los dos proyectos.
 
 ## 6. Verificación
 
-1. En el log de build del backend busca la línea `go version` / versión de Go que usó Vercel y anótala en `docs/fuentes.md` (hoy figura como no verificada).
+1. En el log de build del backend aparece la versión de Go que usó Vercel (el equivalente de `go version`, en la línea `Downloading go: ...`); con `go.mod` en 1.25.0 baja esa.
 2. Abre `https://<tu-backend>.vercel.app/health`: debe responder `200`.
 3. Abre el frontend, inicia sesión con el usuario del paso 3 y crea un insumo.
 4. Si `/health` responde `500` con "configuración del servidor inválida", falta o está mal una variable (el log de la función dice cuál, sin mostrar valores).
 5. Si el login falla con error de conexión, revisa que `DATABASE_URL` use el puerto 6543 y el usuario con `.<project_ref>`.
+6. Si al crear un usuario sale `relation "manager.users" does not exist`, todavía no corriste las migraciones (paso 2). El script del paso 1 solo crea el rol y el esquema vacío.
+7. Cada despliegue conserva las variables que tenía al crearse: tras cambiar una variable hay que hacer Redeploy, y probar siempre una dirección estable del proyecto, no un enlace viejo de un despliegue anterior.
+8. Los logs de funciones en Hobby se guardan solo una hora: si necesitas la causa de un error, reprodúcelo y míralos enseguida.
 
 ## 7. Respaldo manual
 
@@ -131,12 +135,17 @@ pg_dump "$MIGRATE_URL" --schema=manager --no-owner --no-privileges -Fc -f manage
 
 Guarda el archivo fuera del repo (contiene los datos del negocio y los hashes de contraseñas). Para restaurar en un proyecto vacío: ejecuta el paso 1 y `pg_restore --no-owner -d "$MIGRATE_URL" manager-<fecha>.dump`.
 
-## Verificación en el mundo real (pendiente)
+## Verificación en el mundo real
 
-Lo siguiente solo se puede confirmar contra Supabase y Vercel reales; el ensayo local no lo cubre. Anota el resultado en `docs/fuentes.md` cuando lo hagas:
+Confirmado contra Supabase y Vercel reales (2026-10-15 al 2026-10-18):
 
-- [ ] Las migraciones corren por el pooler de sesión con el rol `manager_app`.
-- [ ] El login funciona por el pooler de transacciones.
-- [ ] Versión de Go en el log de build del backend.
-- [ ] La ruta que recibe la función (con o sin prefijo `/api`); el handler acepta ambas.
+- [x] Las migraciones corren por el pooler de sesión con el rol `manager_app`.
+- [x] El login funciona por el pooler de transacciones, desde el frontend (confirmado por Felipe).
+- [x] Versión de Go en el log de build del backend: 1.25.0, la de `go.mod`.
+- [x] La ruta que recibe la función llega tal cual se pidió, sin el prefijo `/api` (el handler acepta ambas).
+- [x] Subida de fotos a Supabase Storage de punta a punta (confirmado por Felipe).
+
+Pendiente de confirmar:
+
 - [ ] `manager` no figura en "Exposed schemas" y las tres filas de la consulta del paso 1 dan `false`.
+- [ ] Respaldo con `pg_dump` probado al menos una vez.

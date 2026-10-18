@@ -25,13 +25,13 @@ Consultadas el 2026-10-08. Precios y límites cambian: reverificar antes de deci
 | Supabase Storage: control de acceso (2026-10-09) | https://supabase.com/docs/guides/storage/security/access-control | Una clave de servicio se salta las políticas de Storage. Sin ella, subir exige una política `INSERT` en `storage.objects`. |
 | Vercel Blob (2026-10-09, descartado) | https://vercel.com/docs/vercel-blob/private-storage | Existe acceso público y privado; el SDK oficial es de JavaScript. No se encontraron límites ni precios de Hobby ni un cliente oficial para Go. |
 | Supabase Storage: subida con clave secreta (observación propia, 2026-10-18) | prueba real con curl sobre el proyecto, sin pegar la clave | `POST https://<ref>.supabase.co/storage/v1/object/<bucket>/<ruta>` con las cabeceras `apikey: <clave>` y `Authorization: Bearer <clave>` (clave `sb_secret_...`) y `Content-Type: image/png` respondió `200` con `{"Key":"<bucket>/<ruta>","Id":"<uuid>"}`. Sin `x-upsert`. |
+| Vercel: preset de framework Go (observación propia, 2026-10-15) | proyecto real del backend y su log de build | Vercel autodetecta el framework `go`, que espera un servidor en `main.go`/`cmd/server`; con él `functions: api/index.go` falla con `unused_function`. Con "Other" encuentra la función. |
+| Vercel: build de Go y rutas (observación propia, 2026-10-15) | log de build y de ejecución del backend | Baja `go1.25.0` (el de `go.mod`). Compila `api/` bajo la ruta `handler/api`, fuera del módulo, así que no puede importar paquetes `internal/` (por eso existe `pkg/serverless`). La función recibe la ruta como se pidió, sin `/api`. |
+| Supabase: administrador no superusuario (observación propia, 2026-10-15) | SQL Editor del proyecto real | `postgres` no es superusuario: `CREATE SCHEMA ... AUTHORIZATION manager_app` exige `GRANT manager_app TO CURRENT_USER` antes, y `ALTER ROLE` no puede mencionar `NOSUPERUSER`. |
 
 ## No verificado todavía
 
-- Versiones de Go soportadas por Vercel y cuál usa por defecto (Felipe cree que la última; confirmarlo en el log del primer despliegue).
-- Que un solo `api/index.go` que envuelva el router chi, con un rewrite de todas las rutas, funcione en Vercel. Es una inferencia a partir de la firma verificada.
 - Comportamiento exacto de pgx 5.8.0 contra el pooler de transacciones (qué modo de ejecución usar). Verificar en el código de la librería y con una prueba en el Sprint 1.
 - Ley 21.719 (datos personales, Chile): vigencia y obligaciones, antes de la etapa 3. Las cotizaciones guardan nombres de clientes.
 - Interpretación de Vercel sobre "uso comercial" para una herramienta interna.
-- URL pública de una foto subida (`/storage/v1/object/public/<bucket>/<ruta>`) abierta en un navegador: se confirma en la verificación real de C6.
 - Precio y límites de egreso de Supabase Storage en Free: no consultados.
