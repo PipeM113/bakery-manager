@@ -9,7 +9,7 @@ interface Props {
 }
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
-const MAX_SIZE = 5 * 1024 * 1024;
+const MAX_SIZE = 4 * 1024 * 1024;
 
 export default function RecipePhotoUpload({ recipeId, currentPhotoUrl, onUploaded }: Props) {
   const [preview, setPreview] = useState<string | null>(null);
@@ -21,7 +21,7 @@ export default function RecipePhotoUpload({ recipeId, currentPhotoUrl, onUploade
 
   const validate = (file: File): string => {
     if (!ALLOWED_TYPES.includes(file.type)) return "Solo se permiten archivos JPEG, PNG o WebP";
-    if (file.size > MAX_SIZE) return "El archivo no puede superar los 5 MB";
+    if (file.size > MAX_SIZE) return "El archivo no puede superar los 4 MB";
     return "";
   };
 
@@ -113,7 +113,7 @@ export default function RecipePhotoUpload({ recipeId, currentPhotoUrl, onUploade
         <p className="text-stone-400 text-xs font-light tracking-wide">
           {displayPhoto ? "Arrastra o haz clic para reemplazar" : "Arrastra o haz clic para subir foto"}
         </p>
-        <p className="text-stone-300 text-xs mt-1">JPEG · PNG · WebP · máx 5 MB</p>
+        <p className="text-stone-300 text-xs mt-1">JPEG · PNG · WebP · máx 4 MB</p>
         <input
           ref={fileInputRef}
           type="file"

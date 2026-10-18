@@ -92,9 +92,24 @@ En el panel del proyecto del backend (Settings, Environment Variables). Nada de 
 | `JWT_SECRET` | Aleatorio, de al menos 32 caracteres. Genéralo con `openssl rand -base64 48` y pégalo directo en el panel. |
 | `CORS_ORIGINS` | La URL exacta del frontend, sin `/` final y sin `*`, por ejemplo `https://<tu-frontend>.vercel.app`. Varias, separadas por coma. |
 | `DB_MAX_CONNS` | `4` (valor por defecto). Cada instancia abre como máximo ese número de conexiones. |
-| `CLOUDINARY_URL` | Opcional. Sin ella la subida de fotos queda desactivada. |
+| `SUPABASE_URL` | Opcional, junto con las dos siguientes. El origen del proyecto: `https://<project_ref>.supabase.co`, sin ruta. |
+| `SUPABASE_SECRET_KEY` | La clave secreta propia del manager (ver "Fotos de las recetas"). Se pega directo en el panel. |
+| `SUPABASE_STORAGE_BUCKET` | `recipe-photos` |
+
+Las tres de Storage van juntas o ninguna: si falta alguna, el backend no arranca y el log dice cuál. Sin ellas la subida de fotos queda desactivada.
 
 En el proyecto del **frontend** agrega `VITE_API_URL` con la URL pública del backend, `https://<tu-backend>.vercel.app`. El build del frontend falla si falta o no es una URL válida. Es una variable de build: cambiarla exige un nuevo despliegue.
+
+### Fotos de las recetas (Supabase Storage)
+
+Las fotos se guardan en un bucket **público** de Supabase: cualquiera que tenga la URL de una foto la ve, pero solo el backend puede subir.
+
+1. En Supabase: **Storage, New bucket**, nombre `recipe-photos`, marcado como **Public**. Activa **Restrict file size** con `4 MB` y **Allowed MIME types** con `image/jpeg, image/png, image/webp`. El límite de 4 MB es porque una función de Vercel admite cuerpos de hasta 4,5 MB.
+2. En Supabase: **Settings, API Keys**, crea una **secret key** nueva con el nombre `manager-backend`. Una clave por componente permite revocarla sin afectar al sitio de Angeles Bakery. Esa clave da acceso completo al proyecto: se pega solo en Vercel, nunca en el chat, el repo ni el frontend.
+3. En el proyecto del backend en Vercel agrega `SUPABASE_URL`, `SUPABASE_SECRET_KEY` y `SUPABASE_STORAGE_BUCKET` (tabla anterior) y haz Redeploy.
+4. Verifica: sube una foto a una receta, abre su URL pública y genera el PDF de una cotización con foto.
+
+Si la clave se filtra: en **Settings, API Keys** crea otra, cámbiala en Vercel, haz Redeploy y borra la comprometida (borrarla es irreversible).
 
 Despliega los dos proyectos.
 
