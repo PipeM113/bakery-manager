@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
 	"unicode/utf8"
@@ -22,12 +23,16 @@ const (
 
 // Config holds the validated settings. It contains secrets: never log it whole.
 type Config struct {
-	Port          string
-	DatabaseURL   string
-	JWTSecret     string
-	CORSOrigins   []string
-	DBMaxConns    int32
-	CloudinaryURL string // optional: without it photo upload is disabled
+	Port        string
+	DatabaseURL string
+	JWTSecret   string
+	CORSOrigins []string
+	DBMaxConns  int32
+	// Supabase Storage for recipe photos. Optional as a group: with none of the three set,
+	// photo upload is disabled.
+	SupabaseURL       string
+	SupabaseSecretKey string
+	SupabaseBucket    string
 }
 
 // Load reads the settings through getenv (os.Getenv in production) and reports every
@@ -37,11 +42,10 @@ func Load(getenv func(string) string) (Config, error) {
 
 	rawSecret := getenv("JWT_SECRET")
 	cfg := Config{
-		Port:          defaultPort,
-		DatabaseURL:   strings.TrimSpace(getenv("DATABASE_URL")),
-		JWTSecret:     strings.TrimSpace(rawSecret),
-		CloudinaryURL: strings.TrimSpace(getenv("CLOUDINARY_URL")),
-		DBMaxConns:    defaultDBMaxConns,
+		Port:        defaultPort,
+		DatabaseURL: strings.TrimSpace(getenv("DATABASE_URL")),
+		JWTSecret:   strings.TrimSpace(rawSecret),
+		DBMaxConns:  defaultDBMaxConns,
 	}
 
 	if port := strings.TrimSpace(getenv("PORT")); port != "" {
@@ -73,6 +77,10 @@ func Load(getenv func(string) string) (Config, error) {
 		problems = append(problems, err)
 	}
 	cfg.CORSOrigins = origins
+
+	if err := loadStorage(getenv, &cfg); err != nil {
+		problems = append(problems, err)
+	}
 
 	if len(problems) > 0 {
 		return Config{}, errors.Join(problems...)
@@ -110,4 +118,59 @@ func normalizeOrigin(entry string) (string, bool) {
 		return "", false
 	}
 	return u.Scheme + "://" + u.Host, true
+}
+
+// bucketName follows what Supabase buckets use; it ends up inside URLs.
+var bucketName = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{1,62}$`)
+
+// loadStorage reads SUPABASE_URL, SUPABASE_SECRET_KEY and SUPABASE_STORAGE_BUCKET. They work
+// as a group: none disables photos, a partial set is a mistake worth stopping the start for.
+func loadStorage(getenv func(string) string, cfg *Config) error {
+	vars := []struct{ name, value string }{
+		{"SUPABASE_URL", strings.TrimSpace(getenv("SUPABASE_URL"))},
+		{"SUPABASE_SECRET_KEY", strings.TrimSpace(getenv("SUPABASE_SECRET_KEY"))},
+		{"SUPABASE_STORAGE_BUCKET", strings.TrimSpace(getenv("SUPABASE_STORAGE_BUCKET"))},
+	}
+	var set, missing []string
+	for _, v := range vars {
+		if v.value == "" {
+			missing = append(missing, v.name)
+		} else {
+			set = append(set, v.name)
+		}
+	}
+	if len(set) == 0 {
+		return nil
+	}
+
+	var problems []error
+	if len(missing) > 0 {
+		problems = append(problems, fmt.Errorf("el almacenamiento de fotos necesita SUPABASE_URL, SUPABASE_SECRET_KEY y SUPABASE_STORAGE_BUCKET juntas; falta: %s", strings.Join(missing, ", ")))
+	}
+	if raw := vars[0].value; raw != "" {
+		origin, ok := normalizeStorageURL(raw)
+		if !ok {
+			problems = append(problems, errors.New("SUPABASE_URL debe ser el origen https del proyecto, por ejemplo https://<ref>.supabase.co, sin ruta ni credenciales"))
+		}
+		cfg.SupabaseURL = origin
+	}
+	cfg.SupabaseSecretKey = vars[1].value
+	if bucket := vars[2].value; bucket != "" {
+		if !bucketName.MatchString(bucket) {
+			problems = append(problems, errors.New("SUPABASE_STORAGE_BUCKET solo admite minúsculas, números, guion y guion bajo"))
+		}
+		cfg.SupabaseBucket = bucket
+	}
+	return errors.Join(problems...)
+}
+
+func normalizeStorageURL(raw string) (string, bool) {
+	u, err := url.Parse(raw)
+	if err != nil || u.Scheme != "https" || u.Host == "" {
+		return "", false
+	}
+	if (u.Path != "" && u.Path != "/") || u.RawQuery != "" || u.Fragment != "" || u.User != nil {
+		return "", false
+	}
+	return "https://" + u.Host, true
 }
