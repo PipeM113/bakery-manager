@@ -24,6 +24,7 @@ Consultadas el 2026-10-08. Precios y límites cambian: reverificar antes de deci
 | Supabase: claves de API (2026-10-09) | https://supabase.com/docs/guides/getting-started/api-keys | Las claves secretas (`sb_secret_...`) dan acceso completo al proyecto y se saltan RLS; solo para backend; se recomienda una por componente; se rotan creando otra y borrando la comprometida. |
 | Supabase Storage: control de acceso (2026-10-09) | https://supabase.com/docs/guides/storage/security/access-control | Una clave de servicio se salta las políticas de Storage. Sin ella, subir exige una política `INSERT` en `storage.objects`. |
 | Vercel Blob (2026-10-09, descartado) | https://vercel.com/docs/vercel-blob/private-storage | Existe acceso público y privado; el SDK oficial es de JavaScript. No se encontraron límites ni precios de Hobby ni un cliente oficial para Go. |
+| Supabase Storage: subida con clave secreta (observación propia, 2026-10-18) | prueba real con curl sobre el proyecto, sin pegar la clave | `POST https://<ref>.supabase.co/storage/v1/object/<bucket>/<ruta>` con las cabeceras `apikey: <clave>` y `Authorization: Bearer <clave>` (clave `sb_secret_...`) y `Content-Type: image/png` respondió `200` con `{"Key":"<bucket>/<ruta>","Id":"<uuid>"}`. Sin `x-upsert`. |
 
 ## No verificado todavía
 
@@ -32,5 +33,5 @@ Consultadas el 2026-10-08. Precios y límites cambian: reverificar antes de deci
 - Comportamiento exacto de pgx 5.8.0 contra el pooler de transacciones (qué modo de ejecución usar). Verificar en el código de la librería y con una prueba en el Sprint 1.
 - Ley 21.719 (datos personales, Chile): vigencia y obligaciones, antes de la etapa 3. Las cotizaciones guardan nombres de clientes.
 - Interpretación de Vercel sobre "uso comercial" para una herramienta interna.
-- Contrato REST de subida de Supabase Storage (ruta, cabeceras, respuesta, forma de la URL pública): se verifica en el spike del Sprint 1c.
+- URL pública de una foto subida (`/storage/v1/object/public/<bucket>/<ruta>`) abierta en un navegador: se confirma en la verificación real de C6.
 - Precio y límites de egreso de Supabase Storage en Free: no consultados.

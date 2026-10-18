@@ -28,14 +28,17 @@ Ordenado por sprint. Cada sprint sigue el mismo método: contrato, reglas de ace
 
 Decidido el 2026-10-09 (opción 3 sobre Vercel Blob; se parte sin fotos previas, no hay nada que migrar). Va después de mergear #2 y #3; el despliegue del Sprint 1b no depende de esto (la subida de fotos ya es opcional).
 
-- [ ] Spike: confirmar contra la documentación de Supabase Storage el contrato REST de subida (ruta, cabeceras, respuesta, URL pública). Hoy solo está verificado el modelo de buckets (público/privado, límites por bucket, tipos permitidos) y las claves.
-- [ ] Config: `SUPABASE_URL`, `SUPABASE_SECRET_KEY` y `SUPABASE_STORAGE_BUCKET`, las tres o ninguna; ningún error repite la clave.
-- [ ] Subida desde el backend con la clave secreta; nombre único por subida (evita caché de la foto vieja); devuelve la URL pública.
-- [ ] Validar en el handler: máximo 4 MB (la función de Vercel admite 4,5 MB de cuerpo) y tipo real por contenido (jpeg, png, webp), no por el nombre ni por la cabecera.
-- [ ] Quitar Cloudinary: paquete `internal/cloudinary`, dependencia `cloudinary-go`, `CLOUDINARY_URL` en config, `.env.example`, runbook y test de higiene (que pase a vigilar `SUPABASE_SECRET_KEY`).
-- [ ] Runbook: crear el bucket, la clave propia del manager y las variables en Vercel.
+- [x] Spike (2026-10-18): confirmar contra la documentación de Supabase Storage el contrato REST de subida (ruta, cabeceras, respuesta, URL pública). Hoy solo está verificado el modelo de buckets (público/privado, límites por bucket, tipos permitidos) y las claves.
+- [x] Config: `SUPABASE_URL`, `SUPABASE_SECRET_KEY` y `SUPABASE_STORAGE_BUCKET`, las tres o ninguna; ningún error repite la clave.
+- [x] Subida desde el backend con la clave secreta; nombre único por subida (evita caché de la foto vieja); devuelve la URL pública.
+- [x] Validar en el handler: máximo 4 MB (la función de Vercel admite 4,5 MB de cuerpo) y tipo real por contenido (jpeg, png, webp), no por el nombre ni por la cabecera.
+- [x] Quitar Cloudinary: paquete `internal/cloudinary`, dependencia `cloudinary-go`, `CLOUDINARY_URL` en config, `.env.example`, runbook y test de higiene (que pase a vigilar `SUPABASE_SECRET_KEY`).
+- [x] Runbook: crear el bucket, la clave propia del manager y las variables en Vercel.
 - [ ] Limpieza de la foto anterior al reemplazarla (best effort), si se decide que vale la pena.
 - [ ] Verificación real (Felipe): subir una foto, abrir su URL pública, ver la foto en el PDF de la cotización, y comprobar que el bucket rechaza un archivo de más de 4 MB y uno que no es imagen.
+- [ ] Verificación real de C6 de punta a punta (Felipe): foto desde la app, URL pública, foto en el PDF, rechazo de más de 4 MB y de un archivo que no es imagen. La subida con curl ya se verificó (2026-10-18).
+- [ ] El PDF de cotizaciones no dibuja WebP (el código lo trata como JPEG y falla en silencio). Ya era así antes; decidir si se restringe a JPEG y PNG o se convierte.
+- [ ] Borrar el objeto del bucket al borrar la receta o al reemplazar su foto (hoy quedan huérfanos).
 
 ## Sprint 2, dinero
 
