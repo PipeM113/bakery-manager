@@ -114,10 +114,9 @@ func TestAC2_CalculateSuggestedPrice(t *testing.T) {
 	}
 }
 
-// AC2: Simulate adds the margin on top of CostPerPortion. When the breakdown was built
-// with that same margin (as the /cost/simulate handler does), the margin is applied twice.
-// CURRENT behaviour, frozen on purpose: it is a suspected defect listed in the backlog
-// and any change needs the owner's approval.
+// AC2 (changed in Sprint 2a, approved by the owner): Simulate applies the margin once.
+// Until Sprint 2a it added the margin on top of a CostPerPortion that already carried it, so
+// the /cost/simulate endpoint charged 1300 * 1.30 = 1690 for a 1000 cost with a 30% markup.
 func TestAC2_SimulateAppliesMarginOnTopOfTheBreakdown(t *testing.T) {
 	ingredients := []IngredientCost{{Quantity: 1, PricePerUnit: 1000}}
 	breakdown := Calculate("r", "n", 1, "u", 0, 0, 0.30, 0, 0, ingredients)
@@ -127,26 +126,25 @@ func TestAC2_SimulateAppliesMarginOnTopOfTheBreakdown(t *testing.T) {
 
 	got := Simulate(breakdown, 0.30)
 
-	if !approx(got.ProfitAmount, 390) {
-		t.Errorf("ProfitAmount = %v, want 390", got.ProfitAmount)
+	if !approx(got.ProfitAmount, 300) {
+		t.Errorf("ProfitAmount = %v, want 300 (30%% of the 1000 cost)", got.ProfitAmount)
 	}
-	if !approx(got.SuggestedPrice, 1690) {
-		t.Errorf("SuggestedPrice = %v, want 1690 (1300 * 1.30)", got.SuggestedPrice)
+	if !approx(got.SuggestedPrice, 1300) {
+		t.Errorf("SuggestedPrice = %v, want 1300 (1000 * 1.30)", got.SuggestedPrice)
 	}
 }
 
-// AC2: KNOWN DEFECT, frozen as it behaves today. With float64 the base price comes out
-// as 1500.000000000000227 instead of exactly 1500, so ceilTo500 charges 2000 for a
-// recipe whose exact price is 1500. Sprint 2 (money) must change this expectation to
-// 1500; until then the test keeps the problem visible and reproducible.
-func TestAC2_KnownDefectFloatDriftRaisesThePriceStep(t *testing.T) {
+// AC2 (changed in Sprint 2a, approved by the owner): float64 arithmetic made the base price
+// come out as 1500.000000000000227 instead of 1500, so ceilTo500 charged 2000 for a recipe
+// whose exact price is 1500. The calculation is now exact.
+func TestAC2_ExactArithmeticKeepsThePriceStep(t *testing.T) {
 	// ingredients 1000, indirect 0%, labor 20%, margin 25%, yield 9:
 	// exact: 1000 * 1.20 = 1200; 1200 / 9 * 1.25 * 9 = 1500.
 	ingredients := []IngredientCost{{Quantity: 1, PricePerUnit: 1000}}
 
 	got := Calculate("r", "n", 9, "u", 0, 0.20, 0.25, 0, 0, ingredients)
 
-	if got.SuggestedPrice != 2000 {
-		t.Fatalf("SuggestedPrice = %v; the documented current value is 2000 (exact value: 1500)", got.SuggestedPrice)
+	if got.SuggestedPrice != 1500 {
+		t.Fatalf("SuggestedPrice = %v, want 1500", got.SuggestedPrice)
 	}
 }

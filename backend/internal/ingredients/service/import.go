@@ -246,3 +246,11 @@ func (s *IngredientImportService) Import(ctx context.Context, rows []IngredientI
 
 	return result, nil
 }
+
+// ParseCLDecimal reads a number the way it is written in Chile. (Sprint 2a red stub: it still
+// reads like the old code did, so the tests fail on behaviour and not on compilation.)
+func ParseCLDecimal(s string) (float64, error) {
+	var v float64
+	fmt.Sscanf(strings.TrimSpace(s), "%f", &v)
+	return v, nil
+}

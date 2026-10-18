@@ -1,0 +1,29 @@
+package hygiene
+
+import (
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+)
+
+// Sprint 2a, rule P9: the words for money are defined once, in the repository.
+func TestP9_GlossaryDefinesMarkupAndMargin(t *testing.T) {
+	root := repoRoot(t)
+	raw, err := os.ReadFile(filepath.Join(root, "docs", "glosario-dinero.md"))
+	if err != nil {
+		t.Fatalf("docs/glosario-dinero.md is missing: %v", err)
+	}
+	text := string(raw)
+	for _, want := range []string{
+		"Recargo sobre costo", // the recipe markup, a fraction of the cost
+		"Margen de ganancia",  // the dashboard figure, a percentage of sales
+		"margin_pct",          // the unchanged name on the wire and in the database
+		"mano de obra",        // an estimate used for pricing, not a paid wage
+		"redondeo",            // when and how amounts are rounded
+	} {
+		if !strings.Contains(text, want) {
+			t.Errorf("the glossary should mention %q", want)
+		}
+	}
+}
