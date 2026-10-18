@@ -89,7 +89,7 @@ En el panel del proyecto del backend (Settings, Environment Variables). Nada de 
 
 | Variable | Valor |
 |---|---|
-| `DATABASE_URL` | Cadena del **pooler de transacciones** (6543) con el usuario `manager_app.<project_ref>`: `postgresql://manager_app.<project_ref>:<contraseña>@<host-del-pooler>:6543/postgres`. Sin corchetes (los de la plantilla de Supabase), sin comillas y sin espacios. La contraseña, la de `manager_app` (no la de la base), generada con `openssl rand -hex 24`: con `#`, `/`, `?` o espacios la URL es inválida y el backend responde `500` en `/health`. |
+| `DATABASE_URL` | Cadena del **pooler de transacciones** (6543) con el usuario `manager_app.<project_ref>`: `postgresql://manager_app.<project_ref>:<contraseña>@<host-del-pooler>:6543/postgres`. Sin corchetes (los de la plantilla de Supabase), sin comillas y sin espacios. La contraseña, la de `manager_app` (no la de la base), generada con `openssl rand -hex 24`: con `#`, `/`, `?` o espacios la URL es inválida y el backend responde `500` en la verificación del paso 6. |
 | `JWT_SECRET` | Aleatorio, de al menos 32 caracteres. Genéralo con `openssl rand -base64 48` y pégalo directo en el panel. |
 | `CORS_ORIGINS` | La URL exacta del frontend, sin `/` final y sin `*`, por ejemplo `https://<tu-frontend>.vercel.app`. Varias, separadas por coma. |
 | `DB_MAX_CONNS` | `4` (valor por defecto). Cada instancia abre como máximo ese número de conexiones. |
