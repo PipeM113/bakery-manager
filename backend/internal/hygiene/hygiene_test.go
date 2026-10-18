@@ -80,7 +80,7 @@ func TestAC5_EnvExampleHasOnlyPlaceholders(t *testing.T) {
 		t.Fatal(err)
 	}
 	placeholder := regexp.MustCompile(`(?i)(your_|<[^>]+>|user:password@host|^$)`)
-	secretKeys := map[string]bool{"DATABASE_URL": true, "JWT_SECRET": true, "CLOUDINARY_URL": true}
+	secretKeys := map[string]bool{"DATABASE_URL": true, "JWT_SECRET": true, "SUPABASE_SECRET_KEY": true}
 
 	for _, line := range strings.Split(string(data), "\n") {
 		line = strings.TrimSpace(line)

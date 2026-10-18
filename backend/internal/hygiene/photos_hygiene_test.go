@@ -29,10 +29,8 @@ func TestC4_CloudinaryIsGone(t *testing.T) {
 		if !strings.HasSuffix(rel, ".go") && !strings.HasSuffix(rel, ".ts") && !strings.HasSuffix(rel, ".tsx") {
 			continue
 		}
-		// This test names the word on purpose. hygiene_test.go (approved in sprint 0) still has
-		// CLOUDINARY_URL in its list of secret keys: replacing it with SUPABASE_SECRET_KEY needs
-		// the owner's approval, so it is left out of this scan until then.
-		if strings.HasSuffix(rel, "photos_hygiene_test.go") || strings.HasSuffix(rel, "internal/hygiene/hygiene_test.go") {
+		// These two tests name the word on purpose (the second checks that the old variable is ignored).
+		if strings.HasSuffix(rel, "photos_hygiene_test.go") || strings.HasSuffix(rel, "internal/config/storage_test.go") {
 			continue
 		}
 		data, err := os.ReadFile(filepath.Join(root, rel))
