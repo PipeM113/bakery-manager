@@ -19,7 +19,6 @@ import (
 	analyticsSvc "github.com/PipeM113/bakery-manager/internal/analytics/service"
 	"github.com/PipeM113/bakery-manager/internal/auth/handler"
 	"github.com/PipeM113/bakery-manager/internal/auth/service"
-	cldSvc "github.com/PipeM113/bakery-manager/internal/cloudinary"
 	"github.com/PipeM113/bakery-manager/internal/config"
 	costHandler "github.com/PipeM113/bakery-manager/internal/costs/handler"
 	costService "github.com/PipeM113/bakery-manager/internal/costs/service"
@@ -39,6 +38,7 @@ import (
 	saleRepo "github.com/PipeM113/bakery-manager/internal/sales/repository"
 	saleSvc "github.com/PipeM113/bakery-manager/internal/sales/service"
 	"github.com/PipeM113/bakery-manager/internal/shared/kernel"
+	"github.com/PipeM113/bakery-manager/internal/storage"
 	"github.com/PipeM113/bakery-manager/pkg/httputil"
 	mid "github.com/PipeM113/bakery-manager/pkg/middleware"
 )
@@ -163,12 +163,10 @@ func Build(ctx context.Context, cfg config.Config, pingDB bool) (http.Handler, f
 	}
 
 	var photos PhotoUploader
-	if cfg.CloudinaryURL == "" {
-		log.Println("Cloudinary no configurado: la subida de fotos queda deshabilitada")
-	} else if svc, err := cldSvc.NewServiceFromURL(cfg.CloudinaryURL); err != nil {
-		log.Printf("Cloudinary no disponible (fotos deshabilitadas): %v", err)
+	if cfg.SupabaseURL == "" {
+		log.Println("Supabase Storage no configurado: la subida de fotos queda deshabilitada")
 	} else {
-		photos = svc
+		photos = storage.New(storage.Config{URL: cfg.SupabaseURL, SecretKey: cfg.SupabaseSecretKey, Bucket: cfg.SupabaseBucket}, nil)
 	}
 
 	return New(cfg, pool, photos), pool.Close, nil

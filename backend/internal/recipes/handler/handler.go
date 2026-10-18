@@ -3,28 +3,31 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"io"
 	"log"
 	"net/http"
+	"regexp"
 	"strings"
 
 	"github.com/PipeM113/bakery-manager/internal/recipes/repository"
 	"github.com/PipeM113/bakery-manager/pkg/httputil"
 	"github.com/PipeM113/bakery-manager/pkg/middleware"
 	"github.com/go-chi/chi/v5"
-	"mime/multipart"
 )
 
+// PhotoUploader stores a recipe photo and returns its public URL.
 type PhotoUploader interface {
-	UploadRecipePhoto(ctx context.Context, fileHeader *multipart.FileHeader, recipeID string) (string, error)
+	UploadRecipePhoto(ctx context.Context, recipeID, contentType string, data []byte) (string, error)
 }
 
 type RecipeHandler struct {
-	repo          *repository.RecipeRepository
-	cloudinarySvc PhotoUploader
+	repo   *repository.RecipeRepository
+	photos PhotoUploader
 }
 
-func NewRecipeHandler(repo *repository.RecipeRepository, cloudinarySvc PhotoUploader) *RecipeHandler {
-	return &RecipeHandler{repo: repo, cloudinarySvc: cloudinarySvc}
+func NewRecipeHandler(repo *repository.RecipeRepository, photos PhotoUploader) *RecipeHandler {
+	return &RecipeHandler{repo: repo, photos: photos}
 }
 
 func (h *RecipeHandler) GetAll(w http.ResponseWriter, r *http.Request) {
@@ -99,7 +102,7 @@ func (h *RecipeHandler) Create(w http.ResponseWriter, r *http.Request) {
 	if body.LaborCostPct == 0 {
 		body.LaborCostPct = 0.30
 	}
-if body.ParentID == nil {
+	if body.ParentID == nil {
 		body.IsBase = true
 	}
 
@@ -281,35 +284,46 @@ func (h *RecipeHandler) Update(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(updated)
 }
 
+// maxPhotoBytes is the largest photo accepted. A Vercel function takes request bodies of up to
+// 4.5 MB, so the photo plus the multipart framing must stay under that.
+const maxPhotoBytes = 4 << 20
+
+// multipartOverhead is what the request may carry besides the photo (boundaries and headers).
+const multipartOverhead = 64 << 10
+
+var recipeIDPattern = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
+
+var photoTypes = map[string]bool{"image/jpeg": true, "image/png": true, "image/webp": true}
+
 func (h *RecipeHandler) UploadPhoto(w http.ResponseWriter, r *http.Request) {
-	if h.cloudinarySvc == nil {
+	if h.photos == nil {
 		httputil.JSONError(w, "servicio de imágenes no configurado", http.StatusServiceUnavailable)
 		return
 	}
 
 	id := chi.URLParam(r, "id")
-
-	if err := r.ParseMultipartForm(5 << 20); err != nil {
-		httputil.JSONError(w, "archivo demasiado grande (máx 5MB)", http.StatusBadRequest)
+	if !recipeIDPattern.MatchString(id) {
+		httputil.JSONError(w, "id de receta inválido", http.StatusBadRequest)
 		return
 	}
 
-	_, fileHeader, err := r.FormFile("photo")
-	if err != nil {
-		httputil.JSONError(w, "no se recibió archivo con nombre 'photo'", http.StatusBadRequest)
+	data, status, msg := readPhotoPart(w, r)
+	if msg != "" {
+		httputil.JSONError(w, msg, status)
 		return
 	}
 
-	contentType := fileHeader.Header.Get("Content-Type")
-	allowed := map[string]bool{"image/jpeg": true, "image/png": true, "image/webp": true}
-	if !allowed[contentType] {
+	// The type is decided by the content: the name and the declared type are the client's word.
+	contentType := http.DetectContentType(data)
+	if !photoTypes[contentType] {
 		httputil.JSONError(w, "tipo de archivo no permitido (solo JPEG, PNG, WebP)", http.StatusBadRequest)
 		return
 	}
 
-	photoURL, err := h.cloudinarySvc.UploadRecipePhoto(r.Context(), fileHeader, id)
+	photoURL, err := h.photos.UploadRecipePhoto(r.Context(), id, contentType, data)
 	if err != nil {
-		httputil.JSONError(w, "error subiendo foto", http.StatusInternalServerError)
+		log.Printf("[recipes] photo upload id=%s: %v", id, err)
+		httputil.JSONError(w, "error subiendo foto", http.StatusBadGateway)
 		return
 	}
 
@@ -320,4 +334,50 @@ func (h *RecipeHandler) UploadPhoto(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"photo_url": photoURL})
+}
+
+// readPhotoPart returns the bytes of the "photo" field without ever holding more than the limit
+// plus one byte. On failure it returns the HTTP status and a message.
+func readPhotoPart(w http.ResponseWriter, r *http.Request) ([]byte, int, string) {
+	r.Body = http.MaxBytesReader(w, r.Body, maxPhotoBytes+multipartOverhead)
+	reader, err := r.MultipartReader()
+	if err != nil {
+		return nil, http.StatusBadRequest, "solicitud multipart inválida"
+	}
+	for {
+		part, err := reader.NextPart()
+		if errors.Is(err, io.EOF) {
+			return nil, http.StatusBadRequest, "no se recibió archivo con nombre 'photo'"
+		}
+		if err != nil {
+			return nil, statusForBodyError(err), messageForBodyError(err)
+		}
+		if part.FormName() != "photo" {
+			continue
+		}
+		data, err := io.ReadAll(io.LimitReader(part, maxPhotoBytes+1))
+		if err != nil {
+			return nil, statusForBodyError(err), messageForBodyError(err)
+		}
+		if len(data) > maxPhotoBytes {
+			return nil, http.StatusRequestEntityTooLarge, "archivo demasiado grande (máx 4MB)"
+		}
+		return data, 0, ""
+	}
+}
+
+func statusForBodyError(err error) int {
+	var tooBig *http.MaxBytesError
+	if errors.As(err, &tooBig) {
+		return http.StatusRequestEntityTooLarge
+	}
+	return http.StatusBadRequest
+}
+
+func messageForBodyError(err error) string {
+	var tooBig *http.MaxBytesError
+	if errors.As(err, &tooBig) {
+		return "archivo demasiado grande (máx 4MB)"
+	}
+	return "solicitud multipart inválida"
 }
