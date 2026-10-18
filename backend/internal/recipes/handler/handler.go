@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"strings"
 
+	costs "github.com/PipeM113/bakery-manager/internal/costs/service"
 	"github.com/PipeM113/bakery-manager/internal/recipes/repository"
 	"github.com/PipeM113/bakery-manager/pkg/httputil"
 	"github.com/PipeM113/bakery-manager/pkg/middleware"
@@ -19,6 +20,21 @@ import (
 // PhotoUploader stores a recipe photo and returns its public URL.
 type PhotoUploader interface {
 	UploadRecipePhoto(ctx context.Context, recipeID, contentType string, data []byte) (string, error)
+}
+
+// recipeBody is a recipe as the client sends it. The three percentages are pointers so that
+// "not sent" can be told apart from a real 0%.
+type recipeBody struct {
+	repository.Recipe
+	IndirectCostPct *float64 `json:"indirect_cost_pct"`
+	LaborCostPct    *float64 `json:"labor_cost_pct"`
+	MarginPct       *float64 `json:"margin_pct"`
+}
+
+func (b recipeBody) validatePcts() error {
+	return costs.CostParams{
+		IndirectCostPct: b.IndirectCostPct, LaborCostPct: b.LaborCostPct, MarginPct: b.MarginPct,
+	}.Validate()
 }
 
 type RecipeHandler struct {
@@ -61,11 +77,16 @@ func (h *RecipeHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var body repository.Recipe
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	var in recipeBody
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
 		httputil.JSONError(w, "request inválido", http.StatusBadRequest)
 		return
 	}
+	if err := in.validatePcts(); err != nil {
+		httputil.JSONError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	body := in.Recipe
 
 	body.Name = strings.TrimSpace(body.Name)
 	if body.Name == "" {
@@ -96,11 +117,16 @@ func (h *RecipeHandler) Create(w http.ResponseWriter, r *http.Request) {
 	if body.YieldUnit == "" {
 		body.YieldUnit = "porciones"
 	}
-	if body.IndirectCostPct == 0 {
-		body.IndirectCostPct = 0.15
+	// A new recipe starts with the same base in the three percentages; an explicit 0 is kept.
+	body.IndirectCostPct, body.LaborCostPct, body.MarginPct = costs.DefaultPct, costs.DefaultPct, costs.DefaultPct
+	if in.IndirectCostPct != nil {
+		body.IndirectCostPct = *in.IndirectCostPct
 	}
-	if body.LaborCostPct == 0 {
-		body.LaborCostPct = 0.30
+	if in.LaborCostPct != nil {
+		body.LaborCostPct = *in.LaborCostPct
+	}
+	if in.MarginPct != nil {
+		body.MarginPct = *in.MarginPct
 	}
 	if body.ParentID == nil {
 		body.IsBase = true
@@ -251,14 +277,23 @@ func (h *RecipeHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var body repository.Recipe
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	var in recipeBody
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
 		httputil.JSONError(w, "request inválido", http.StatusBadRequest)
 		return
 	}
+	if err := in.validatePcts(); err != nil {
+		httputil.JSONError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	body := in.Recipe
 	body.Name = strings.TrimSpace(body.Name)
 	if body.Name == "" {
 		httputil.JSONError(w, "el nombre es requerido", http.StatusBadRequest)
+		return
+	}
+	if body.Yield <= 0 {
+		httputil.JSONError(w, "el rendimiento debe ser mayor a 0", http.StatusBadRequest)
 		return
 	}
 	if len(body.Ingredients) == 0 {
@@ -270,6 +305,22 @@ func (h *RecipeHandler) Update(w http.ResponseWriter, r *http.Request) {
 			httputil.JSONError(w, "la cantidad de cada ingrediente debe ser mayor a 0", http.StatusBadRequest)
 			return
 		}
+	}
+
+	// Percentages that were not sent keep the values the recipe already has.
+	if in.IndirectCostPct == nil || in.LaborCostPct == nil {
+		current, err := h.repo.GetByID(r.Context(), id)
+		if err != nil {
+			httputil.JSONError(w, "receta no encontrada", http.StatusNotFound)
+			return
+		}
+		body.IndirectCostPct, body.LaborCostPct = current.IndirectCostPct, current.LaborCostPct
+	}
+	if in.IndirectCostPct != nil {
+		body.IndirectCostPct = *in.IndirectCostPct
+	}
+	if in.LaborCostPct != nil {
+		body.LaborCostPct = *in.LaborCostPct
 	}
 
 	log.Printf("[recipes] PUT /recipes/%s user=%s name=%q", id, claims.ID, body.Name)

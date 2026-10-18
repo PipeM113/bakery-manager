@@ -179,7 +179,7 @@ func TestAC5_CoreFlowsWorkWithoutPreparedStatements(t *testing.T) {
 		}
 	})
 
-	t.Run("cost: 500 gr x 2 = 1000; with 15% indirect and 30% labor 1450; margin 30% gives 1885, rounded up to 2000", func(t *testing.T) {
+	t.Run("cost: 500 gr x 2 = 1000; a new recipe has 30% indirect and 30% labor, so 1600; markup 30% gives 2080, rounded up to 2500", func(t *testing.T) {
 		status, raw := api.do("GET", "/recipes/"+recipeID+"/cost?margin_pct=0.3", nil)
 		if status != http.StatusOK {
 			t.Fatalf("status = %d, want 200: %s", status, raw)
@@ -188,8 +188,8 @@ func TestAC5_CoreFlowsWorkWithoutPreparedStatements(t *testing.T) {
 		if got := number(t, body, "ingredients_total"); got < 999.999 || got > 1000.001 {
 			t.Errorf("ingredients_total = %v, want 1000", got)
 		}
-		if got := number(t, body, "suggested_price"); got != 2000 {
-			t.Errorf("suggested_price = %v, want 2000", got)
+		if got := number(t, body, "suggested_price"); got != 2500 {
+			t.Errorf("suggested_price = %v, want 2500", got)
 		}
 	})
 

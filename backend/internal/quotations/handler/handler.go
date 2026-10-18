@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -36,13 +37,13 @@ func userID(r *http.Request) string {
 }
 
 type generateRequest struct {
-	RecipeID        string  `json:"recipe_id"`
-	ClientName      string  `json:"client_name"`
-	MarginPct       float64 `json:"margin_pct"`
-	IndirectCostPct float64 `json:"indirect_cost_pct"`
-	LaborCostPct    float64 `json:"labor_cost_pct"`
-	ExtraCharge     int     `json:"extra_charge"`
-	DeliveryCost    int     `json:"delivery_cost"`
+	RecipeID        string   `json:"recipe_id"`
+	ClientName      string   `json:"client_name"`
+	MarginPct       *float64 `json:"margin_pct"`
+	IndirectCostPct *float64 `json:"indirect_cost_pct"`
+	LaborCostPct    *float64 `json:"labor_cost_pct"`
+	ExtraCharge     int      `json:"extra_charge"`
+	DeliveryCost    int      `json:"delivery_cost"`
 }
 
 func (h *QuotationHandler) Generate(w http.ResponseWriter, r *http.Request) {
@@ -60,8 +61,15 @@ func (h *QuotationHandler) Generate(w http.ResponseWriter, r *http.Request) {
 		httputil.JSONError(w, "el nombre del cliente no puede superar 100 caracteres", http.StatusBadRequest)
 		return
 	}
-	if req.MarginPct < 0 {
-		httputil.JSONError(w, "el margen no puede ser negativo", http.StatusBadRequest)
+	params := costSvc.CostParams{
+		IndirectCostPct: req.IndirectCostPct,
+		LaborCostPct:    req.LaborCostPct,
+		MarginPct:       req.MarginPct,
+		ExtraCharge:     req.ExtraCharge,
+		DeliveryCost:    req.DeliveryCost,
+	}
+	if err := params.Validate(); err != nil {
+		httputil.JSONError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -85,13 +93,11 @@ func (h *QuotationHandler) Generate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	breakdown, err := h.costSvc.GetCostBreakdown(r.Context(), req.RecipeID, costSvc.CostParams{
-		IndirectCostPct: req.IndirectCostPct,
-		LaborCostPct:    req.LaborCostPct,
-		MarginPct:       req.MarginPct,
-		ExtraCharge:     req.ExtraCharge,
-		DeliveryCost:    req.DeliveryCost,
-	})
+	breakdown, err := h.costSvc.GetCostBreakdown(r.Context(), req.RecipeID, params)
+	if errors.Is(err, costSvc.ErrInvalidYield) {
+		httputil.JSONError(w, err.Error(), http.StatusUnprocessableEntity)
+		return
+	}
 	if err != nil {
 		httputil.JSONError(w, "error calculando costos", http.StatusInternalServerError)
 		return
@@ -124,7 +130,7 @@ func (h *QuotationHandler) Generate(w http.ResponseWriter, r *http.Request) {
 			UserID:     uid,
 			RecipeID:   req.RecipeID,
 			ClientName: req.ClientName,
-			MarginPct:  req.MarginPct,
+			MarginPct:  breakdown.MarginPct,
 			FinalPrice: finalPrice,
 		})
 	}

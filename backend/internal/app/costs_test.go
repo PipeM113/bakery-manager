@@ -224,12 +224,16 @@ func TestP4_UpdatingARecipeKeepsThePercentagesItDoesNotSend(t *testing.T) {
 	}
 }
 
-func TestP4_RecipeCreationDefaultsWhenTheFieldsAreAbsent(t *testing.T) {
+// A new recipe starts with 30% in the three percentages (owner decision, Sprint 2a); from
+// then on each recipe keeps its own.
+func TestP4_NewRecipeStartsWithThirtyPercentInTheThree(t *testing.T) {
 	api, _ := newPricingAPI(t)
 	id := flourRecipe(t, api, nil)
 	costs := getJSON(t, api, "/recipes/"+id+"/costs")
-	if number(t, costs, "indirect_cost_pct") != 0.15 || number(t, costs, "labor_cost_pct") != 0.30 {
-		t.Errorf("defaults were not applied: %v", costs)
+	for _, k := range []string{"indirect_cost_pct", "labor_cost_pct", "margin_pct"} {
+		if got := number(t, costs, k); got != 0.30 {
+			t.Errorf("%s = %v, want 0.30 for a new recipe", k, got)
+		}
 	}
 }
 
@@ -238,6 +242,7 @@ func TestP4_RecipeCreationDefaultsWhenTheFieldsAreAbsent(t *testing.T) {
 func TestP3_SimulateEndpointAppliesTheMarkupOnce(t *testing.T) {
 	api, _ := newPricingAPI(t)
 	id := flourRecipe(t, api, nil)
+	setCosts(t, api, id, 0.15, 0.30, 0.30)
 
 	status, raw := api.do("POST", "/recipes/"+id+"/cost/simulate", map[string]any{"margin_pct": 0.3})
 	if status != http.StatusOK {

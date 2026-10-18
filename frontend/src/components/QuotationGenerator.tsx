@@ -25,22 +25,18 @@ interface CostBreakdown {
   ingredients_total: number;
   indirect_costs: number;
   labor_costs: number;
-  subtotal_sin_margen: number;
   total_cost: number;
   margin_pct: number;
   cost_per_portion: number;
   base_price: number;    // total_cost*(1+margin), before extra/delivery/rounding
   extra_charge: number;  // hidden surcharge
   delivery_cost: number; // visible delivery charge
-  suggested_price: number; // ceilTo500(base_price + extra + delivery)
+  suggested_price: number; // rounded up to the next $500 by the backend
 }
 
 type ToastState = { msg: string; ok: boolean } | null;
 
 const clp = (n: number) => `$${Math.round(n).toLocaleString("es-CL")}`;
-
-// Fix 6: round up to nearest 500
-const ceilTo500 = (n: number) => n === 0 ? 0 : Math.ceil(n / 500) * 500;
 
 export default function QuotationGenerator({ recipe, deferredSave = false, onDeferredSaveDone }: Props) {
   const [indirectPct, setIndirectPct] = useState(String(Math.round(recipe.indirect_cost_pct * 100)));
@@ -101,14 +97,6 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
   const portionsNum     = Math.max(1, Math.round(parseFloat(portions || "1")));
   const extraChargeNum  = Math.max(0, parseInt(extraCharge  || "0", 10));
   const deliveryCostNum = Math.max(0, parseInt(deliveryCost || "0", 10));
-
-  // Fix 6: adjusted portions price with rounding + extras
-  const adjustedCostPerPortion = breakdown
-    ? (breakdown.subtotal_sin_margen / portionsNum) * (1 + marginNum)
-    : null;
-  const adjustedFinalPrice = adjustedCostPerPortion !== null
-    ? ceilTo500(adjustedCostPerPortion * portionsNum + extraChargeNum + deliveryCostNum)
-    : null;
 
   const portionsChanged = breakdown && portionsNum !== Math.round(breakdown.yield);
 
@@ -230,18 +218,6 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
     if (deferredSave) { deferredCostsRef.current.deliveryCost = n; hasChangesRef.current = true; }
     else scheduleSave(indirectNum, laborNum, marginNum, extraChargeNum, n);
     scheduleRecalc(indirectNum, laborNum, marginNum, extraChargeNum, n);
-  };
-
-  const handleDeliveryCostBlur = () => {
-    // Fix 6: round delivery cost up to nearest 500 on blur
-    const n = Math.max(0, parseInt(deliveryCost || "0", 10));
-    const rounded = ceilTo500(n);
-    if (rounded !== n) {
-      setDeliveryCost(String(rounded));
-      if (deferredSave) { deferredCostsRef.current.deliveryCost = rounded; hasChangesRef.current = true; }
-      else scheduleSave(indirectNum, laborNum, marginNum, extraChargeNum, rounded);
-      scheduleRecalc(indirectNum, laborNum, marginNum, extraChargeNum, rounded);
-    }
   };
 
   const handlePortionsChange = (val: string) => {
@@ -397,22 +373,17 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
           )}
         </div>
 
-        {portionsChanged && adjustedCostPerPortion !== null && adjustedFinalPrice !== null && (
+        {portionsChanged && breakdown && (
           <div className="space-y-1.5 pt-2 border-t border-stone-200">
             <div className="flex justify-between items-center">
               <span className="text-stone-400 text-xs tracking-wide font-light">
-                Costo por porción (ajustado)
+                Costo por porción (no cambia al escalar)
               </span>
-              <span className="text-stone-700 text-sm font-medium">{clp(adjustedCostPerPortion)}</span>
-            </div>
-            <div className="flex justify-between items-center bg-white border border-gold border-opacity-30 px-3 py-2">
-              <span className="text-gold text-xs tracking-wide font-medium uppercase tracking-widest">
-                Precio final ({portionsNum} porciones)
-              </span>
-              <span className="text-gold font-display text-xl">{clp(adjustedFinalPrice)}</span>
+              <span className="text-stone-700 text-sm font-medium">{clp(breakdown.cost_per_portion)}</span>
             </div>
             <p className="text-stone-400 text-xs font-light">
-              Este ajuste es temporal. Usa "Guardar escalado" para crear una versión permanente.
+              Este ajuste es temporal. Usa "Guardar escalado" para crear una versión permanente
+              con ingredientes y precio de {portionsNum} porciones.
             </p>
           </div>
         )}
@@ -447,23 +418,23 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
             </div>
           ))}
           <div className="flex justify-between items-center bg-vanilla-100 border border-stone-200 px-3 py-2 mt-1">
-            <span className="text-stone-600 text-xs tracking-wide font-medium">Subtotal (sin margen)</span>
-            <span className="text-stone-800 text-sm font-medium">{clp(breakdown.subtotal_sin_margen)}</span>
+            <span className="text-stone-600 text-xs tracking-wide font-medium">Costo total (sin recargo)</span>
+            <span className="text-stone-800 text-sm font-medium">{clp(breakdown.total_cost)}</span>
           </div>
           <div className="flex justify-between items-center">
-            <span className="text-stone-400 text-xs tracking-wide font-light">Margen (%)</span>
+            <span className="text-stone-400 text-xs tracking-wide font-light">Recargo sobre costo (%)</span>
             <span className="text-stone-700 text-sm font-light">{Math.round(breakdown.margin_pct * 100)}%</span>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-stone-400 text-xs tracking-wide font-light">
-              Costo por porción (con margen)
+              Costo por porción (con recargo)
             </span>
             <span className="text-stone-700 text-sm font-medium">{clp(breakdown.cost_per_portion)}</span>
           </div>
 
           {/* Fix 5+6: extras breakdown before final price */}
           <div className="flex justify-between items-center">
-            <span className="text-stone-400 text-xs tracking-wide font-light">Base con margen</span>
+            <span className="text-stone-400 text-xs tracking-wide font-light">Base con recargo</span>
             <span className="text-stone-700 text-sm font-light">{clp(breakdown.base_price)}</span>
           </div>
           {breakdown.extra_charge > 0 && (
@@ -512,7 +483,7 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
         )}
       </div>
 
-      {/* Parámetros de costo + margen */}
+      {/* Parámetros de costo + recargo */}
       <div className="space-y-4">
         <div className="grid grid-cols-3 gap-3">
           <div>
@@ -545,7 +516,7 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
           </div>
           <div>
             <label className="block text-xs tracking-widest uppercase text-stone-400 mb-1.5 font-light">
-              Margen ganancia (%)
+              Recargo sobre costo (%)
             </label>
             <input
               type="number"
@@ -590,7 +561,6 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
                 step="500"
                 placeholder="ej. 2000"
                 onChange={(e) => handleDeliveryCostChange(e.target.value)}
-                onBlur={handleDeliveryCostBlur}
                 className="w-full bg-white border border-stone-200 text-stone-800
                            px-3 py-2 text-sm font-light focus:outline-none focus:border-gold transition-all"
               />
