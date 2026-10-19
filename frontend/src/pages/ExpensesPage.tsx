@@ -1,21 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import { expenseService } from "../api/expenseService";
-import type { IExpense, ExpenseFormData } from "../types/expense";
+import { expenseCategoryService } from "../api/expenseCategoryService";
+import type { IExpense, IExpenseCategory, ExpenseFormData } from "../types/expense";
 
 const clp = (n: number) => `$${Math.round(n).toLocaleString("es-CL")}`;
-
-const CATEGORIES: { value: IExpense["category"]; label: string }[] = [
-  { value: "ingredientes", label: "Ingredientes" },
-  { value: "servicios",    label: "Servicios"    },
-  { value: "otros",        label: "Otros"        },
-];
 
 const today = () => new Date().toISOString().slice(0, 10);
 
 const emptyForm: ExpenseFormData = {
   description: "",
   amount: "",
-  category: "otros",
+  category_id: "",
   expense_date: today(),
 };
 
@@ -36,6 +31,10 @@ export default function ExpensesPage() {
   const [filterMonth, setFilterMonth] = useState(now.getMonth() + 1);
   const [filterYear, setFilterYear]   = useState(now.getFullYear());
   const [toasts, setToasts]     = useState<Toast[]>([]);
+  const [categories, setCategories] = useState<IExpenseCategory[]>([]);
+  const [newCategory, setNewCategory] = useState("");
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
   const toastCounter            = useRef(0);
 
   const addToast = (type: Toast["type"], message: string) => {
@@ -57,6 +56,62 @@ export default function ExpensesPage() {
       });
   };
 
+  const loadCategories = () =>
+    expenseCategoryService.list()
+      .then((list) => {
+        setCategories(list);
+        // A new expense starts in "Otros" when it exists, else in the first category.
+        setForm((f) => f.category_id
+          ? f
+          : { ...f, category_id: (list.find((c) => c.name.toLowerCase() === "otros") ?? list[0])?.id ?? "" });
+      })
+      .catch(() => setError("Error cargando categorías"));
+
+  useEffect(() => { loadCategories(); }, []);
+
+  const apiMessage = (err: unknown, fallback: string) =>
+    (err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? fallback;
+
+  const handleCreateCategory = async () => {
+    const name = newCategory.trim();
+    if (!name) return;
+    try {
+      const created = await expenseCategoryService.create(name);
+      setCategories((prev) => [...prev, created].sort((a, b) => a.name.localeCompare(b.name, "es")));
+      setForm((f) => ({ ...f, category_id: created.id }));
+      setNewCategory("");
+      setError("");
+    } catch (err) {
+      setError(apiMessage(err, "Error creando la categoría"));
+    }
+  };
+
+  const handleRenameCategory = async (id: string) => {
+    const name = renameValue.trim();
+    if (!name) return;
+    try {
+      const renamed = await expenseCategoryService.rename(id, name);
+      setCategories((prev) => prev.map((c) => (c.id === id ? renamed : c)));
+      setExpenses((prev) => prev.map((e) => (e.category_id === id ? { ...e, category: renamed.name } : e)));
+      setRenamingId(null);
+      setError("");
+    } catch (err) {
+      setError(apiMessage(err, "Error renombrando la categoría"));
+    }
+  };
+
+  const handleDeleteCategory = async (c: IExpenseCategory) => {
+    if (!window.confirm(`¿Borrar la categoría "${c.name}"?`)) return;
+    try {
+      await expenseCategoryService.remove(c.id);
+      setCategories((prev) => prev.filter((x) => x.id !== c.id));
+      setForm((f) => (f.category_id === c.id ? { ...f, category_id: "" } : f));
+      setError("");
+    } catch (err) {
+      setError(apiMessage(err, "Error borrando la categoría"));
+    }
+  };
+
   useEffect(() => {
     load(filterMonth, filterYear);
   }, [filterMonth, filterYear]);
@@ -68,7 +123,7 @@ export default function ExpensesPage() {
     setForm({
       description: e.description,
       amount: String(e.amount),
-      category: e.category,
+      category_id: e.category_id,
       expense_date: e.expense_date,
     });
     setError("");
@@ -84,9 +139,10 @@ export default function ExpensesPage() {
   const handleSubmit = async (ev: React.FormEvent) => {
     ev.preventDefault();
     setError("");
-    const amount = parseFloat(form.amount);
+    const amount = /^\d+$/.test(form.amount.trim()) ? Number(form.amount.trim()) : NaN;
     if (!form.description.trim()) { setError("La descripción es requerida"); return; }
-    if (isNaN(amount) || amount <= 0) { setError("El monto debe ser mayor a 0"); return; }
+    if (isNaN(amount) || amount <= 0) { setError("El monto debe ser un número entero de pesos, mayor a 0"); return; }
+    if (!form.category_id) { setError("Elige una categoría"); return; }
     if (!form.expense_date) { setError("La fecha es requerida"); return; }
     if (form.expense_date > today()) { setError("La fecha no puede ser futura"); return; }
 
@@ -94,7 +150,7 @@ export default function ExpensesPage() {
     const payload = {
       description: form.description.trim(),
       amount,
-      category: form.category,
+      category_id: form.category_id,
       expense_date: form.expense_date,
     };
     console.log("Expense form submitted:", payload);
@@ -145,8 +201,6 @@ export default function ExpensesPage() {
   const yearOptions = [];
   for (let y = now.getFullYear(); y >= now.getFullYear() - 3; y--) yearOptions.push(y);
 
-  const categoryLabel = (cat: string) =>
-    CATEGORIES.find((c) => c.value === cat)?.label ?? cat;
 
   return (
     <div className="px-6 py-10 max-w-2xl mx-auto md:max-w-none md:px-10">
@@ -209,6 +263,7 @@ export default function ExpensesPage() {
             <input
               type="number"
               min="1"
+              step="1"
               value={form.amount}
               onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
               placeholder="ej. 50000"
@@ -223,17 +278,64 @@ export default function ExpensesPage() {
               Categoría
             </label>
             <select
-              value={form.category}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, category: e.target.value as IExpense["category"] }))
-              }
+              value={form.category_id}
+              onChange={(e) => setForm((f) => ({ ...f, category_id: e.target.value }))}
               className="w-full bg-vanilla-100 border border-stone-200 text-stone-800
                          px-4 py-2.5 text-sm font-light focus:outline-none focus:border-gold transition-all"
             >
-              {CATEGORIES.map((c) => (
-                <option key={c.value} value={c.value}>{c.label}</option>
+              <option value="" disabled>Elige una categoría</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </select>
+            <div className="mt-2 flex gap-2">
+              <input
+                type="text"
+                value={newCategory}
+                maxLength={50}
+                onChange={(e) => setNewCategory(e.target.value)}
+                placeholder="Nueva categoría (ej. Mantención)"
+                className="flex-1 bg-vanilla-100 border border-stone-200 text-stone-800
+                           px-3 py-2 text-xs font-light focus:outline-none focus:border-gold transition-all"
+              />
+              <button
+                type="button"
+                onClick={handleCreateCategory}
+                disabled={!newCategory.trim()}
+                className="text-xs tracking-widest uppercase text-gold hover:text-gold-light
+                           disabled:opacity-40 transition-all px-2"
+              >
+                Agregar
+              </button>
+            </div>
+            <details className="mt-2">
+              <summary className="text-xs text-stone-400 font-light cursor-pointer">Administrar categorías</summary>
+              <ul className="mt-2 space-y-1">
+                {categories.map((c) => (
+                  <li key={c.id} className="flex items-center gap-2 text-xs text-stone-600 font-light">
+                    {renamingId === c.id ? (
+                      <>
+                        <input
+                          type="text"
+                          value={renameValue}
+                          maxLength={50}
+                          onChange={(e) => setRenameValue(e.target.value)}
+                          className="flex-1 bg-vanilla-100 border border-stone-200 px-2 py-1"
+                        />
+                        <button type="button" onClick={() => handleRenameCategory(c.id)} className="text-gold">Guardar</button>
+                        <button type="button" onClick={() => setRenamingId(null)} className="text-stone-400">Cancelar</button>
+                      </>
+                    ) : (
+                      <>
+                        <span className="flex-1">{c.name}</span>
+                        <button type="button" onClick={() => { setRenamingId(c.id); setRenameValue(c.name); }} className="text-stone-400 hover:text-gold">Renombrar</button>
+                        <button type="button" onClick={() => handleDeleteCategory(c)} className="text-stone-400 hover:text-red-500">Borrar</button>
+                      </>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </details>
           </div>
 
           {/* Date */}
@@ -350,7 +452,7 @@ export default function ExpensesPage() {
                   <td className="px-6 py-4 text-stone-800 font-light">{e.description}</td>
                   <td className="px-6 py-4">
                     <span className="text-xs tracking-widest uppercase font-medium px-2 py-1 border border-stone-200 text-stone-500">
-                      {categoryLabel(e.category)}
+                      {e.category}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right text-stone-800 font-light">{clp(e.amount)}</td>

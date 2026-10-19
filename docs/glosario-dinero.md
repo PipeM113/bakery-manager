@@ -50,3 +50,24 @@ motivo; las demás filas se importan.
 son por pedido y no se multiplican. "Guardar escalado" crea una copia con las cantidades
 escaladas y los mismos porcentajes, cobro extra y delivery; su precio coincide con el de la
 vista previa.
+
+## Pesos enteros
+
+Todo el dinero que se guarda y se muestra (ventas, costos fijos, gastos, cotizaciones y el
+dashboard) son pesos enteros, de 1 hasta 2.000.000.000. La API rechaza decimales, cero (salvo
+una venta regalada, que puede valer 0), negativos y texto. El costo de los ingredientes del
+mes se suma exacto y se redondea una sola vez al final. El margen de ganancia lleva un decimal.
+
+## Categorías de gasto
+
+Cada gasto pertenece a una categoría. Parten gas, luz, agua, arriendo, envases, transporte,
+sueldos y otros, y cualquier persona puede crear, renombrar o borrar categorías (no se borra
+una que tenga gastos). El nombre es único sin distinguir mayúsculas.
+
+Lo que va dentro de la receta (ingredientes, y más adelante los insumos como cajas o moldes)
+sale del costo de ventas del dashboard, así que **no se registra además como gasto**: se
+contaría dos veces. Por eso no se puede crear una categoría "ingredientes". Gas, luz,
+arriendo y similares, que no son líneas de receta, sí son gastos y se restan de la utilidad.
+
+El dashboard mensual trae `expenses_by_category`: cuánto se gastó en cada categoría, de mayor a
+menor.

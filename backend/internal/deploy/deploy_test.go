@@ -207,7 +207,7 @@ func TestB1_MigrationsLandInTheManagerSchemaOnly(t *testing.T) {
 
 	got := names(t, r.admin, `select table_name from information_schema.tables
 		where table_schema = 'manager' and table_type = 'BASE TABLE' order by 1`)
-	want := []string{"fixed_costs", "ingredient_price_history", "ingredients", "operational_expenses",
+	want := []string{"expense_categories", "fixed_costs", "ingredient_price_history", "ingredients", "operational_expenses",
 		"quotations", "recipe_ingredients", "recipes", "sale_ingredients", "sales", "schema_migrations", "users"}
 	if !slices.Equal(got, want) {
 		t.Errorf("tables in manager = %v, want %v", got, want)
@@ -228,8 +228,8 @@ func TestB1_MigrationsLandInTheManagerSchemaOnly(t *testing.T) {
 	if err := r.admin.QueryRow(context.Background(), `select version, dirty from manager.schema_migrations`).Scan(&version, &dirty); err != nil {
 		t.Fatal(err)
 	}
-	if version != 15 || dirty {
-		t.Errorf("schema_migrations = version %d dirty %v, want 15 and clean", version, dirty)
+	if version != 16 || dirty {
+		t.Errorf("schema_migrations = version %d dirty %v, want 16 and clean", version, dirty)
 	}
 }
 
@@ -255,14 +255,15 @@ func TestB2_EveryManagerTableHasRLSAndNoPolicies(t *testing.T) {
 func TestB2_RLSMigrationIsReversible(t *testing.T) {
 	r := rehearse(t)
 
-	migrate(t, r.url, r.password, "down", "1")
+	// Migration 16 (whole pesos and expense categories) sits on top of the RLS one.
+	migrate(t, r.url, r.password, "down", "2")
 
 	var version int
 	if err := r.admin.QueryRow(context.Background(), `select version from manager.schema_migrations`).Scan(&version); err != nil {
 		t.Fatal(err)
 	}
 	if version != 14 {
-		t.Errorf("version after down 1 = %d, want 14", version)
+		t.Errorf("version after down 2 = %d, want 14", version)
 	}
 	on := names(t, r.admin, `select c.relname from pg_class c join pg_namespace n on n.oid = c.relnamespace
 		where n.nspname = 'manager' and c.relkind = 'r' and c.relname <> 'schema_migrations' and c.relrowsecurity order by 1`)

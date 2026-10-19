@@ -27,3 +27,23 @@ func TestP9_GlossaryDefinesMarkupAndMargin(t *testing.T) {
 		}
 	}
 }
+
+// Sprint 2b: expense categories and whole pesos are written down too.
+func TestD6_GlossaryExplainsCategoriesAndWholePesos(t *testing.T) {
+	root := repoRoot(t)
+	raw, err := os.ReadFile(filepath.Join(root, "docs", "glosario-dinero.md"))
+	if err != nil {
+		t.Fatalf("docs/glosario-dinero.md is missing: %v", err)
+	}
+	text := string(raw)
+	for _, want := range []string{
+		"Categorías de gasto",  // what they are and that anyone can add one
+		"expenses_by_category", // the dashboard split
+		"pesos enteros",        // money is stored and shown without decimals
+		"como gasto",           // ingredients and recipe supplies are not logged as an expense
+	} {
+		if !strings.Contains(text, want) {
+			t.Errorf("the glossary should mention %q", want)
+		}
+	}
+}

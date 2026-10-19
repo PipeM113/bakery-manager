@@ -37,8 +37,8 @@ type Sale struct {
 	RecipeID     string           `json:"recipe_id"`
 	RecipeName   string           `json:"recipe_name"`
 	QuantitySold int              `json:"quantity_sold"`
-	UnitPrice    float64          `json:"unit_price"`
-	TotalPrice   float64          `json:"total_price"`
+	UnitPrice    int64            `json:"unit_price"`
+	TotalPrice   int64            `json:"total_price"`
 	SaleDate     string           `json:"sale_date"`
 	Notes        string           `json:"notes"`
 	Ingredients  []SaleIngredient `json:"ingredients"`
@@ -49,7 +49,7 @@ type RegisterSaleInput struct {
 	UserID       string
 	RecipeID     string
 	QuantitySold int
-	UnitPrice    float64
+	UnitPrice    int64
 	SaleDate     string
 	Notes        string
 }
@@ -132,7 +132,7 @@ func (r *SaleRepository) RegisterSale(ctx context.Context, input RegisterSaleInp
 	if err != nil {
 		return Sale{}, fmt.Errorf("insert sale: %w", err)
 	}
-	sale.TotalPrice = float64(sale.QuantitySold) * sale.UnitPrice
+	sale.TotalPrice = int64(sale.QuantitySold) * sale.UnitPrice
 
 	// For each ingredient: decrement stock, insert audit row
 	for _, ing := range ings {
@@ -173,7 +173,7 @@ func (r *SaleRepository) RegisterSale(ctx context.Context, input RegisterSaleInp
 func (r *SaleRepository) GetAll(ctx context.Context, userID, from, to string) ([]Sale, error) {
 	query := `
 		SELECT s.id, s.user_id, s.recipe_id, rec.name, s.quantity_sold, s.unit_price,
-		       s.quantity_sold * s.unit_price AS total_price,
+		       s.quantity_sold::bigint * s.unit_price AS total_price,
 		       s.sale_date::text, s.notes, s.created_at
 		FROM sales s
 		JOIN recipes rec ON rec.id = s.recipe_id

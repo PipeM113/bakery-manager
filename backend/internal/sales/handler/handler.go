@@ -10,6 +10,7 @@ import (
 	"github.com/PipeM113/bakery-manager/internal/sales/service"
 	"github.com/PipeM113/bakery-manager/pkg/httputil"
 	mid "github.com/PipeM113/bakery-manager/pkg/middleware"
+	"github.com/PipeM113/bakery-manager/pkg/money"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -28,22 +29,22 @@ func userID(r *http.Request) string {
 
 func (h *SaleHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var body struct {
-		RecipeID     string  `json:"recipe_id"`
-		QuantitySold int     `json:"quantity_sold"`
-		UnitPrice    float64 `json:"unit_price"`
-		SaleDate     string  `json:"sale_date"`
-		Notes        string  `json:"notes"`
+		RecipeID     string `json:"recipe_id"`
+		QuantitySold int    `json:"quantity_sold"`
+		UnitPrice    int64  `json:"unit_price"`
+		SaleDate     string `json:"sale_date"`
+		Notes        string `json:"notes"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		log.Printf("[sales] decode body error: %v", err)
 		httputil.JSONError(w, "request inválido", http.StatusBadRequest)
 		return
 	}
-	log.Printf("[sales] POST /sales user=%s recipe_id=%q qty=%d price=%.2f date=%q",
+	log.Printf("[sales] POST /sales user=%s recipe_id=%q qty=%d price=%d date=%q",
 		userID(r), body.RecipeID, body.QuantitySold, body.UnitPrice, body.SaleDate)
 
-	if body.RecipeID == "" || body.QuantitySold <= 0 || body.UnitPrice < 0 {
-		msg := "receta, cantidad y precio son requeridos"
+	if body.RecipeID == "" || body.QuantitySold <= 0 || !money.Valid(body.UnitPrice, true) {
+		msg := "receta, cantidad y precio (pesos enteros, hasta 2.000.000.000) son requeridos"
 		log.Printf("[sales] validación fallida: %s", msg)
 		httputil.JSONError(w, msg, http.StatusBadRequest)
 		return

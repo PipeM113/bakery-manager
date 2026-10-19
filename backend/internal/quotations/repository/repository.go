@@ -14,7 +14,7 @@ type Quotation struct {
 	RecipeName string    `json:"recipe_name"`
 	ClientName string    `json:"client_name"`
 	MarginPct  float64   `json:"margin_pct"`
-	FinalPrice float64   `json:"final_price"`
+	FinalPrice int64     `json:"final_price"`
 	Status     string    `json:"status"`
 	CreatedAt  time.Time `json:"created_at"`
 	UpdatedAt  time.Time `json:"updated_at"`
@@ -25,7 +25,7 @@ type SaveInput struct {
 	RecipeID   string
 	ClientName string
 	MarginPct  float64
-	FinalPrice float64
+	FinalPrice int64
 }
 
 type QuotationRepository struct {

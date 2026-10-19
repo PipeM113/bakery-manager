@@ -3,15 +3,21 @@ export interface IExpense {
   user_id: string;
   description: string;
   amount: number;
-  category: "ingredientes" | "servicios" | "otros";
+  category_id: string;
+  category: string;
   expense_date: string;
   created_at: string;
   updated_at: string;
 }
 
+export interface IExpenseCategory {
+  id: string;
+  name: string;
+}
+
 export interface ExpenseFormData {
   description: string;
   amount: string;
-  category: "ingredientes" | "servicios" | "otros";
+  category_id: string;
   expense_date: string;
 }

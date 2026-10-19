@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/PipeM113/bakery-manager/internal/analytics/domain"
@@ -17,13 +18,14 @@ func NewAnalyticsService(db *pgxpool.Pool) *AnalyticsService {
 	return &AnalyticsService{db: db}
 }
 
-// GetMonthlyMetrics computes profitability aggregates for the given month and year.
+// GetMonthlyMetrics computes profitability aggregates for the given month and year, in whole
+// pesos. The cost of ingredients is summed exactly and rounded once at the end of the month.
 func (s *AnalyticsService) GetMonthlyMetrics(ctx context.Context, userID string, month, year int) (domain.MonthlyMetrics, error) {
-	m := domain.MonthlyMetrics{Month: month, Year: year}
+	m := domain.MonthlyMetrics{Month: month, Year: year, ExpensesByCategory: []domain.CategoryExpense{}}
 
 	// Total revenue
 	err := s.db.QueryRow(ctx, `
-		SELECT COALESCE(SUM(quantity_sold * unit_price), 0)
+		SELECT COALESCE(SUM(quantity_sold::bigint * unit_price), 0)::bigint
 		FROM sales
 		WHERE user_id = $1
 		  AND EXTRACT(MONTH FROM sale_date) = $2
@@ -36,7 +38,7 @@ func (s *AnalyticsService) GetMonthlyMetrics(ctx context.Context, userID string,
 
 	// Total ingredient cost (using sale_ingredients price snapshots)
 	err = s.db.QueryRow(ctx, `
-		SELECT COALESCE(SUM(si.price_at_time * si.quantity_used), 0)
+		SELECT COALESCE(ROUND(SUM(si.price_at_time * si.quantity_used)), 0)::bigint
 		FROM sale_ingredients si
 		JOIN sales s ON s.id = si.sale_id
 		WHERE s.user_id = $1
@@ -50,7 +52,7 @@ func (s *AnalyticsService) GetMonthlyMetrics(ctx context.Context, userID string,
 
 	// Total active fixed costs (monthly amount, applied in full)
 	err = s.db.QueryRow(ctx, `
-		SELECT COALESCE(SUM(monthly_amount), 0)
+		SELECT COALESCE(SUM(monthly_amount), 0)::bigint
 		FROM fixed_costs
 		WHERE user_id = $1 AND is_active = TRUE`,
 		userID,
@@ -59,48 +61,76 @@ func (s *AnalyticsService) GetMonthlyMetrics(ctx context.Context, userID string,
 		return m, fmt.Errorf("total fixed costs: %w", err)
 	}
 
-	// Total operational expenses for the month
-	err = s.db.QueryRow(ctx, `
-		SELECT COALESCE(SUM(amount), 0)
-		FROM operational_expenses
-		WHERE user_id = $1
-		  AND EXTRACT(MONTH FROM expense_date) = $2
-		  AND EXTRACT(YEAR  FROM expense_date) = $3`,
+	// Operational expenses for the month, by category (largest first)
+	rows, err := s.db.Query(ctx, `
+		SELECT c.id, c.name, SUM(e.amount)::bigint AS total
+		FROM operational_expenses e
+		JOIN expense_categories c ON c.id = e.category_id
+		WHERE e.user_id = $1
+		  AND EXTRACT(MONTH FROM e.expense_date) = $2
+		  AND EXTRACT(YEAR  FROM e.expense_date) = $3
+		GROUP BY c.id, c.name
+		ORDER BY total DESC, lower(c.name)`,
 		userID, month, year,
-	).Scan(&m.TotalOperationalExpenses)
+	)
 	if err != nil {
-		return m, fmt.Errorf("total operational expenses: %w", err)
+		return m, fmt.Errorf("expenses by category: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var ce domain.CategoryExpense
+		if err := rows.Scan(&ce.CategoryID, &ce.Category, &ce.Total); err != nil {
+			return m, fmt.Errorf("scan expenses by category: %w", err)
+		}
+		m.TotalOperationalExpenses += ce.Total
+		m.ExpensesByCategory = append(m.ExpensesByCategory, ce)
+	}
+	if err := rows.Err(); err != nil {
+		return m, fmt.Errorf("read expenses by category: %w", err)
 	}
 
 	m.GrossProfit = m.TotalRevenue - m.TotalIngredientsCost
 	m.NetProfit = m.GrossProfit - m.TotalFixedCosts - m.TotalOperationalExpenses
 	if m.TotalRevenue > 0 {
-		m.ProfitMargin = m.NetProfit / m.TotalRevenue * 100
+		m.ProfitMargin = percentOneDecimal(m.NetProfit, m.TotalRevenue)
 	}
 	return m, nil
+}
+
+// percentOneDecimal is part over whole in percent, rounded to one decimal.
+func percentOneDecimal(part, whole int64) float64 {
+	return math.Round(float64(part)/float64(whole)*1000) / 10
 }
 
 // GetRecipeMetrics returns per-recipe profitability for the given month/year, sorted by revenue desc.
 func (s *AnalyticsService) GetRecipeMetrics(ctx context.Context, userID string, month, year int) ([]domain.RecipeMetrics, error) {
 	rows, err := s.db.Query(ctx, `
-		SELECT
-			r.id,
-			r.name,
-			SUM(s.quantity_sold)::int                           AS units_sold,
-			SUM(s.quantity_sold * s.unit_price)                 AS total_revenue,
-			COALESCE(SUM(si_agg.ingredient_cost), 0)            AS total_cost
-		FROM sales s
-		JOIN recipes r ON r.id = s.recipe_id
-		LEFT JOIN (
-			SELECT si.sale_id, SUM(si.price_at_time * si.quantity_used) AS ingredient_cost
-			FROM sale_ingredients si
-			GROUP BY si.sale_id
-		) si_agg ON si_agg.sale_id = s.id
-		WHERE s.user_id = $1
-		  AND EXTRACT(MONTH FROM s.sale_date) = $2
-		  AND EXTRACT(YEAR  FROM s.sale_date) = $3
-		GROUP BY r.id, r.name
-		ORDER BY total_revenue DESC`,
+		WITH per_recipe AS (
+			SELECT
+				r.id,
+				r.name,
+				SUM(s.quantity_sold)::bigint                        AS units_sold,
+				SUM(s.quantity_sold::bigint * s.unit_price)         AS revenue,
+				COALESCE(SUM(si_agg.ingredient_cost), 0)            AS cost
+			FROM sales s
+			JOIN recipes r ON r.id = s.recipe_id
+			LEFT JOIN (
+				SELECT si.sale_id, SUM(si.price_at_time * si.quantity_used) AS ingredient_cost
+				FROM sale_ingredients si
+				GROUP BY si.sale_id
+			) si_agg ON si_agg.sale_id = s.id
+			WHERE s.user_id = $1
+			  AND EXTRACT(MONTH FROM s.sale_date) = $2
+			  AND EXTRACT(YEAR  FROM s.sale_date) = $3
+			GROUP BY r.id, r.name
+		)
+		SELECT id, name, units_sold::int, revenue::bigint,
+		       ROUND(cost)::bigint,
+		       ROUND(cost / units_sold)::bigint,
+		       ROUND(revenue::numeric / units_sold)::bigint,
+		       COALESCE(ROUND((revenue - cost) * 100 / NULLIF(revenue, 0), 1), 0)::float8
+		FROM per_recipe
+		ORDER BY revenue DESC`,
 		userID, month, year,
 	)
 	if err != nil {
@@ -111,18 +141,16 @@ func (s *AnalyticsService) GetRecipeMetrics(ctx context.Context, userID string, 
 	var result []domain.RecipeMetrics
 	for rows.Next() {
 		var rm domain.RecipeMetrics
-		if err := rows.Scan(&rm.RecipeID, &rm.RecipeName, &rm.UnitsSold, &rm.TotalRevenue, &rm.TotalCost); err != nil {
+		var avgPrice int64
+		if err := rows.Scan(&rm.RecipeID, &rm.RecipeName, &rm.UnitsSold, &rm.TotalRevenue,
+			&rm.TotalCost, &rm.CostPerUnit, &avgPrice, &rm.GrossMargin); err != nil {
 			return nil, fmt.Errorf("scan recipe metrics: %w", err)
 		}
-		if rm.UnitsSold > 0 {
-			rm.CostPerUnit = rm.TotalCost / float64(rm.UnitsSold)
-			avgPrice := rm.TotalRevenue / float64(rm.UnitsSold)
-			rm.UnitProfit = avgPrice - rm.CostPerUnit
-		}
-		if rm.TotalRevenue > 0 {
-			rm.GrossMargin = (rm.TotalRevenue - rm.TotalCost) / rm.TotalRevenue * 100
-		}
+		rm.UnitProfit = avgPrice - rm.CostPerUnit
 		result = append(result, rm)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("read recipe metrics: %w", err)
 	}
 	return result, nil
 }
