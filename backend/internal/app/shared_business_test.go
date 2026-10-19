@@ -137,7 +137,7 @@ func TestN2_EverybodySeesTheWholeBusiness(t *testing.T) {
 		t.Fatalf("status = %d", status)
 	}
 	m := decode(t, raw)
-	// 3000 of the sale + 4000 of the order, 100 of the fixed cost, 400 of the expense, 20 of the merma
+	// 3000 of the sale + 4000 of the order, 100 of the fixed cost, 400 of the expense, 10 of the merma (10 gr at 1 per gr)
 	if got := number(t, m, "total_revenue"); got != 7000 {
 		t.Errorf("total_revenue = %v, want 7000 (the sale and the order of the other account)", got)
 	}
@@ -147,8 +147,8 @@ func TestN2_EverybodySeesTheWholeBusiness(t *testing.T) {
 	if got := number(t, m, "total_operational_expenses"); got != 400 {
 		t.Errorf("total_operational_expenses = %v, want 400", got)
 	}
-	if got := number(t, m, "total_waste_cost"); got != 20 {
-		t.Errorf("total_waste_cost = %v, want 20", got)
+	if got := number(t, m, "total_waste_cost"); got != 10 {
+		t.Errorf("total_waste_cost = %v, want 10", got)
 	}
 
 	t.Run("what the second account registers is seen by the first", func(t *testing.T) {

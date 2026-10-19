@@ -24,7 +24,7 @@ type OrderLine struct {
 
 type Order struct {
 	ID           string      `json:"id"`
-	UserID       string      `json:"user_id"`
+	CreatedBy    *string     `json:"created_by"`
 	CustomerName string      `json:"customer_name"`
 	Notes        string      `json:"notes"`
 	OrderDate    string      `json:"order_date"`
@@ -36,7 +36,7 @@ type Order struct {
 }
 
 type OrderInput struct {
-	UserID       string
+	CreatedBy    string
 	CustomerName string
 	Notes        string
 	OrderDate    string // YYYY-MM-DD, already checked
@@ -101,16 +101,16 @@ func (r *SaleRepository) CreateOrder(ctx context.Context, in OrderInput) (Order,
 	}
 	defer tx.Rollback(ctx)
 
-	order := Order{UserID: in.UserID, CustomerName: in.CustomerName, Notes: in.Notes, OrderDate: in.OrderDate, TotalPrice: total}
+	order := Order{CustomerName: in.CustomerName, Notes: in.Notes, OrderDate: in.OrderDate, TotalPrice: total}
 	if err := tx.QueryRow(ctx, `
-		INSERT INTO orders (user_id, customer_name, notes, order_date, total_price)
+		INSERT INTO orders (created_by, customer_name, notes, order_date, total_price)
 		VALUES ($1, $2, $3, $4::date, $5) RETURNING id, created_at`,
-		in.UserID, in.CustomerName, in.Notes, in.OrderDate, total,
+		in.CreatedBy, in.CustomerName, in.Notes, in.OrderDate, total,
 	).Scan(&order.ID, &order.CreatedAt); err != nil {
 		return Order{}, fmt.Errorf("insert order: %w", err)
 	}
 
-	sales, shortfalls, err := takeLines(ctx, tx, in.UserID, &order.ID, in.OrderDate, in.Notes, in.Lines, totals)
+	sales, shortfalls, err := takeLines(ctx, tx, in.CreatedBy, &order.ID, in.OrderDate, in.Notes, in.Lines, totals)
 	if err != nil {
 		return Order{}, err
 	}
@@ -126,11 +126,11 @@ func (r *SaleRepository) CreateOrder(ctx context.Context, in OrderInput) (Order,
 	return order, nil
 }
 
-const orderColumns = `o.id, o.user_id, o.customer_name, o.notes, o.order_date::text, o.total_price, o.created_at`
+const orderColumns = `o.id, o.created_by, o.customer_name, o.notes, o.order_date::text, o.total_price, o.created_at`
 
 func scanOrder(row pgx.Row) (Order, error) {
 	var o Order
-	err := row.Scan(&o.ID, &o.UserID, &o.CustomerName, &o.Notes, &o.OrderDate, &o.TotalPrice, &o.CreatedAt)
+	err := row.Scan(&o.ID, &o.CreatedBy, &o.CustomerName, &o.Notes, &o.OrderDate, &o.TotalPrice, &o.CreatedAt)
 	o.Lines = []OrderLine{}
 	o.StockShortfalls = []Shortfall{}
 	return o, err
@@ -168,11 +168,11 @@ func (r *SaleRepository) fillLines(ctx context.Context, orders []Order) error {
 }
 
 // ListOrders gives the orders of the month that starts on `month` ("YYYY-MM-01"), newest first.
-func (r *SaleRepository) ListOrders(ctx context.Context, userID, month string) ([]Order, error) {
+func (r *SaleRepository) ListOrders(ctx context.Context, month string) ([]Order, error) {
 	rows, err := r.db.Query(ctx, `
 		SELECT `+orderColumns+` FROM orders o
-		WHERE o.user_id = $1 AND o.order_date >= $2::date AND o.order_date < ($2::date + interval '1 month')
-		ORDER BY o.order_date DESC, o.created_at DESC`, userID, month)
+		WHERE o.order_date >= $1::date AND o.order_date < ($1::date + interval '1 month')
+		ORDER BY o.order_date DESC, o.created_at DESC`, month)
 	if err != nil {
 		return nil, fmt.Errorf("list orders: %w", err)
 	}
@@ -198,8 +198,8 @@ func notFound(err error) bool {
 }
 
 // GetOrder gives one order of the user with its lines.
-func (r *SaleRepository) GetOrder(ctx context.Context, userID, id string) (Order, error) {
-	o, err := scanOrder(r.db.QueryRow(ctx, `SELECT `+orderColumns+` FROM orders o WHERE o.id = $1 AND o.user_id = $2`, id, userID))
+func (r *SaleRepository) GetOrder(ctx context.Context, id string) (Order, error) {
+	o, err := scanOrder(r.db.QueryRow(ctx, `SELECT `+orderColumns+` FROM orders o WHERE o.id = $1`, id))
 	if notFound(err) {
 		return Order{}, ErrNotFound
 	}
@@ -214,7 +214,7 @@ func (r *SaleRepository) GetOrder(ctx context.Context, userID, id string) (Order
 }
 
 // DeleteOrder cancels the whole order: each ingredient gets back exactly what the lines took.
-func (r *SaleRepository) DeleteOrder(ctx context.Context, userID, id string) error {
+func (r *SaleRepository) DeleteOrder(ctx context.Context, id string) error {
 	tx, err := r.db.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("begin tx: %w", err)
@@ -222,7 +222,7 @@ func (r *SaleRepository) DeleteOrder(ctx context.Context, userID, id string) err
 	defer tx.Rollback(ctx)
 
 	var locked string
-	if err := tx.QueryRow(ctx, `SELECT id FROM orders WHERE id = $1 AND user_id = $2 FOR UPDATE`, id, userID).Scan(&locked); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT id FROM orders WHERE id = $1 FOR UPDATE`, id).Scan(&locked); err != nil {
 		if notFound(err) {
 			return ErrNotFound
 		}

@@ -12,7 +12,8 @@ export interface QuotationRequest {
 
 export interface IQuotation {
   id:          string;
-  user_id:     string;
+  /** Who registered it; empty if that user was deleted. */
+  created_by:     string | null;
   recipe_id:   string;
   recipe_name: string;
   client_name: string;

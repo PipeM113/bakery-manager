@@ -20,17 +20,16 @@ func NewAnalyticsService(db *pgxpool.Pool) *AnalyticsService {
 
 // GetMonthlyMetrics computes profitability aggregates for the given month and year, in whole
 // pesos. The cost of ingredients is summed exactly and rounded once at the end of the month.
-func (s *AnalyticsService) GetMonthlyMetrics(ctx context.Context, userID string, month, year int) (domain.MonthlyMetrics, error) {
+func (s *AnalyticsService) GetMonthlyMetrics(ctx context.Context, month, year int) (domain.MonthlyMetrics, error) {
 	m := domain.MonthlyMetrics{Month: month, Year: year, ExpensesByCategory: []domain.CategoryExpense{}}
 
 	// Total revenue
 	err := s.db.QueryRow(ctx, `
 		SELECT COALESCE(SUM(line_total), 0)::bigint
 		FROM sales
-		WHERE user_id = $1
-		  AND EXTRACT(MONTH FROM sale_date) = $2
-		  AND EXTRACT(YEAR  FROM sale_date) = $3`,
-		userID, month, year,
+		WHERE EXTRACT(MONTH FROM sale_date) = $1
+		  AND EXTRACT(YEAR  FROM sale_date) = $2`,
+		month, year,
 	).Scan(&m.TotalRevenue)
 	if err != nil {
 		return m, fmt.Errorf("total revenue: %w", err)
@@ -41,10 +40,9 @@ func (s *AnalyticsService) GetMonthlyMetrics(ctx context.Context, userID string,
 		SELECT COALESCE(ROUND(SUM(si.price_at_time * si.quantity_used)), 0)::bigint
 		FROM sale_ingredients si
 		JOIN sales s ON s.id = si.sale_id
-		WHERE s.user_id = $1
-		  AND EXTRACT(MONTH FROM s.sale_date) = $2
-		  AND EXTRACT(YEAR  FROM s.sale_date) = $3`,
-		userID, month, year,
+		WHERE EXTRACT(MONTH FROM s.sale_date) = $1
+		  AND EXTRACT(YEAR  FROM s.sale_date) = $2`,
+		month, year,
 	).Scan(&m.TotalIngredientsCost)
 	if err != nil {
 		return m, fmt.Errorf("total ingredients cost: %w", err)
@@ -56,10 +54,10 @@ func (s *AnalyticsService) GetMonthlyMetrics(ctx context.Context, userID string,
 		FROM fixed_costs fc
 		JOIN LATERAL (
 			SELECT monthly_amount FROM fixed_cost_versions
-			WHERE fixed_cost_id = fc.id AND valid_from <= $2::date
+			WHERE fixed_cost_id = fc.id AND valid_from <= $1::date
 			ORDER BY valid_from DESC LIMIT 1) v ON TRUE
-		WHERE fc.user_id = $1 AND (fc.ended_from IS NULL OR $2::date < fc.ended_from)`,
-		userID, fmt.Sprintf("%04d-%02d-01", year, month),
+		WHERE (fc.ended_from IS NULL OR $1::date < fc.ended_from)`,
+		fmt.Sprintf("%04d-%02d-01", year, month),
 	).Scan(&m.TotalFixedCosts)
 	if err != nil {
 		return m, fmt.Errorf("total fixed costs: %w", err)
@@ -70,12 +68,11 @@ func (s *AnalyticsService) GetMonthlyMetrics(ctx context.Context, userID string,
 		SELECT c.id, c.name, SUM(e.amount)::bigint AS total
 		FROM operational_expenses e
 		JOIN expense_categories c ON c.id = e.category_id
-		WHERE e.user_id = $1
-		  AND EXTRACT(MONTH FROM e.expense_date) = $2
-		  AND EXTRACT(YEAR  FROM e.expense_date) = $3
+		WHERE EXTRACT(MONTH FROM e.expense_date) = $1
+		  AND EXTRACT(YEAR  FROM e.expense_date) = $2
 		GROUP BY c.id, c.name
 		ORDER BY total DESC, lower(c.name)`,
-		userID, month, year,
+		month, year,
 	)
 	if err != nil {
 		return m, fmt.Errorf("expenses by category: %w", err)
@@ -97,9 +94,9 @@ func (s *AnalyticsService) GetMonthlyMetrics(ctx context.Context, userID string,
 	err = s.db.QueryRow(ctx, `
 		SELECT COALESCE(SUM(loss_amount), 0)::bigint
 		FROM stock_adjustments
-		WHERE user_id = $1 AND reason = 'merma'
-		  AND adjusted_on >= $2::date AND adjusted_on < ($2::date + interval '1 month')`,
-		userID, fmt.Sprintf("%04d-%02d-01", year, month),
+		WHERE reason = 'merma'
+		  AND adjusted_on >= $1::date AND adjusted_on < ($1::date + interval '1 month')`,
+		fmt.Sprintf("%04d-%02d-01", year, month),
 	).Scan(&m.TotalWasteCost)
 	if err != nil {
 		return m, fmt.Errorf("total waste cost: %w", err)
@@ -119,7 +116,7 @@ func percentOneDecimal(part, whole int64) float64 {
 }
 
 // GetRecipeMetrics returns per-recipe profitability for the given month/year, sorted by revenue desc.
-func (s *AnalyticsService) GetRecipeMetrics(ctx context.Context, userID string, month, year int) ([]domain.RecipeMetrics, error) {
+func (s *AnalyticsService) GetRecipeMetrics(ctx context.Context, month, year int) ([]domain.RecipeMetrics, error) {
 	rows, err := s.db.Query(ctx, `
 		WITH per_recipe AS (
 			SELECT
@@ -135,9 +132,8 @@ func (s *AnalyticsService) GetRecipeMetrics(ctx context.Context, userID string, 
 				FROM sale_ingredients si
 				GROUP BY si.sale_id
 			) si_agg ON si_agg.sale_id = s.id
-			WHERE s.user_id = $1
-			  AND EXTRACT(MONTH FROM s.sale_date) = $2
-			  AND EXTRACT(YEAR  FROM s.sale_date) = $3
+			WHERE EXTRACT(MONTH FROM s.sale_date) = $1
+			  AND EXTRACT(YEAR  FROM s.sale_date) = $2
 			GROUP BY r.id, r.name
 		)
 		SELECT id, name, units_sold::int, revenue::bigint,
@@ -147,7 +143,7 @@ func (s *AnalyticsService) GetRecipeMetrics(ctx context.Context, userID string, 
 		       COALESCE(ROUND((revenue - cost) * 100 / NULLIF(revenue, 0), 1), 0)::float8
 		FROM per_recipe
 		ORDER BY revenue DESC`,
-		userID, month, year,
+		month, year,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("recipe metrics query: %w", err)
@@ -174,7 +170,7 @@ func (s *AnalyticsService) GetRecipeMetrics(ctx context.Context, userID string, 
 // GetTrendData returns the revenue and the net profit of each month of `months` ("YYYY-MM",
 // consecutive, oldest first). It asks the database four questions in all, whatever the number of
 // months, and each figure is calculated as in GetMonthlyMetrics.
-func (s *AnalyticsService) GetTrendData(ctx context.Context, userID string, months []string) ([]domain.TrendPoint, error) {
+func (s *AnalyticsService) GetTrendData(ctx context.Context, months []string) ([]domain.TrendPoint, error) {
 	if len(months) == 0 {
 		return []domain.TrendPoint{}, nil
 	}
@@ -186,7 +182,7 @@ func (s *AnalyticsService) GetTrendData(ctx context.Context, userID string, mont
 	until := first.AddDate(0, len(months), 0).Format("2006-01-02")
 
 	perMonth := func(name, query string) (map[string]int64, error) {
-		rows, err := s.db.Query(ctx, query, userID, from, until)
+		rows, err := s.db.Query(ctx, query, from, until)
 		if err != nil {
 			return nil, fmt.Errorf("trend %s: %w", name, err)
 		}
@@ -209,7 +205,7 @@ func (s *AnalyticsService) GetTrendData(ctx context.Context, userID string, mont
 	revenue, err := perMonth("revenue", `
 		SELECT to_char(sale_date, 'YYYY-MM'), SUM(line_total)::bigint
 		FROM sales
-		WHERE user_id = $1 AND sale_date >= $2::date AND sale_date < $3::date
+		WHERE sale_date >= $1::date AND sale_date < $2::date
 		GROUP BY 1`)
 	if err != nil {
 		return nil, err
@@ -218,7 +214,7 @@ func (s *AnalyticsService) GetTrendData(ctx context.Context, userID string, mont
 		SELECT to_char(s.sale_date, 'YYYY-MM'), ROUND(SUM(si.price_at_time * si.quantity_used))::bigint
 		FROM sale_ingredients si
 		JOIN sales s ON s.id = si.sale_id
-		WHERE s.user_id = $1 AND s.sale_date >= $2::date AND s.sale_date < $3::date
+		WHERE s.sale_date >= $1::date AND s.sale_date < $2::date
 		GROUP BY 1`)
 	if err != nil {
 		return nil, err
@@ -228,11 +224,11 @@ func (s *AnalyticsService) GetTrendData(ctx context.Context, userID string, mont
 		SELECT ym, SUM(total)::bigint FROM (
 			SELECT to_char(expense_date, 'YYYY-MM') AS ym, amount AS total
 			FROM operational_expenses
-			WHERE user_id = $1 AND expense_date >= $2::date AND expense_date < $3::date
+			WHERE expense_date >= $1::date AND expense_date < $2::date
 			UNION ALL
 			SELECT to_char(adjusted_on, 'YYYY-MM'), loss_amount
 			FROM stock_adjustments
-			WHERE user_id = $1 AND reason = 'merma' AND adjusted_on >= $2::date AND adjusted_on < $3::date
+			WHERE reason = 'merma' AND adjusted_on >= $1::date AND adjusted_on < $2::date
 		) t GROUP BY 1`)
 	if err != nil {
 		return nil, err
@@ -241,8 +237,8 @@ func (s *AnalyticsService) GetTrendData(ctx context.Context, userID string, mont
 	// Fixed costs in force in each month, with that month's amount (as in GetMonthlyMetrics).
 	fixed, err := perMonth("fixed costs", `
 		SELECT to_char(m, 'YYYY-MM'), COALESCE(SUM(v.monthly_amount), 0)::bigint
-		FROM generate_series($2::date, $3::date - 1, interval '1 month') AS m
-		JOIN fixed_costs fc ON fc.user_id = $1 AND (fc.ended_from IS NULL OR m::date < fc.ended_from)
+		FROM generate_series($1::date, $2::date - 1, interval '1 month') AS m
+		JOIN fixed_costs fc ON (fc.ended_from IS NULL OR m::date < fc.ended_from)
 		JOIN LATERAL (
 			SELECT monthly_amount FROM fixed_cost_versions
 			WHERE fixed_cost_id = fc.id AND valid_from <= m::date

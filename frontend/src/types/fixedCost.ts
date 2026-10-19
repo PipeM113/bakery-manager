@@ -1,6 +1,7 @@
 export interface IFixedCost {
   id: string;
-  user_id: string;
+  /** Who registered it; empty if that user was deleted. */
+  created_by: string | null;
   name: string;
   /** The amount in force in the month that was asked for. */
   monthly_amount: number;

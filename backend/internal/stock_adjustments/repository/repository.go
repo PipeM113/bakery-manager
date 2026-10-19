@@ -43,12 +43,13 @@ type Adjustment struct {
 	LossAmount     int64     `json:"loss_amount"`
 	Note           string    `json:"note"`
 	AdjustedOn     string    `json:"adjusted_on"`
+	CreatedBy      *string   `json:"created_by"`
 	CreatedAt      time.Time `json:"created_at"`
 }
 
 // Input of an adjustment: Quantity (merma), CountedQuantity (correccion) or QuantityDelta (otro).
 type Input struct {
-	UserID          string
+	CreatedBy       string
 	IngredientID    string
 	Reason          string
 	Quantity        *float64
@@ -88,12 +89,12 @@ func lossOf(quantity float64, price *big.Rat) int64 {
 }
 
 const columns = `a.id, a.ingredient_id, i.name, a.reason, a.quantity_delta, a.unit, a.stock_before, a.stock_after,
-	a.loss_amount, a.note, to_char(a.adjusted_on, 'YYYY-MM-DD'), a.created_at`
+	a.loss_amount, a.note, to_char(a.adjusted_on, 'YYYY-MM-DD'), a.created_by, a.created_at`
 
 func scan(row pgx.Row) (Adjustment, error) {
 	var a Adjustment
 	err := row.Scan(&a.ID, &a.IngredientID, &a.IngredientName, &a.Reason, &a.QuantityDelta, &a.Unit,
-		&a.StockBefore, &a.StockAfter, &a.LossAmount, &a.Note, &a.AdjustedOn, &a.CreatedAt)
+		&a.StockBefore, &a.StockAfter, &a.LossAmount, &a.Note, &a.AdjustedOn, &a.CreatedBy, &a.CreatedAt)
 	return a, err
 }
 
@@ -186,9 +187,9 @@ func (r *Repository) Record(ctx context.Context, in Input) (Adjustment, error) {
 	}
 	var id string
 	if err := tx.QueryRow(ctx, `
-		INSERT INTO stock_adjustments (user_id, ingredient_id, reason, quantity_delta, unit, stock_before, stock_after, loss_amount, note, adjusted_on)
+		INSERT INTO stock_adjustments (created_by, ingredient_id, reason, quantity_delta, unit, stock_before, stock_after, loss_amount, note, adjusted_on)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::date) RETURNING id`,
-		in.UserID, in.IngredientID, in.Reason, round3(after-stock), unit, stock, after, loss, note, in.AdjustedOn,
+		in.CreatedBy, in.IngredientID, in.Reason, round3(after-stock), unit, stock, after, loss, note, in.AdjustedOn,
 	).Scan(&id); err != nil {
 		return Adjustment{}, fmt.Errorf("insert adjustment: %w", err)
 	}
@@ -223,7 +224,7 @@ func (r *Repository) ForIngredient(ctx context.Context, ingredientID string) ([]
 	return r.list(ctx, `a.ingredient_id = $1`, ingredientID)
 }
 
-// ForMonth is what a user adjusted during the month that starts on `month` ("YYYY-MM-01").
-func (r *Repository) ForMonth(ctx context.Context, userID, month string) ([]Adjustment, error) {
-	return r.list(ctx, `a.user_id = $1 AND a.adjusted_on >= $2::date AND a.adjusted_on < ($2::date + interval '1 month')`, userID, month)
+// ForMonth is what was adjusted during the month that starts on `month` ("YYYY-MM-01").
+func (r *Repository) ForMonth(ctx context.Context, month string) ([]Adjustment, error) {
+	return r.list(ctx, `a.adjusted_on >= $1::date AND a.adjusted_on < ($1::date + interval '1 month')`, month)
 }

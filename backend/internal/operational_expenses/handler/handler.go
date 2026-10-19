@@ -113,7 +113,7 @@ func (h *ExpenseHandler) List(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	expenses, err := h.svc.ListByMonth(r.Context(), userID(r), month, year)
+	expenses, err := h.svc.ListByMonth(r.Context(), month, year)
 	if err != nil {
 		httputil.JSONError(w, "error obteniendo gastos", http.StatusInternalServerError)
 		return
@@ -160,7 +160,7 @@ func (h *ExpenseHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("[expenses] PUT /expenses/%s user=%s description=%q amount=%d", id, userID(r), body.Description, body.Amount)
 
-	expense, err := h.svc.Update(r.Context(), id, userID(r), body.Description, body.CategoryID, body.ExpenseDate, body.Amount)
+	expense, err := h.svc.Update(r.Context(), id, body.Description, body.CategoryID, body.ExpenseDate, body.Amount)
 	if err != nil {
 		log.Printf("[expenses] Update error id=%s user=%s: %v", id, userID(r), err)
 		writeExpenseError(w, err, "error actualizando gasto")
@@ -173,7 +173,7 @@ func (h *ExpenseHandler) Update(w http.ResponseWriter, r *http.Request) {
 func (h *ExpenseHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	log.Printf("[expenses] DELETE /expenses/%s user=%s", id, userID(r))
-	if err := h.svc.Delete(r.Context(), id, userID(r)); err != nil {
+	if err := h.svc.Delete(r.Context(), id); err != nil {
 		log.Printf("[expenses] Delete error id=%s user=%s: %v", id, userID(r), err)
 		httputil.JSONError(w, "error eliminando gasto", http.StatusInternalServerError)
 		return

@@ -1,6 +1,7 @@
 export interface IExpense {
   id: string;
-  user_id: string;
+  /** Who registered it; empty if that user was deleted. */
+  created_by: string | null;
   description: string;
   amount: number;
   category_id: string;

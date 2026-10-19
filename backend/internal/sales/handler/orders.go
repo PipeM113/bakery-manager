@@ -96,7 +96,7 @@ func (h *OrderHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("[orders] POST /orders user=%s lines=%d", userID(r), len(lines))
 	order, err := h.svc.CreateOrder(r.Context(), repository.OrderInput{
-		UserID: userID(r), CustomerName: strings.TrimSpace(body.CustomerName), Notes: strings.TrimSpace(body.Notes),
+		CreatedBy: userID(r), CustomerName: strings.TrimSpace(body.CustomerName), Notes: strings.TrimSpace(body.Notes),
 		OrderDate: body.OrderDate, TotalPrice: body.TotalPrice, Lines: lines,
 	})
 	var invalid *repository.ValidationError
@@ -125,7 +125,7 @@ func (h *OrderHandler) List(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	orders, err := h.svc.ListOrders(r.Context(), userID(r), month+"-01")
+	orders, err := h.svc.ListOrders(r.Context(), month+"-01")
 	if err != nil {
 		log.Printf("[orders] ListOrders error: %v", err)
 		httputil.JSONError(w, "error obteniendo pedidos", http.StatusInternalServerError)
@@ -136,7 +136,7 @@ func (h *OrderHandler) List(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *OrderHandler) Get(w http.ResponseWriter, r *http.Request) {
-	order, err := h.svc.GetOrder(r.Context(), userID(r), chi.URLParam(r, "id"))
+	order, err := h.svc.GetOrder(r.Context(), chi.URLParam(r, "id"))
 	if errors.Is(err, repository.ErrNotFound) {
 		httputil.JSONError(w, "pedido no encontrado", http.StatusNotFound)
 		return
@@ -154,7 +154,7 @@ func (h *OrderHandler) Get(w http.ResponseWriter, r *http.Request) {
 func (h *OrderHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	log.Printf("[orders] DELETE /orders/%s user=%s", id, userID(r))
-	err := h.svc.DeleteOrder(r.Context(), userID(r), id)
+	err := h.svc.DeleteOrder(r.Context(), id)
 	if errors.Is(err, repository.ErrNotFound) {
 		httputil.JSONError(w, "pedido no encontrado", http.StatusNotFound)
 		return

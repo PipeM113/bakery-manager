@@ -195,7 +195,7 @@ func (r *IngredientRepository) Update(ctx context.Context, i Ingredient, userID 
 
 	if before, after := math.Round(oldStock*1000)/1000, math.Round(i.StockQuantity*1000)/1000; before != after {
 		_, err = tx.Exec(ctx, `
-			INSERT INTO stock_adjustments (user_id, ingredient_id, reason, quantity_delta, unit, stock_before, stock_after, adjusted_on)
+			INSERT INTO stock_adjustments (created_by, ingredient_id, reason, quantity_delta, unit, stock_before, stock_after, adjusted_on)
 			VALUES ($1, $2, 'correccion', $3, $4, $5, $6, $7::date)`,
 			userID, i.ID, math.Round((after-before)*1000)/1000, i.DefaultUnit, before, after, r.clk.Today(),
 		)

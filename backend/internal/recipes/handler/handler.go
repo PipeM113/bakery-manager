@@ -113,7 +113,7 @@ func (h *RecipeHandler) Create(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	body.UserID = claims.ID
+	body.CreatedBy = &claims.ID
 	if body.YieldUnit == "" {
 		body.YieldUnit = "porciones"
 	}
@@ -261,7 +261,7 @@ func (h *RecipeHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Printf("[recipes] DELETE /recipes/%s user=%s", id, claims.ID)
-	if err := h.repo.Delete(r.Context(), id, claims.ID); err != nil {
+	if err := h.repo.Delete(r.Context(), id); err != nil {
 		log.Printf("[recipes] Delete error id=%s user=%s: %v", id, claims.ID, err)
 		httputil.JSONError(w, "error eliminando receta", http.StatusInternalServerError)
 		return
@@ -325,7 +325,7 @@ func (h *RecipeHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("[recipes] PUT /recipes/%s user=%s name=%q", id, claims.ID, body.Name)
 
-	updated, err := h.repo.Update(r.Context(), id, claims.ID, body)
+	updated, err := h.repo.Update(r.Context(), id, body)
 	if err != nil {
 		log.Printf("[recipes] Update error id=%s user=%s: %v", id, claims.ID, err)
 		httputil.JSONError(w, "error actualizando receta", http.StatusInternalServerError)

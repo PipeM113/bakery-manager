@@ -14,6 +14,8 @@ export interface IOrderLine {
 
 export interface IOrder {
   id: string;
+  /** Who registered it; empty if that user was deleted. */
+  created_by: string | null;
   customer_name: string;
   notes: string;
   order_date: string;
