@@ -19,6 +19,8 @@
 //     "Nombre del cliente" and the main button "Crear y descargar PDF"
 //   /business "Datos del negocio": [data-testid="business-form"] with the fields "Nombre del negocio", "Teléfono",
 //     "Instagram", "Banco", "Tipo de cuenta", "Titular de la cuenta", "Correo electrónico" and the button "Guardar"; reachable from the navigation
+//   /account "Mi cuenta": [data-testid="account-form"] with "Contraseña actual", "Nueva contraseña",
+//     "Repite la nueva contraseña" and the button "Cambiar contraseña"; reachable from the navigation
 //   [data-testid="quote-download"]              "Descargar PDF" button of each quotation card / row
 //   button "Nuevo pedido" -> window (role=dialog) with "Agregar producto" and the main button "Registrar pedido"
 import { test, before, after } from "node:test";
@@ -51,8 +53,9 @@ const PAGES = [
   { name: "expenses", path: "/expenses" },
   { name: "profitability", path: "/profitability" },
   { name: "business", path: "/business" },
+  { name: "account", path: "/account" },
 ];
-const SECTIONS = ["/dashboard", "/ingredients", "/recipes", "/costs", "/fixed-costs", "/sales", "/expenses", "/profitability", "/business"];
+const SECTIONS = ["/dashboard", "/ingredients", "/recipes", "/costs", "/fixed-costs", "/sales", "/expenses", "/profitability", "/business", "/account"];
 
 let server;
 let browser;
@@ -435,3 +438,40 @@ for (const w of PHONES) {
     assert.equal(await page.evaluate(coveredPrimary), "", "the order window's main button is covered");
   }));
 }
+
+// C2 (sprint 13): the account screen works on a phone and on a computer.
+for (const w of WIDTHS) {
+  test(`C2 account form at ${w}px`, { timeout: 60000 }, withPage(w, "/account", {}, async (page) => {
+    const form = page.locator('[data-testid="account-form"]');
+    await form.waitFor({ state: "visible" });
+    for (const label of ["Contraseña actual", "Nueva contraseña", "Repite la nueva contraseña"]) {
+      await form.getByLabel(label, { exact: true }).waitFor({ state: "visible" });
+    }
+    const m = await page.evaluate(() => ({ doc: document.documentElement.scrollWidth, view: window.innerWidth }));
+    assert.ok(m.doc <= m.view, `the form makes the page ${m.doc}px wide in a ${m.view}px screen`);
+    if (isPhone(w)) {
+      const bad = (await page.evaluate(interactive)).filter((s) => !/^a "/.test(s));
+      assert.deepEqual(bad.slice(0, 8), [], "things in the form are too small");
+    }
+    const save = form.getByRole("button", { name: "Cambiar contraseña" });
+    await save.scrollIntoViewIfNeeded();
+    assert.ok(inViewport(await save.boundingBox(), w, HEIGHT), "the button is out of the screen");
+
+    await form.getByLabel("Contraseña actual", { exact: true }).fill("la-clave-de-hoy");
+    await form.getByLabel("Nueva contraseña", { exact: true }).fill("una-clave-nueva-123");
+    await form.getByLabel("Repite la nueva contraseña", { exact: true }).fill("otra-cosa-distinta");
+    await save.click();
+    await page.getByText(/no coinciden/i).first().waitFor({ state: "visible", timeout: 5000 });
+
+    await form.getByLabel("Repite la nueva contraseña", { exact: true }).fill("una-clave-nueva-123");
+    await save.click();
+    await page.getByText(/contraseña cambiada/i).first().waitFor({ state: "visible", timeout: 5000 });
+  }));
+}
+
+// C7 (sprint 13): a negative amount is written -$271.000, not $-271.000, in every screen.
+test("C7 no screen writes the minus after the $", withPage(1280, "/profitability", {}, async (page) => {
+  const text = await page.locator("main, body").first().innerText();
+  assert.doesNotMatch(text, /\$-\d/, "found an amount written as $-...");
+  assert.match(text, /-\$\d/, "the trend of the mock has a negative amount and it should read -$...");
+}));

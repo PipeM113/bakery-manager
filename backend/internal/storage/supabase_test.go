@@ -244,3 +244,59 @@ func TestC2_EmptyFileIsRefused(t *testing.T) {
 		t.Fatalf("err = %v, requests = %d: an empty file must be refused before any request", err, f.count())
 	}
 }
+
+// Sprint 13, C6: removing a photo. The contract is the one of the official storage-js client
+// (docs/fuentes.md): DELETE /storage/v1/object/<bucket> with {"prefixes": [<paths>]}.
+func TestC6_DeleteSendsTheObjectPathToTheBucket(t *testing.T) {
+	f := &fakeStorage{body: `[{"name":"x"}]`}
+	c, base := newClient(t, f)
+	url := base + "/storage/v1/object/public/" + testBucket + "/recipes/" + recipeID + "/abc123.jpg"
+
+	if err := c.DeleteRecipePhoto(context.Background(), url); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	got := f.last(t)
+	if got.method != http.MethodDelete || got.path != "/storage/v1/object/"+testBucket {
+		t.Errorf("request = %s %s, want DELETE /storage/v1/object/%s", got.method, got.path, testBucket)
+	}
+	if got.header.Get("apikey") != testKey || got.header.Get("Authorization") != "Bearer "+testKey {
+		t.Error("the secret key must travel in the apikey and Authorization headers")
+	}
+	if got.header.Get("Content-Type") != "application/json" {
+		t.Errorf("Content-Type = %q, want application/json", got.header.Get("Content-Type"))
+	}
+	if want := `{"prefixes":["recipes/` + recipeID + `/abc123.jpg"]}`; strings.TrimSpace(string(got.body)) != want {
+		t.Errorf("body = %s, want %s", got.body, want)
+	}
+}
+
+func TestC6_DeleteIgnoresWhatIsNotOurs(t *testing.T) {
+	f := &fakeStorage{}
+	c, base := newClient(t, f)
+	for _, url := range []string{
+		"https://other.example.test/storage/v1/object/public/" + testBucket + "/recipes/" + recipeID + "/a.jpg", // another host
+		base + "/storage/v1/object/public/other-bucket/recipes/" + recipeID + "/a.jpg",                          // another bucket
+		base + "/storage/v1/object/public/" + testBucket + "/recipes/../secrets/a.jpg",                          // climbs out
+		base + "/storage/v1/object/public/" + testBucket + "/other/a.jpg",                                       // not a recipe photo
+		"", "not a url",
+	} {
+		if err := c.DeleteRecipePhoto(context.Background(), url); err != nil {
+			t.Errorf("%q: unexpected error %v (a foreign address is ignored, not an error)", url, err)
+		}
+	}
+	if f.count() != 0 {
+		t.Errorf("%d request(s) were sent for addresses that are not ours", f.count())
+	}
+}
+
+func TestC6_DeleteErrorsNeverCarryTheKey(t *testing.T) {
+	f := &fakeStorage{status: http.StatusInternalServerError, body: "boom " + testKey}
+	c, base := newClient(t, f)
+	err := c.DeleteRecipePhoto(context.Background(), base+"/storage/v1/object/public/"+testBucket+"/recipes/"+recipeID+"/a.jpg")
+	if err == nil {
+		t.Fatal("a 500 must be an error")
+	}
+	if strings.Contains(err.Error(), testKey) {
+		t.Error("the error carries the secret key")
+	}
+}
