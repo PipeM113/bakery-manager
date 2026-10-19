@@ -9,6 +9,7 @@ import DashboardPage from "./pages/DashboardPage";
 import FixedCostsPage from "./pages/FixedCostsPage";
 import SalesPage from "./pages/SalesPage";
 import ExpensesPage from "./pages/ExpensesPage";
+import BusinessPage from "./pages/BusinessPage";
 import ProfitabilityPage from "./pages/ProfitabilityPage";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -37,6 +38,7 @@ export default function App() {
         <Route path="sales"        element={<SalesPage />} />
         <Route path="expenses"        element={<ExpensesPage />} />
         <Route path="profitability"   element={<ProfitabilityPage />} />
+        <Route path="/business"       element={<BusinessPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>

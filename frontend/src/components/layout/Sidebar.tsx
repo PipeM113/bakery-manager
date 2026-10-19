@@ -11,6 +11,7 @@ const links = [
   { to: "/sales",       icon: "⊕", label: "Ventas"        },
   { to: "/expenses",       icon: "◷", label: "Gastos"        },
   { to: "/profitability",  icon: "◈", label: "Rentabilidad"  },
+  { to: "/business",       icon: "⌂", label: "Datos del negocio" },
 ];
 
 export default function Sidebar() {

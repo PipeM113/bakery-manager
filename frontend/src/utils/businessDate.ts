@@ -15,3 +15,6 @@ export const currentMonthYear = (): { month: number; year: number } => {
   const [year, month] = todayInSantiago().split("-").map(Number);
   return { month, year };
 };
+
+/** The Santiago date (YYYY-MM-DD) of a moment given as an ISO text. */
+export const dateInSantiago = (iso: string): string => santiagoDate.format(new Date(iso));
