@@ -52,7 +52,8 @@ go run -tags postgres github.com/golang-migrate/migrate/v4/cmd/migrate@v4.20.1 \
 - La migración 16 pasa el dinero a pesos enteros (los montos con decimales se redondean al peso más cercano) y crea las categorías de gasto (`expense_categories`, con RLS). Los gastos que ya existían conservan su categoría. Haz una copia de seguridad antes de correrla en producción (sección de respaldo).
 - La migración 17 agrega `ingredients.kind` (`ingredient` o `supply`, para cajas y cartones); lo que ya existe queda como `ingredient`.
 - La migración 18 pasa las columnas `TIMESTAMP` (usuarios, ingredientes, historial de precios y recetas) a `TIMESTAMPTZ`; los valores existentes se leen como UTC. Haz una copia de seguridad antes de correrla.
-- Verifica: `select version, dirty from manager.schema_migrations;` debe dar `18` y `false`.
+- La migración 19 pasa el monto de los costos fijos a la tabla `fixed_cost_versions` (un monto por mes) y reemplaza `is_active` por `ended_from` (ver `docs/costos-fijos.md`). Hazla **antes** de desplegar el backend nuevo: el backend anterior lee las columnas que la migración quita.
+- Verifica: `select version, dirty from manager.schema_migrations;` debe dar `19` y `false`, y `select count(*) from manager.fixed_cost_versions;` debe igualar la cantidad de costos fijos que tenías.
 - Deshacer la última: mismo comando con `down 1`.
 - Cuando termines, `unset MIGRATE_URL`.
 

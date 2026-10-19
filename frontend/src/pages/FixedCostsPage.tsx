@@ -1,22 +1,25 @@
 import { useEffect, useState } from "react";
 import { fixedCostService } from "../api/fixedCostService";
 import type { IFixedCost } from "../types/fixedCost";
+import { todayInSantiago } from "../utils/businessDate";
 
 const clp = (n: number) => `$${Math.round(n).toLocaleString("es-CL")}`;
 
-const emptyForm = { name: "", monthly_amount: "" };
+const thisMonth = () => todayInSantiago().slice(0, 7);
+const emptyForm = (month: string) => ({ name: "", monthly_amount: "", from: month });
 
 export default function FixedCostsPage() {
   const [costs, setCosts]         = useState<IFixedCost[]>([]);
-  const [form, setForm]           = useState(emptyForm);
+  const [month, setMonth]         = useState(thisMonth);
+  const [form, setForm]           = useState(() => emptyForm(thisMonth()));
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError]         = useState("");
   const [loading, setLoading]     = useState(false);
 
   const load = () =>
-    fixedCostService.getAll().then(setCosts).catch(() => setError("Error cargando costos fijos"));
+    fixedCostService.getAll(month).then(setCosts).catch(() => setError("Error cargando costos fijos"));
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [month]);
 
   const totalActive = costs
     .filter((c) => c.is_active)
@@ -24,13 +27,13 @@ export default function FixedCostsPage() {
 
   const startEdit = (fc: IFixedCost) => {
     setEditingId(fc.id);
-    setForm({ name: fc.name, monthly_amount: String(fc.monthly_amount) });
+    setForm({ name: fc.name, monthly_amount: String(fc.monthly_amount), from: month });
     setError("");
   };
 
   const cancelEdit = () => {
     setEditingId(null);
-    setForm(emptyForm);
+    setForm(emptyForm(month));
     setError("");
   };
 
@@ -46,20 +49,22 @@ export default function FixedCostsPage() {
     try {
       if (editingId) {
         const existing = costs.find((c) => c.id === editingId)!;
-        const updated = await fixedCostService.update(editingId, {
+        await fixedCostService.update(editingId, {
           name: form.name.trim(),
           monthly_amount: amount,
           is_active: existing.is_active,
+          effective_from: form.from || month,
         });
-        setCosts((prev) => prev.map((c) => (c.id === editingId ? updated : c)));
         cancelEdit();
+        await load();
       } else {
-        const created = await fixedCostService.create({
+        await fixedCostService.create({
           name: form.name.trim(),
           monthly_amount: amount,
+          valid_from: form.from || month,
         });
-        setCosts((prev) => [...prev, created]);
-        setForm(emptyForm);
+        setForm(emptyForm(month));
+        await load();
       }
     } catch {
       setError("Error guardando costo fijo");
@@ -69,10 +74,10 @@ export default function FixedCostsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("¿Eliminar este costo fijo?")) return;
+    if (!confirm("¿Terminar este costo fijo desde este mes? Los meses anteriores no cambian.")) return;
     try {
       await fixedCostService.delete(id);
-      setCosts((prev) => prev.filter((c) => c.id !== id));
+      await load();
     } catch {
       setError("Error eliminando costo fijo");
     }
@@ -80,12 +85,13 @@ export default function FixedCostsPage() {
 
   const handleToggle = async (fc: IFixedCost) => {
     try {
-      const updated = await fixedCostService.update(fc.id, {
+      await fixedCostService.update(fc.id, {
         name: fc.name,
         monthly_amount: fc.monthly_amount,
         is_active: !fc.is_active,
+        effective_from: month,
       });
-      setCosts((prev) => prev.map((c) => (c.id === fc.id ? updated : c)));
+      await load();
     } catch {
       setError("Error actualizando estado");
     }
@@ -100,6 +106,18 @@ export default function FixedCostsPage() {
           <span className="text-oro text-xs tracking-[0.3em] uppercase font-light">Gestión</span>
         </div>
         <h1 className="font-display text-4xl text-negro">Costos Fijos</h1>
+        <div className="mt-4 flex items-center gap-3">
+          <label className="text-xs tracking-widest uppercase text-negro/70 font-light" htmlFor="fixed-month">
+            Mes
+          </label>
+          <input
+            id="fixed-month"
+            type="month"
+            value={month}
+            onChange={(e) => e.target.value && setMonth(e.target.value)}
+            className="bg-white border border-linea text-negro px-3 py-1.5 text-sm font-light focus:outline-none focus:border-oro"
+          />
+        </div>
       </div>
 
       {/* Formulario */}
@@ -121,6 +139,18 @@ export default function FixedCostsPage() {
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
               placeholder="ej. Arriendo"
+              className="w-full bg-crema border border-linea text-negro
+                         px-4 py-2.5 text-sm font-light focus:outline-none focus:border-oro transition-all"
+            />
+          </div>
+          <div className="sm:w-44">
+            <label className="block text-xs tracking-widest uppercase text-negro/70 mb-1.5 font-light">
+              Vigente desde
+            </label>
+            <input
+              type="month"
+              value={form.from}
+              onChange={(e) => setForm((f) => ({ ...f, from: e.target.value }))}
               className="w-full bg-crema border border-linea text-negro
                          px-4 py-2.5 text-sm font-light focus:outline-none focus:border-oro transition-all"
             />
@@ -172,7 +202,7 @@ export default function FixedCostsPage() {
           <h2 className="font-display text-xl text-negro">Lista</h2>
           {costs.length > 0 && (
             <span className="text-xs text-negro/70 font-light">
-              Total activo:{" "}
+              Total del mes:{" "}
               <span className="text-oro font-medium">{clp(totalActive)}/mes</span>
             </span>
           )}
@@ -180,7 +210,7 @@ export default function FixedCostsPage() {
 
         {costs.length === 0 ? (
           <p className="text-negro/70 text-sm font-light text-center py-10">
-            No hay costos fijos registrados
+            No hay costos fijos en este mes
           </p>
         ) : (
           <table className="w-full text-sm">
@@ -220,7 +250,7 @@ export default function FixedCostsPage() {
                         onClick={() => handleDelete(fc.id)}
                         className="text-xs text-negro/70 hover:text-peligro tracking-widest uppercase transition-colors"
                       >
-                        Eliminar
+                        Terminar
                       </button>
                     </div>
                   </td>

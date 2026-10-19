@@ -89,3 +89,10 @@ precio por paquete, unidad y stock.
   gasto: se contaría dos veces. La categoría de gasto "Envases" queda para lo que no va dentro de
   una receta.
 - Los moldes quedan fuera por ahora: dependen del tamaño y a veces ya se tienen.
+
+## Costo fijo
+
+Un gasto que se repite cada mes (arriendo, gas, luz, contador). Tiene un **monto por mes**: cuando
+cambia, el nuevo monto vale desde el mes que se indique ("Vigente desde") y el histórico no cambia.
+Terminar un costo lo saca desde ese mes en adelante pero conserva los meses anteriores. Ver
+`docs/costos-fijos.md`.

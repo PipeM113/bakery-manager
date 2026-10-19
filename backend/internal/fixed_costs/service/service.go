@@ -14,22 +14,20 @@ func NewFixedCostService(repo *repository.FixedCostRepository) *FixedCostService
 	return &FixedCostService{repo: repo}
 }
 
-func (s *FixedCostService) Create(ctx context.Context, userID, name string, amount int64) (repository.FixedCost, error) {
-	return s.repo.Create(ctx, userID, name, amount)
+// Months are "YYYY-MM-01" dates.
+
+func (s *FixedCostService) Create(ctx context.Context, userID, name string, amount int64, validFrom string) (repository.FixedCost, error) {
+	return s.repo.Create(ctx, userID, name, amount, validFrom)
 }
 
-func (s *FixedCostService) List(ctx context.Context, userID string) ([]repository.FixedCost, error) {
-	return s.repo.GetAll(ctx, userID)
+func (s *FixedCostService) List(ctx context.Context, userID, month string) ([]repository.FixedCost, error) {
+	return s.repo.List(ctx, userID, month)
 }
 
-func (s *FixedCostService) Update(ctx context.Context, id, userID, name string, amount int64, isActive bool) (repository.FixedCost, error) {
-	return s.repo.Update(ctx, id, userID, name, amount, isActive)
+func (s *FixedCostService) Update(ctx context.Context, id, userID, name string, amount int64, active bool, month string) (repository.FixedCost, error) {
+	return s.repo.Update(ctx, id, userID, name, amount, active, month)
 }
 
-func (s *FixedCostService) Delete(ctx context.Context, id, userID string) error {
-	return s.repo.Delete(ctx, id, userID)
-}
-
-func (s *FixedCostService) TotalActiveMonthly(ctx context.Context, userID string) (int64, error) {
-	return s.repo.SumActive(ctx, userID)
+func (s *FixedCostService) End(ctx context.Context, id, userID, month string) error {
+	return s.repo.End(ctx, id, userID, month)
 }

@@ -94,7 +94,7 @@ func NewWithClock(cfg config.Config, db *pgxpool.Pool, photos PhotoUploader, clk
 	costHandler := costHandler.NewCostHandler(costSvc, recipeRepo)
 	fixedCostRepo := fcRepo.NewFixedCostRepository(db)
 	fixedCostSvc := fcSvc.NewFixedCostService(fixedCostRepo)
-	fixedCostHandler := fcHand.NewFixedCostHandler(fixedCostSvc)
+	fixedCostHandler := fcHand.NewFixedCostHandler(fixedCostSvc, clk)
 
 	r.Group(func(r chi.Router) {
 		r.Use(mid.Auth(cfg.JWTSecret))
