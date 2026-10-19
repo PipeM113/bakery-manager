@@ -42,3 +42,11 @@ Se leen como se escriben en Chile: el punto agrupa miles y la coma separa decima
 (`1.500` = mil quinientos, `1.500,50`, `2,5`), y puede llevar `$` delante. Un `2.5` suelto es
 2,5. Una fila con tamaño o precio inválido, vacío o menor o igual a 0 se rechaza con su
 motivo; las demás filas se importan.
+
+## Escalar una receta
+
+`GET /recipes/{id}/cost?portions=N` calcula el precio de la receta hecha para N porciones
+(mínimo 1): los ingredientes se multiplican por N / rendimiento. El cobro extra y el delivery
+son por pedido y no se multiplican. "Guardar escalado" crea una copia con las cantidades
+escaladas y los mismos porcentajes, cobro extra y delivery; su precio coincide con el de la
+vista previa.

@@ -46,6 +46,8 @@ type CostParams struct {
 	MarginPct       *float64
 	ExtraCharge     int
 	DeliveryCost    int
+	// Portions, when set, prices the recipe made for that many portions (at least 1).
+	Portions *float64
 }
 
 // CheckPct validates one percentage (a fraction) against 0..max.
@@ -71,6 +73,11 @@ func (p CostParams) Validate() error {
 	if p.MarginPct != nil {
 		if err := CheckPct("margin_pct", *p.MarginPct, MaxMarkupPct); err != nil {
 			return err
+		}
+	}
+	if p.Portions != nil {
+		if v := *p.Portions; math.IsNaN(v) || math.IsInf(v, 0) || v < 1 {
+			return &ParamError{Message: "portions debe ser un número mayor o igual a 1"}
 		}
 	}
 	return nil
@@ -147,6 +154,15 @@ func (s *CostService) GetCostBreakdown(ctx context.Context, recipeID string, par
 		markupPct = *params.MarginPct
 	}
 
+	if params.Portions != nil {
+		return domain.CalculateScaled(
+			recipeID, recipe.Name,
+			recipe.Yield, *params.Portions, recipe.YieldUnit,
+			indirectPct, laborPct, markupPct,
+			params.ExtraCharge, params.DeliveryCost,
+			ingredients,
+		), nil
+	}
 	return domain.Calculate(
 		recipeID, recipe.Name,
 		recipe.Yield, recipe.YieldUnit,

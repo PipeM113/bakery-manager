@@ -105,9 +105,41 @@ func Calculate(
 	extraCharge, deliveryCost int,
 	ingredients []IngredientCost,
 ) CostBreakdown {
+	return calculate(recipeID, recipeName, yield, yieldUnit, indirectPct, laborPct, marginPct,
+		extraCharge, deliveryCost, ingredients, big.NewRat(1, 1))
+}
+
+// CalculateScaled prices the recipe made for `portions` portions instead of its own yield:
+// every quantity is multiplied by portions / yield, exactly. The extra charge and the
+// delivery are per order and are not scaled.
+func CalculateScaled(
+	recipeID, recipeName string,
+	yield, portions float64, yieldUnit string,
+	indirectPct, laborPct, marginPct float64,
+	extraCharge, deliveryCost int,
+	ingredients []IngredientCost,
+) CostBreakdown {
+	factor := big.NewRat(1, 1)
+	if rat(yield).Sign() > 0 {
+		factor = new(big.Rat).Quo(rat(portions), rat(yield))
+	}
+	return calculate(recipeID, recipeName, portions, yieldUnit, indirectPct, laborPct, marginPct,
+		extraCharge, deliveryCost, ingredients, factor)
+}
+
+func calculate(
+	recipeID, recipeName string,
+	yield float64, yieldUnit string,
+	indirectPct, laborPct, marginPct float64,
+	extraCharge, deliveryCost int,
+	ingredients []IngredientCost,
+	factor *big.Rat,
+) CostBreakdown {
 	ingredientsTotal := new(big.Rat)
 	for i, ing := range ingredients {
-		subtotal := new(big.Rat).Mul(rat(ing.Quantity), unitPrice(ing))
+		quantity := new(big.Rat).Mul(rat(ing.Quantity), factor)
+		subtotal := new(big.Rat).Mul(quantity, unitPrice(ing))
+		ingredients[i].Quantity = toFloat(quantity)
 		ingredients[i].Subtotal = toFloat(subtotal)
 		ingredientsTotal.Add(ingredientsTotal, subtotal)
 	}

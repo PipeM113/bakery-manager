@@ -76,6 +76,10 @@ func (h *CostHandler) GetBreakdown(w http.ResponseWriter, r *http.Request) {
 		writeCostError(w, err)
 		return
 	}
+	if params.Portions, err = queryPct(r, "portions"); err != nil {
+		writeCostError(w, err)
+		return
+	}
 	if err := params.Validate(); err != nil {
 		writeCostError(w, err)
 		return

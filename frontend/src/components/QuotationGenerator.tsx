@@ -98,7 +98,7 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
   const extraChargeNum  = Math.max(0, parseInt(extraCharge  || "0", 10));
   const deliveryCostNum = Math.max(0, parseInt(deliveryCost || "0", 10));
 
-  const portionsChanged = breakdown && portionsNum !== Math.round(breakdown.yield);
+  const portionsChanged = breakdown && portionsNum !== Math.round(recipe.yield);
 
   const showToast = (msg: string, ok: boolean) => {
     setToast({ msg, ok });
@@ -155,16 +155,22 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
 
   const recalcDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const scheduleRecalc = (indirect: number, labor: number, marginVal: number, extra: number, delivery: number) => {
+  const scheduleRecalc = (
+    indirect: number, labor: number, marginVal: number, extra: number, delivery: number,
+    portionsForPrice: number = portionsNum,
+  ) => {
     if (recalcDebounceRef.current) clearTimeout(recalcDebounceRef.current);
     recalcDebounceRef.current = setTimeout(() => {
       setLoading(true);
+      // The backend prices the recipe for the portions asked; without them it uses its own yield.
+      const scaled = portionsForPrice !== Math.round(recipe.yield);
       const params = new URLSearchParams({
         indirect_cost_pct: String(indirect),
         labor_cost_pct:    String(labor),
         margin_pct:        String(marginVal),
         extra_charge:      String(extra),
         delivery_cost:     String(delivery),
+        ...(scaled ? { portions: String(portionsForPrice) } : {}),
       });
       api.get<CostBreakdown>(`/recipes/${recipe.id}/cost?${params}`)
         .then(({ data }) => setBreakdown(data))
@@ -222,6 +228,8 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
 
   const handlePortionsChange = (val: string) => {
     setPortions(val);
+    const n = Math.max(1, Math.round(parseFloat(val || "1")));
+    scheduleRecalc(indirectNum, laborNum, marginNum, extraChargeNum, deliveryCostNum, n);
   };
 
   const openSaveModal = () => {
@@ -377,13 +385,18 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
           <div className="space-y-1.5 pt-2 border-t border-stone-200">
             <div className="flex justify-between items-center">
               <span className="text-stone-400 text-xs tracking-wide font-light">
-                Costo por porción (no cambia al escalar)
+                Costo por porción
               </span>
               <span className="text-stone-700 text-sm font-medium">{clp(breakdown.cost_per_portion)}</span>
             </div>
+            <div className="flex justify-between items-center bg-white border border-gold border-opacity-30 px-3 py-2">
+              <span className="text-gold text-xs tracking-wide font-medium uppercase tracking-widest">
+                Precio final ({portionsNum} porciones)
+              </span>
+              <span className="text-gold font-display text-xl">{clp(breakdown.suggested_price)}</span>
+            </div>
             <p className="text-stone-400 text-xs font-light">
-              Este ajuste es temporal. Usa "Guardar escalado" para crear una versión permanente
-              con ingredientes y precio de {portionsNum} porciones.
+              Este ajuste es temporal. Usa "Guardar escalado" para crear una versión permanente.
             </p>
           </div>
         )}
