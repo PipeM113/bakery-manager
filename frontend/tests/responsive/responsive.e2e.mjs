@@ -14,6 +14,10 @@
 //   [data-kpi]                                  every big figure (KPIs, totals)
 //   data-testid="trend-chart"                   the trend chart
 //   data-testid="orders-list"                   list of orders (tab "Pedidos" of Ventas); data-view="cards" | "table"
+//   button "Nueva cotización" -> window (role=dialog) with [data-testid="quote-line"] (select aria-label "Producto",
+//     input aria-label "Cantidad"), [data-testid="quote-add-line"], [data-testid="quote-delivery"], placeholder
+//     "Nombre del cliente" and the main button "Crear y descargar PDF"
+//   [data-testid="quote-download"]              "Descargar PDF" button of each quotation card / row
 //   button "Nuevo pedido" -> window (role=dialog) with "Agregar producto" and the main button "Registrar pedido"
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
@@ -333,3 +337,51 @@ test("R8 every page left its screenshots", () => {
   for (const p of PAGES) for (const w of WIDTHS) if (!existsSync(join(shots, `${p.name}-${w}.png`))) missing.push(`${p.name}-${w}.png`);
   assert.deepEqual(missing, []);
 });
+
+// Q13 (sprint 12): a quotation with several products is made and downloaded from any screen size.
+for (const w of WIDTHS) {
+  test(`Q13 new quotation window at ${w}px`, { timeout: 90000 }, withPage(w, "/sales", {}, async (page) => {
+    await page.getByRole("button", { name: "Nueva cotización" }).click();
+    const dialog = page.getByRole("dialog");
+    await dialog.waitFor({ state: "visible" });
+    await dialog.getByPlaceholder("Nombre del cliente").fill("María González");
+    await dialog.locator('[data-testid="quote-add-line"]').click();
+    const lines = dialog.locator('[data-testid="quote-line"]');
+    assert.ok((await lines.count()) >= 2, "the window should let you add a second product");
+    for (let i = 0; i < 2; i++) {
+      await lines.nth(i).locator('select[aria-label="Producto"]').selectOption(recipes[i].id);
+      await lines.nth(i).locator('input[aria-label="Cantidad"]').fill("2");
+    }
+    await dialog.locator('[data-testid="quote-delivery"]').fill("2500");
+
+    const m = await page.evaluate(() => ({ doc: document.documentElement.scrollWidth, view: window.innerWidth }));
+    assert.ok(m.doc <= m.view, `with the window open the page is ${m.doc}px wide in a ${m.view}px screen`);
+    if (isPhone(w)) {
+      const bad = (await page.evaluate(interactive)).filter((s) => !/^a "/.test(s));
+      assert.deepEqual(bad.slice(0, 8), [], "things in the window are too small");
+    }
+    const create = dialog.locator("[data-primary-action]");
+    await create.scrollIntoViewIfNeeded();
+    assert.match(await create.innerText(), /Crear y descargar PDF/i);
+    assert.ok(inViewport(await create.boundingBox(), w, HEIGHT), "the main button is out of the screen");
+    const [file] = await Promise.all([page.waitForEvent("download", { timeout: 10000 }), create.click()]);
+    assert.match(file.suggestedFilename(), /^cotizacion_.*\.pdf$/);
+  }));
+}
+
+// Q14 (sprint 12): any quotation of the list can be downloaded again.
+for (const w of WIDTHS) {
+  test(`Q14 download again from the list at ${w}px`, { timeout: 60000 }, withPage(w, "/sales", {}, async (page) => {
+    const list = page.locator('[data-testid="quotations-list"]');
+    await list.waitFor({ state: "visible" });
+    const button = list.locator('[data-testid="quote-download"]:visible').first();
+    await button.waitFor({ state: "visible" });
+    if (isPhone(w)) assert.ok((await button.boundingBox()).height >= 43.5, "the download button is too small to tap");
+    const [file] = await Promise.all([page.waitForEvent("download", { timeout: 10000 }), button.click()]);
+    assert.match(file.suggestedFilename(), /^cotizacion_.*\.pdf$/);
+    if (isPhone(w)) {
+      const text = await list.locator("[data-card]").first().innerText();
+      assert.match(text, /\$/, "the card shows the total");
+    }
+  }));
+}

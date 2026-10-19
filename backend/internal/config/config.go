@@ -33,7 +33,18 @@ type Config struct {
 	SupabaseURL       string
 	SupabaseSecretKey string
 	SupabaseBucket    string
+	// Business is what the quotation PDF prints about the business. Optional: without it the
+	// PDF is refused (the quotations themselves still work).
+	Business Business
 }
+
+// Business holds the contact and bank data printed in the quotation PDF.
+type Business struct {
+	Name, Phone, Instagram, Bank, Account, Holder, RUT string
+}
+
+// Missing names the environment variables that are not set.
+func (b Business) Missing() []string { return nil }
 
 // Load reads the settings through getenv (os.Getenv in production) and reports every
 // problem it finds at once.

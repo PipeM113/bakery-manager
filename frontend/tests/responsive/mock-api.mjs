@@ -61,12 +61,20 @@ export const cost = (r) => ({
 });
 
 const clientNames = ["María González Pérez de la Fuente", "Cumpleaños de Sofía", "Evento corporativo Banco del Sur Ltda."];
-export const quotations = Array.from({ length: 8 }, (_, i) => ({
-  id: `00000000-0000-4000-8000-0000000004${String(i).padStart(2, "0")}`, user_id: "u1",
-  recipe_id: recipes[i % 3].id, recipe_name: recipes[i % 3].name, client_name: clientNames[i % 3],
-  margin_pct: 0.3, final_price: 25000 + i * 12500, status: ["pending", "pending", "confirmed", "cancelled"][i % 4],
-  created_at: iso, updated_at: iso,
-}));
+export const quotations = Array.from({ length: 8 }, (_, i) => {
+  const lines = [0, 1].slice(0, 1 + (i % 2)).map((k) => ({
+    id: `00000000-0000-4000-8000-0000000006${i}${k}`, position: k + 1, recipe_id: recipes[(i + k) % 3].id,
+    recipe_name: recipes[(i + k) % 3].name, sold_as: "recipe", quantity: 1 + k, unit_price: 25000, line_total: 25000 * (1 + k),
+    margin_pct: 0.3, indirect_cost_pct: 0.3, labor_cost_pct: 0.3, extra_charge: 0,
+  }));
+  const delivery = i % 2 ? 2500 : 0;
+  return {
+    id: `00000000-0000-4000-8000-0000000004${String(i).padStart(2, "0")}`, created_by: "u1",
+    client_name: clientNames[i % 3], delivery_cost: delivery, lines,
+    total: lines.reduce((a, l) => a + l.line_total, 0) + delivery,
+    status: ["pending", "pending", "confirmed", "cancelled"][i % 4], created_at: iso, updated_at: iso,
+  };
+});
 
 export const sales = Array.from({ length: 6 }, (_, i) => ({
   id: `00000000-0000-4000-8000-0000000005${String(i).padStart(2, "0")}`, user_id: "u1",
@@ -119,7 +127,8 @@ export const pdfBytes = Buffer.from("%PDF-1.1\n1 0 obj<</Type/Catalog/Pages 2 0 
 /** Answers every call the screens make; returns undefined for what it does not know. */
 export function answer(method, pathname) {
   const m = (re) => pathname.match(re);
-  if (method === "POST" && pathname === "/quotations/generate") return { pdf: true };
+  if (method === "POST" && pathname === "/quotations") return { body: quotations[0] };
+  if (method === "GET" && m(/^\/quotations\/[^/]+\/pdf$/)) return { pdf: true };
   if (method === "POST" && pathname === "/auth/login") return { body: { token: "x" } };
   if (method === "POST" && pathname === "/orders") return { body: orders[0] };
   if (method !== "GET") return { body: {} };
