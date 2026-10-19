@@ -38,11 +38,10 @@ Los sprints 0 a 4 usan la numeración antigua y son anteriores al registro de ac
 - [x] Al reemplazar o borrar una receta se borra su foto del bucket (si ninguna otra receta ni cotización la usa).
 - [x] Una sola función de formato de dinero (`-$271.000`); `App.css` eliminado; ESLint sin errores y en el CI.
 - [x] `go mod tidy` limpio; el CI instala `poppler-utils` para los tests de texto del PDF.
-- [x] Dependencias de producción del frontend actualizadas (`axios`, `react-router-dom`).
+- [x] Dependencias de producción del frontend actualizadas (`axios`, `react-router-dom`) y `xlsx` eliminado junto con la vista previa del archivo de "Importar ingredientes" (decisión del propietario): `npm audit --omit=dev` da 0 avisos.
 
 ## Pendiente
 
-- [ ] **`xlsx@0.18.5` (decisión del propietario):** dos avisos de gravedad alta sin versión corregida en npm (ver `docs/fuentes.md`). Opciones: quitar la vista previa del archivo (el servidor ya valida), o cambiar de biblioteca.
 - [ ] Probar S6 a S10, S12 y S13 en la app real, sobre todo desde el celular, y marcarlos como aceptados.
 - [ ] Medir en Vercel el tiempo de una cotización de 30 líneas con fotos (nunca se midió).
 - [ ] Cargar los datos reales con su mamá, escribirle un manual corto de una página y hacer un piloto de 1 a 2 semanas.
