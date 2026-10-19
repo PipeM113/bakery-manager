@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"strings"
 	"testing"
 
 	"golang.org/x/crypto/bcrypt"
@@ -279,8 +278,8 @@ func TestF8_TrendUsesEachMonthsCost(t *testing.T) {
 	}
 }
 
-// F9: one user cannot read, change or end the costs of another, and they do not count in its numbers.
-func TestF9_CostsBelongToTheirUser(t *testing.T) {
+// F9: the costs are the business's: both accounts see them, change them and end them, and get the same numbers.
+func TestF9_CostsAreSharedByBothAccounts(t *testing.T) {
 	api := newAPIAt(t, marchClock)
 	id := fixedCostWithHistory(t, api)
 
@@ -299,24 +298,26 @@ func TestF9_CostsBelongToTheirUser(t *testing.T) {
 	}
 	other.token, _ = decode(t, raw)["token"].(string)
 
-	if got := listFixed(t, other, "?month=2026-03"); len(got) != 0 {
-		t.Errorf("the other user sees %v", got)
+	if got := listFixed(t, other, "?month=2026-03"); len(got) != 1 || got[id].Amount != 150 {
+		t.Errorf("the other account sees %v, want the cost of 150", got)
 	}
-	if status, _ := putFixed(t, other, id, map[string]any{"name": "Mio", "monthly_amount": 1, "is_active": true}); status != http.StatusNotFound {
-		t.Errorf("PUT of someone else's cost: status = %d, want 404", status)
+	if status, raw := putFixed(t, other, id, map[string]any{"name": "Arriendo", "monthly_amount": 200, "is_active": true}); status != http.StatusOK {
+		t.Fatalf("PUT of the other account's cost: status = %d: %s", status, raw)
 	}
-	if status, _ := other.do("DELETE", "/fixed-costs/"+id, nil); status != http.StatusNotFound {
-		t.Errorf("DELETE of someone else's cost: status = %d, want 404", status)
+	expectAmount(t, api.client, id, "2026-03", 200) // the first account sees the change
+	if status, _ := other.do("DELETE", "/fixed-costs/"+id, nil); status != http.StatusNoContent {
+		t.Fatalf("DELETE of the other account's cost: status = %d, want 204", status)
 	}
-	status, raw = other.do("GET", "/analytics/monthly?month=3&year=2026", nil)
-	if status != http.StatusOK {
-		t.Fatalf("status = %d: %s", status, raw)
-	}
-	if got := number(t, decode(t, raw), "total_fixed_costs"); got != 0 {
-		t.Errorf("the other user's total_fixed_costs = %v, want 0", got)
-	}
-	expectAmount(t, api.client, id, "2026-03", 150) // untouched
-	if !strings.Contains(string(raw), "total_fixed_costs") {
-		t.Error("unexpected response")
+	for _, month := range []string{"2", "3"} {
+		statusA, rawA := api.do("GET", "/analytics/monthly?month="+month+"&year=2026", nil)
+		statusB, rawB := other.do("GET", "/analytics/monthly?month="+month+"&year=2026", nil)
+		if statusA != http.StatusOK || statusB != http.StatusOK {
+			t.Fatalf("statuses = %d and %d", statusA, statusB)
+		}
+		a, b := number(t, decode(t, rawA), "total_fixed_costs"), number(t, decode(t, rawB), "total_fixed_costs")
+		want := map[string]float64{"2": 100, "3": 0}[month]
+		if a != want || b != want {
+			t.Errorf("month %s: total_fixed_costs = %v and %v, want %v for both", month, a, b, want)
+		}
 	}
 }

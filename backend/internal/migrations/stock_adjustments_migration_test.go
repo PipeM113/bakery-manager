@@ -52,7 +52,7 @@ func TestA1_TheTableRefusesWhatTheRulesRefuse(t *testing.T) {
 	}
 	insert := func(reason string, loss int, before, after float64) error {
 		_, err := pool.Exec(ctx, `insert into stock_adjustments
-			(user_id, ingredient_id, reason, quantity_delta, unit, stock_before, stock_after, loss_amount, note, adjusted_on)
+			(created_by, ingredient_id, reason, quantity_delta, unit, stock_before, stock_after, loss_amount, note, adjusted_on)
 			values ($1, $2, $3, $6::numeric - $5::numeric, 'gr', $5, $6, $4, '', '2026-03-10')`, user, ingredient, reason, loss, before, after)
 		return err
 	}

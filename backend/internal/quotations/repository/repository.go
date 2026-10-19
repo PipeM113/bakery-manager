@@ -9,7 +9,7 @@ import (
 
 type Quotation struct {
 	ID         string    `json:"id"`
-	UserID     string    `json:"user_id"`
+	CreatedBy  *string   `json:"created_by"`
 	RecipeID   string    `json:"recipe_id"`
 	RecipeName string    `json:"recipe_name"`
 	ClientName string    `json:"client_name"`
@@ -21,7 +21,7 @@ type Quotation struct {
 }
 
 type SaveInput struct {
-	UserID     string
+	CreatedBy  string
 	RecipeID   string
 	ClientName string
 	MarginPct  float64
@@ -39,11 +39,11 @@ func NewQuotationRepository(db *pgxpool.Pool) *QuotationRepository {
 func (r *QuotationRepository) Save(ctx context.Context, in SaveInput) (Quotation, error) {
 	var q Quotation
 	err := r.db.QueryRow(ctx, `
-		INSERT INTO quotations (user_id, recipe_id, client_name, margin_pct, final_price)
+		INSERT INTO quotations (created_by, recipe_id, client_name, margin_pct, final_price)
 		VALUES ($1, $2, $3, $4, $5)
-		RETURNING id, user_id, recipe_id, client_name, margin_pct, final_price, status, created_at, updated_at`,
-		in.UserID, in.RecipeID, in.ClientName, in.MarginPct, in.FinalPrice,
-	).Scan(&q.ID, &q.UserID, &q.RecipeID, &q.ClientName, &q.MarginPct, &q.FinalPrice, &q.Status, &q.CreatedAt, &q.UpdatedAt)
+		RETURNING id, created_by, recipe_id, client_name, margin_pct, final_price, status, created_at, updated_at`,
+		in.CreatedBy, in.RecipeID, in.ClientName, in.MarginPct, in.FinalPrice,
+	).Scan(&q.ID, &q.CreatedBy, &q.RecipeID, &q.ClientName, &q.MarginPct, &q.FinalPrice, &q.Status, &q.CreatedAt, &q.UpdatedAt)
 	if err != nil {
 		return q, err
 	}
@@ -52,15 +52,15 @@ func (r *QuotationRepository) Save(ctx context.Context, in SaveInput) (Quotation
 	return q, nil
 }
 
-func (r *QuotationRepository) List(ctx context.Context, userID string, status string) ([]Quotation, error) {
+func (r *QuotationRepository) List(ctx context.Context, status string) ([]Quotation, error) {
 	query := `
-		SELECT q.id, q.user_id, q.recipe_id, r.name, q.client_name, q.margin_pct, q.final_price, q.status, q.created_at, q.updated_at
+		SELECT q.id, q.created_by, q.recipe_id, r.name, q.client_name, q.margin_pct, q.final_price, q.status, q.created_at, q.updated_at
 		FROM quotations q
 		JOIN recipes r ON r.id = q.recipe_id
-		WHERE q.user_id = $1`
-	args := []any{userID}
+		WHERE TRUE`
+	args := []any{}
 	if status != "" {
-		query += ` AND q.status = $2`
+		query += ` AND q.status = $1`
 		args = append(args, status)
 	}
 	query += ` ORDER BY q.created_at DESC`
@@ -74,7 +74,7 @@ func (r *QuotationRepository) List(ctx context.Context, userID string, status st
 	var result []Quotation
 	for rows.Next() {
 		var q Quotation
-		if err := rows.Scan(&q.ID, &q.UserID, &q.RecipeID, &q.RecipeName, &q.ClientName,
+		if err := rows.Scan(&q.ID, &q.CreatedBy, &q.RecipeID, &q.RecipeName, &q.ClientName,
 			&q.MarginPct, &q.FinalPrice, &q.Status, &q.CreatedAt, &q.UpdatedAt); err != nil {
 			return nil, err
 		}
@@ -83,11 +83,11 @@ func (r *QuotationRepository) List(ctx context.Context, userID string, status st
 	return result, nil
 }
 
-func (r *QuotationRepository) UpdateStatus(ctx context.Context, id, userID, status string) error {
+func (r *QuotationRepository) UpdateStatus(ctx context.Context, id, status string) error {
 	tag, err := r.db.Exec(ctx, `
 		UPDATE quotations SET status = $1, updated_at = NOW()
-		WHERE id = $2 AND user_id = $3`,
-		status, id, userID,
+		WHERE id = $2`,
+		status, id,
 	)
 	if err != nil {
 		return err

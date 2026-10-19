@@ -14,6 +14,8 @@ export interface IStockAdjustment {
   loss_amount: number;
   note: string;
   adjusted_on: string;
+  /** Who registered it; empty if that user was deleted. */
+  created_by: string | null;
   created_at: string;
 }
 

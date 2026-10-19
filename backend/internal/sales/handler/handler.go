@@ -68,7 +68,7 @@ func (h *SaleHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	input := repository.RegisterSaleInput{
-		UserID:       userID(r),
+		CreatedBy:    userID(r),
 		RecipeID:     body.RecipeID,
 		QuantitySold: body.QuantitySold,
 		UnitPrice:    body.UnitPrice,
@@ -98,7 +98,7 @@ func (h *SaleHandler) List(w http.ResponseWriter, r *http.Request) {
 	from := r.URL.Query().Get("from")
 	to := r.URL.Query().Get("to")
 
-	sales, err := h.svc.GetAll(r.Context(), userID(r), from, to)
+	sales, err := h.svc.GetAll(r.Context(), from, to)
 	if err != nil {
 		httputil.JSONError(w, "error obteniendo ventas", http.StatusInternalServerError)
 		return
@@ -115,7 +115,7 @@ func (h *SaleHandler) List(w http.ResponseWriter, r *http.Request) {
 func (h *SaleHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	log.Printf("[sales] DELETE /sales/%s user=%s", id, userID(r))
-	if err := h.svc.DeleteSale(r.Context(), id, userID(r)); err != nil {
+	if err := h.svc.DeleteSale(r.Context(), id); err != nil {
 		if errors.Is(err, repository.ErrPartOfOrder) {
 			httputil.JSONError(w, "esta venta es una línea de un pedido: anula el pedido completo", http.StatusConflict)
 			return

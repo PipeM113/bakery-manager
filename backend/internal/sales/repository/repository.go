@@ -40,7 +40,7 @@ type SaleIngredient struct {
 
 type Sale struct {
 	ID           string           `json:"id"`
-	UserID       string           `json:"user_id"`
+	CreatedBy    *string          `json:"created_by"`
 	RecipeID     string           `json:"recipe_id"`
 	RecipeName   string           `json:"recipe_name"`
 	QuantitySold int              `json:"quantity_sold"`
@@ -57,7 +57,7 @@ type Sale struct {
 }
 
 type RegisterSaleInput struct {
-	UserID       string
+	CreatedBy    string
 	RecipeID     string
 	QuantitySold int
 	UnitPrice    int64
@@ -157,7 +157,7 @@ func needsOf(ctx context.Context, tx db, line LineInput) ([]need, error) {
 // out of the stock. Every ingredient of every line is locked first, in a fixed order, so sales and
 // orders at the same time wait for each other instead of reading the same stock. Without enough
 // stock the lines are still registered: the stock stops at 0 and the shortfalls say what was missing.
-func takeLines(ctx context.Context, tx db, userID string, orderID *string, saleDate, notes string, lines []LineInput, lineTotals []int64) ([]Sale, []Shortfall, error) {
+func takeLines(ctx context.Context, tx db, createdBy string, orderID *string, saleDate, notes string, lines []LineInput, lineTotals []int64) ([]Sale, []Shortfall, error) {
 	allNeeds := make([][]need, len(lines))
 	for i, line := range lines {
 		n, err := needsOf(ctx, tx, line)
@@ -194,11 +194,11 @@ func takeLines(ctx context.Context, tx db, userID string, orderID *string, saleD
 	for i, line := range lines {
 		var sale Sale
 		err := tx.QueryRow(ctx, `
-			INSERT INTO sales (user_id, recipe_id, quantity_sold, unit_price, sold_as, sale_date, notes, order_id, line_total, created_at)
+			INSERT INTO sales (created_by, recipe_id, quantity_sold, unit_price, sold_as, sale_date, notes, order_id, line_total, created_at)
 			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9, clock_timestamp())
-			RETURNING id, user_id, recipe_id, quantity_sold, unit_price, line_total, sold_as, sale_date::text, notes, created_at`,
-			userID, line.RecipeID, line.QuantitySold, line.UnitPrice, line.SoldAs, saleDate, notes, orderID, lineTotals[i],
-		).Scan(&sale.ID, &sale.UserID, &sale.RecipeID, &sale.QuantitySold, &sale.UnitPrice, &sale.TotalPrice,
+			RETURNING id, created_by, recipe_id, quantity_sold, unit_price, line_total, sold_as, sale_date::text, notes, created_at`,
+			createdBy, line.RecipeID, line.QuantitySold, line.UnitPrice, line.SoldAs, saleDate, notes, orderID, lineTotals[i],
+		).Scan(&sale.ID, &sale.CreatedBy, &sale.RecipeID, &sale.QuantitySold, &sale.UnitPrice, &sale.TotalPrice,
 			&sale.SoldAs, &sale.SaleDate, &sale.Notes, &sale.CreatedAt)
 		if err != nil {
 			return nil, nil, fmt.Errorf("insert sale: %w", err)
@@ -263,7 +263,7 @@ func (r *SaleRepository) RegisterSale(ctx context.Context, input RegisterSaleInp
 	defer tx.Rollback(ctx)
 
 	line := LineInput{RecipeID: input.RecipeID, QuantitySold: input.QuantitySold, UnitPrice: input.UnitPrice, SoldAs: soldAs}
-	sales, shortfalls, err := takeLines(ctx, tx, input.UserID, nil, input.SaleDate, input.Notes,
+	sales, shortfalls, err := takeLines(ctx, tx, input.CreatedBy, nil, input.SaleDate, input.Notes,
 		[]LineInput{line}, []int64{int64(input.QuantitySold) * input.UnitPrice})
 	if err != nil {
 		return Sale{}, err
@@ -277,15 +277,15 @@ func (r *SaleRepository) RegisterSale(ctx context.Context, input RegisterSaleInp
 }
 
 // GetAll returns sales for a user optionally filtered by date range.
-func (r *SaleRepository) GetAll(ctx context.Context, userID, from, to string) ([]Sale, error) {
+func (r *SaleRepository) GetAll(ctx context.Context, from, to string) ([]Sale, error) {
 	query := `
-		SELECT s.id, s.user_id, s.recipe_id, rec.name, s.quantity_sold, s.unit_price,
+		SELECT s.id, s.created_by, s.recipe_id, rec.name, s.quantity_sold, s.unit_price,
 		       s.line_total AS total_price,
 		       s.sold_as, s.order_id, s.sale_date::text, s.notes, s.created_at
 		FROM sales s
 		JOIN recipes rec ON rec.id = s.recipe_id
-		WHERE s.user_id = $1`
-	args := []any{userID}
+		WHERE TRUE`
+	args := []any{}
 
 	if from != "" {
 		args = append(args, from)
@@ -306,7 +306,7 @@ func (r *SaleRepository) GetAll(ctx context.Context, userID, from, to string) ([
 	var sales []Sale
 	for rows.Next() {
 		var s Sale
-		if err := rows.Scan(&s.ID, &s.UserID, &s.RecipeID, &s.RecipeName,
+		if err := rows.Scan(&s.ID, &s.CreatedBy, &s.RecipeID, &s.RecipeName,
 			&s.QuantitySold, &s.UnitPrice, &s.TotalPrice, &s.SoldAs, &s.OrderID, &s.SaleDate, &s.Notes, &s.CreatedAt); err != nil {
 			return nil, fmt.Errorf("scan sale: %w", err)
 		}
@@ -317,7 +317,7 @@ func (r *SaleRepository) GetAll(ctx context.Context, userID, from, to string) ([
 }
 
 // DeleteSale removes a sale and reverts ingredient stock.
-func (r *SaleRepository) DeleteSale(ctx context.Context, id, userID string) error {
+func (r *SaleRepository) DeleteSale(ctx context.Context, id string) error {
 	tx, err := r.db.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("begin tx: %w", err)
@@ -325,7 +325,7 @@ func (r *SaleRepository) DeleteSale(ctx context.Context, id, userID string) erro
 	defer tx.Rollback(ctx)
 
 	var orderID *string
-	err = tx.QueryRow(ctx, `SELECT order_id FROM sales WHERE id = $1 AND user_id = $2 FOR UPDATE`, id, userID).Scan(&orderID)
+	err = tx.QueryRow(ctx, `SELECT order_id FROM sales WHERE id = $1 FOR UPDATE`, id).Scan(&orderID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return fmt.Errorf("sale not found")
 	}
@@ -369,7 +369,7 @@ func (r *SaleRepository) DeleteSale(ctx context.Context, id, userID string) erro
 	}
 
 	// Delete sale (cascades to sale_ingredients)
-	tag, err := tx.Exec(ctx, `DELETE FROM sales WHERE id=$1 AND user_id=$2`, id, userID)
+	tag, err := tx.Exec(ctx, `DELETE FROM sales WHERE id=$1`, id)
 	if err != nil {
 		return fmt.Errorf("delete sale: %w", err)
 	}

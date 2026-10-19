@@ -36,7 +36,7 @@ export default function DashboardPage() {
           <div className="h-px w-8 bg-oro/40" />
           <span className="text-oro text-xs tracking-[0.3em] uppercase font-light">Panel principal</span>
         </div>
-        <h1 className="font-display text-4xl text-negro">Bienvenida{firstName ? `, ${firstName}` : ""}</h1>
+        <h1 className="font-display text-4xl text-negro">Hola{firstName ? `, ${firstName}` : ""}</h1>
       </div>
 
       {alerts.length > 0 && (

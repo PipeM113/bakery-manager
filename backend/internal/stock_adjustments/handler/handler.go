@@ -62,7 +62,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	log.Printf("[stock] POST /ingredients/%s/stock-adjustments user=%s reason=%q", id, userID(r), body.Reason)
 	a, err := h.repo.Record(r.Context(), repository.Input{
-		UserID: userID(r), IngredientID: id, Reason: body.Reason,
+		CreatedBy: userID(r), IngredientID: id, Reason: body.Reason,
 		Quantity: body.Quantity, CountedQuantity: body.CountedQuantity, QuantityDelta: body.QuantityDelta,
 		Unit: body.Unit, Note: body.Note, AdjustedOn: body.AdjustedOn,
 	})
@@ -111,6 +111,6 @@ func (h *Handler) ForMonth(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	list, err := h.repo.ForMonth(r.Context(), userID(r), month+"-01")
+	list, err := h.repo.ForMonth(r.Context(), month+"-01")
 	h.write(w, list, err)
 }

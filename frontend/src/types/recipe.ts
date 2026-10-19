@@ -10,7 +10,8 @@ export interface IRecipeIngredient {
 
 export interface IRecipe {
   id: string;
-  user_id: string;
+  /** Who registered it; empty if that user was deleted. */
+  created_by: string | null;
   parent_id: string | null;
   name: string;
   description: string;

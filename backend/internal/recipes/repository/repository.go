@@ -20,7 +20,7 @@ type RecipeIngredient struct {
 
 type Recipe struct {
 	ID              string             `json:"id"`
-	UserID          string             `json:"user_id"`
+	CreatedBy       *string            `json:"created_by"`
 	ParentID        *string            `json:"parent_id"`
 	Name            string             `json:"name"`
 	Description     string             `json:"description"`
@@ -58,10 +58,10 @@ func (r *RecipeRepository) Create(ctx context.Context, recipe Recipe) (Recipe, e
 		recipe.ScaleFactor = 1.0
 	}
 	err = tx.QueryRow(ctx, `
-		INSERT INTO recipes (user_id, parent_id, name, description, yield, yield_unit, photo_url, is_base, scale_factor, indirect_cost_pct, labor_cost_pct, margin_pct, extra_charge, delivery_cost)
+		INSERT INTO recipes (created_by, parent_id, name, description, yield, yield_unit, photo_url, is_base, scale_factor, indirect_cost_pct, labor_cost_pct, margin_pct, extra_charge, delivery_cost)
 		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
 		RETURNING id, created_at, updated_at`,
-		recipe.UserID, recipe.ParentID, recipe.Name, recipe.Description,
+		recipe.CreatedBy, recipe.ParentID, recipe.Name, recipe.Description,
 		recipe.Yield, recipe.YieldUnit, recipe.PhotoURL, recipe.IsBase,
 		recipe.ScaleFactor, recipe.IndirectCostPct, recipe.LaborCostPct, recipe.MarginPct,
 		recipe.ExtraCharge, recipe.DeliveryCost,
@@ -90,7 +90,7 @@ func (r *RecipeRepository) Create(ctx context.Context, recipe Recipe) (Recipe, e
 
 func (r *RecipeRepository) GetAll(ctx context.Context) ([]Recipe, error) {
 	rows, err := r.db.Query(ctx, `
-		SELECT id, user_id, parent_id, name, description, yield, yield_unit,
+		SELECT id, created_by, parent_id, name, description, yield, yield_unit,
 		       photo_url, is_base, scale_factor, indirect_cost_pct, labor_cost_pct, margin_pct,
 		       extra_charge, delivery_cost, created_at, updated_at
 		FROM recipes ORDER BY name ASC`)
@@ -103,7 +103,7 @@ func (r *RecipeRepository) GetAll(ctx context.Context) ([]Recipe, error) {
 	for rows.Next() {
 		var rec Recipe
 		err := rows.Scan(
-			&rec.ID, &rec.UserID, &rec.ParentID, &rec.Name, &rec.Description,
+			&rec.ID, &rec.CreatedBy, &rec.ParentID, &rec.Name, &rec.Description,
 			&rec.Yield, &rec.YieldUnit, &rec.PhotoURL, &rec.IsBase,
 			&rec.ScaleFactor, &rec.IndirectCostPct, &rec.LaborCostPct, &rec.MarginPct,
 			&rec.ExtraCharge, &rec.DeliveryCost, &rec.CreatedAt, &rec.UpdatedAt,
@@ -140,12 +140,12 @@ func (r *RecipeRepository) GetAll(ctx context.Context) ([]Recipe, error) {
 func (r *RecipeRepository) GetByID(ctx context.Context, id string) (Recipe, error) {
 	var rec Recipe
 	err := r.db.QueryRow(ctx, `
-		SELECT id, user_id, parent_id, name, description, yield, yield_unit,
+		SELECT id, created_by, parent_id, name, description, yield, yield_unit,
 		       photo_url, is_base, scale_factor, indirect_cost_pct, labor_cost_pct, margin_pct,
 		       extra_charge, delivery_cost, created_at, updated_at
 		FROM recipes WHERE id = $1`, id,
 	).Scan(
-		&rec.ID, &rec.UserID, &rec.ParentID, &rec.Name, &rec.Description,
+		&rec.ID, &rec.CreatedBy, &rec.ParentID, &rec.Name, &rec.Description,
 		&rec.Yield, &rec.YieldUnit, &rec.PhotoURL, &rec.IsBase,
 		&rec.ScaleFactor, &rec.IndirectCostPct, &rec.LaborCostPct, &rec.MarginPct,
 		&rec.ExtraCharge, &rec.DeliveryCost, &rec.CreatedAt, &rec.UpdatedAt,
@@ -177,18 +177,18 @@ func (r *RecipeRepository) GetByID(ctx context.Context, id string) (Recipe, erro
 	return rec, nil
 }
 
-func (r *RecipeRepository) Delete(ctx context.Context, id, userID string) error {
-	tag, err := r.db.Exec(ctx, `DELETE FROM recipes WHERE id = $1 AND user_id = $2`, id, userID)
+func (r *RecipeRepository) Delete(ctx context.Context, id string) error {
+	tag, err := r.db.Exec(ctx, `DELETE FROM recipes WHERE id = $1`, id)
 	if err != nil {
 		return fmt.Errorf("delete recipe: %w", err)
 	}
 	if tag.RowsAffected() == 0 {
-		return fmt.Errorf("recipe not found or not owned by user")
+		return fmt.Errorf("recipe not found")
 	}
 	return nil
 }
 
-func (r *RecipeRepository) Update(ctx context.Context, id, userID string, recipe Recipe) (Recipe, error) {
+func (r *RecipeRepository) Update(ctx context.Context, id string, recipe Recipe) (Recipe, error) {
 	tx, err := r.db.Begin(ctx)
 	if err != nil {
 		return Recipe{}, fmt.Errorf("begin tx: %w", err)
@@ -201,15 +201,15 @@ func (r *RecipeRepository) Update(ctx context.Context, id, userID string, recipe
 		    labor_cost_pct=$6,
 		    scale_factor=CASE WHEN $8 > 0 THEN $8 ELSE scale_factor END,
 		    updated_at=NOW()
-		WHERE id=$7 AND user_id=$9`,
+		WHERE id=$7`,
 		recipe.Name, recipe.Description, recipe.Yield, recipe.YieldUnit,
-		recipe.IndirectCostPct, recipe.LaborCostPct, id, recipe.ScaleFactor, userID,
+		recipe.IndirectCostPct, recipe.LaborCostPct, id, recipe.ScaleFactor,
 	)
 	if err != nil {
 		return Recipe{}, fmt.Errorf("update recipe: %w", err)
 	}
 	if tag.RowsAffected() == 0 {
-		return Recipe{}, fmt.Errorf("recipe not found or not owned by user")
+		return Recipe{}, fmt.Errorf("recipe not found")
 	}
 
 	_, err = tx.Exec(ctx, `DELETE FROM recipe_ingredients WHERE recipe_id=$1`, id)
@@ -263,7 +263,7 @@ func (r *RecipeRepository) SaveScaled(ctx context.Context, recipeID string, scal
 	}
 
 	scaled := Recipe{
-		UserID:          original.UserID,
+		CreatedBy:       original.CreatedBy,
 		ParentID:        &recipeID,
 		Name:            newName,
 		Description:     original.Description,

@@ -130,7 +130,7 @@ func (h *QuotationHandler) Generate(w http.ResponseWriter, r *http.Request) {
 	uid := userID(r)
 	if uid != "" {
 		_, _ = h.repo.Save(r.Context(), quoteRepo.SaveInput{
-			UserID:     uid,
+			CreatedBy:  uid,
 			RecipeID:   req.RecipeID,
 			ClientName: req.ClientName,
 			MarginPct:  breakdown.MarginPct,
@@ -155,7 +155,7 @@ func (h *QuotationHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	quotations, err := h.repo.List(r.Context(), userID(r), status)
+	quotations, err := h.repo.List(r.Context(), status)
 	if err != nil {
 		httputil.JSONError(w, "error listando cotizaciones", http.StatusInternalServerError)
 		return
@@ -169,7 +169,7 @@ func (h *QuotationHandler) List(w http.ResponseWriter, r *http.Request) {
 
 func (h *QuotationHandler) Confirm(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-	if err := h.repo.UpdateStatus(r.Context(), id, userID(r), "confirmed"); err != nil {
+	if err := h.repo.UpdateStatus(r.Context(), id, "confirmed"); err != nil {
 		if quoteRepo.IsNotFound(err) {
 			httputil.JSONError(w, "cotización no encontrada", http.StatusNotFound)
 			return
@@ -182,7 +182,7 @@ func (h *QuotationHandler) Confirm(w http.ResponseWriter, r *http.Request) {
 
 func (h *QuotationHandler) Cancel(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-	if err := h.repo.UpdateStatus(r.Context(), id, userID(r), "cancelled"); err != nil {
+	if err := h.repo.UpdateStatus(r.Context(), id, "cancelled"); err != nil {
 		if quoteRepo.IsNotFound(err) {
 			httputil.JSONError(w, "cotización no encontrada", http.StatusNotFound)
 			return

@@ -54,7 +54,7 @@ func (h *FixedCostHandler) List(w http.ResponseWriter, r *http.Request) {
 		httputil.JSONError(w, monthMessage, http.StatusBadRequest)
 		return
 	}
-	costs, err := h.svc.List(r.Context(), userID(r), month)
+	costs, err := h.svc.List(r.Context(), month)
 	if err != nil {
 		httputil.JSONError(w, "error obteniendo costos fijos", http.StatusInternalServerError)
 		return
@@ -137,7 +137,7 @@ func (h *FixedCostHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("[fixed_costs] PUT /fixed-costs/%s user=%s name=%q active=%v from=%s", id, userID(r), body.Name, active, month)
 
-	fc, err := h.svc.Update(r.Context(), id, userID(r), body.Name, body.MonthlyAmount, active, month)
+	fc, err := h.svc.Update(r.Context(), id, body.Name, body.MonthlyAmount, active, month)
 	if errors.Is(err, repository.ErrNotFound) {
 		httputil.JSONError(w, "costo fijo no encontrado", http.StatusNotFound)
 		return
@@ -155,7 +155,7 @@ func (h *FixedCostHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	log.Printf("[fixed_costs] DELETE /fixed-costs/%s user=%s", id, userID(r))
 	month, _ := h.monthStart("", false)
-	err := h.svc.End(r.Context(), id, userID(r), month)
+	err := h.svc.End(r.Context(), id, month)
 	if errors.Is(err, repository.ErrNotFound) {
 		httputil.JSONError(w, "costo fijo no encontrado", http.StatusNotFound)
 		return

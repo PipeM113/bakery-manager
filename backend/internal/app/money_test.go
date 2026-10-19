@@ -300,7 +300,7 @@ func TestD6_MonthlyDashboardInWholePesos(t *testing.T) {
 		amount int
 	}{{"gas", 1500}, {"envases", 500}} {
 		_, err := db.Exec(context.Background(), `
-			insert into operational_expenses (user_id, description, amount, category_id, expense_date)
+			insert into operational_expenses (created_by, description, amount, category_id, expense_date)
 			select (select id from users limit 1), 'gasto', $2, id, current_date from expense_categories where lower(name) = $1`, e.cat, e.amount)
 		if err != nil {
 			t.Fatal(err)

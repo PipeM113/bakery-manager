@@ -18,14 +18,14 @@ func (s *ExpenseService) Create(ctx context.Context, userID, description, catego
 	return s.repo.Create(ctx, userID, description, categoryID, expenseDate, amount)
 }
 
-func (s *ExpenseService) ListByMonth(ctx context.Context, userID string, month, year int) ([]repository.OperationalExpense, error) {
-	return s.repo.GetByMonth(ctx, userID, month, year)
+func (s *ExpenseService) ListByMonth(ctx context.Context, month, year int) ([]repository.OperationalExpense, error) {
+	return s.repo.GetByMonth(ctx, month, year)
 }
 
-func (s *ExpenseService) Update(ctx context.Context, id, userID, description, categoryID, expenseDate string, amount int64) (repository.OperationalExpense, error) {
-	return s.repo.Update(ctx, id, userID, description, categoryID, expenseDate, amount)
+func (s *ExpenseService) Update(ctx context.Context, id, description, categoryID, expenseDate string, amount int64) (repository.OperationalExpense, error) {
+	return s.repo.Update(ctx, id, description, categoryID, expenseDate, amount)
 }
 
-func (s *ExpenseService) Delete(ctx context.Context, id, userID string) error {
-	return s.repo.Delete(ctx, id, userID)
+func (s *ExpenseService) Delete(ctx context.Context, id string) error {
+	return s.repo.Delete(ctx, id)
 }

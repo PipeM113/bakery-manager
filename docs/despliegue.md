@@ -55,7 +55,7 @@ go run -tags postgres github.com/golang-migrate/migrate/v4/cmd/migrate@v4.20.1 \
 - La migración 19 pasa el monto de los costos fijos a la tabla `fixed_cost_versions` (un monto por mes) y reemplaza `is_active` por `ended_from` (ver `docs/costos-fijos.md`). Hazla **antes** de desplegar el backend nuevo: el backend anterior lee las columnas que la migración quita.
 - La migración 20 agrega `sales.sold_as` y `sale_ingredients.stock_deducted` (ver `docs/ventas-y-stock.md`). Solo agrega columnas: se puede aplicar antes o después del deploy, pero el backend nuevo las necesita, así que aplícala **antes**.
 - La migración 22 crea `orders` y agrega `sales.order_id` y `sales.line_total` (ver `docs/pedidos.md`). Solo agrega: se aplica **antes** del deploy, porque el backend nuevo las necesita.
-- Verifica: `select version, dirty from manager.schema_migrations;` debe dar `22` y `false` (la 22 crea `orders`; la 21 crea `stock_adjustments`, ver `docs/ajustes-de-stock.md`; la 19 dejó `fixed_cost_versions`, ver arriba), y `select count(*) from manager.fixed_cost_versions;` debe igualar la cantidad de costos fijos que tenías.
+- Verifica: `select version, dirty from manager.schema_migrations;` debe dar `23` y `false` (la 23 renombra `user_id` a `created_by`; la 22 crea `orders`; la 21 crea `stock_adjustments`, ver `docs/ajustes-de-stock.md`; la 19 dejó `fixed_cost_versions`, ver arriba), y `select count(*) from manager.fixed_cost_versions;` debe igualar la cantidad de costos fijos que tenías.
 - Deshacer la última: mismo comando con `down 1`.
 - Cuando termines, `unset MIGRATE_URL`.
 
@@ -78,7 +78,19 @@ insert into manager.users (name, email, password, role)
 values ('<nombre>', '<correo>', '<hash>', 'owner');
 ```
 
-Ambas administran el negocio: crea una fila por persona, las dos con rol `owner`.
+Ambas administran el negocio: crea una fila por persona, las dos con rol `owner`. Ver `docs/acceso.md`.
+
+### La cuenta de tu mamá
+
+Con el hash de su contraseña (otra vez `go run ./cmd/hashpassword`, sin que la clave pase por el chat) ejecuta el mismo `insert` con su nombre y su correo y rol `owner`. Entran con cuentas distintas y ven el mismo negocio (ADR-002).
+
+### Cambiar una contraseña
+
+Para cambiar una contraseña, genera un hash nuevo con `hashpassword` y ejecuta `update manager.users set password = '<hash>' where email = '<correo>';`. Cambiar una contraseña desde la app todavía no está hecho.
+
+### Migración 23
+
+Renombra `user_id` a `created_by` en siete tablas y hace que, si se borra un usuario, sus registros se queden. El backend nuevo usa `created_by` y el anterior usa `user_id`: aplica la migración y despliega el backend **seguidos**, sin dejar un backend viejo sobre el esquema nuevo.
 
 ## 4. Proyecto de Vercel del backend
 

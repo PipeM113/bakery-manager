@@ -424,8 +424,8 @@ func TestO6_ListAndGet(t *testing.T) {
 	}
 
 	other := secondUser(t, api)
-	if status, _ := other.do("GET", "/orders/"+older["id"].(string), nil); status != http.StatusNotFound {
-		t.Errorf("someone else's order: status = %d, want 404", status)
+	if status, _ := other.do("GET", "/orders/"+older["id"].(string), nil); status != http.StatusOK {
+		t.Errorf("the other account's order: status = %d, want 200 (the business is one)", status)
 	}
 	if got := list("/orders?month=2026-02"); got[0]["id"] != feb["id"] {
 		t.Errorf("unexpected: %v", got)
@@ -450,12 +450,9 @@ func TestO7_CancellingAnOrder(t *testing.T) {
 		t.Fatalf("stock after the order: manjar %v, nuts %v", stockOf(t, api.client, manjar), stockOf(t, api.client, scarce))
 	}
 
+	// The other account of the same business may cancel it.
 	other := secondUser(t, api)
-	if status, _ := other.do("DELETE", "/orders/"+o["id"].(string), nil); status != http.StatusNotFound {
-		t.Errorf("someone else's order: status = %d, want 404", status)
-	}
-
-	if status, raw := api.do("DELETE", "/orders/"+o["id"].(string), nil); status != http.StatusNoContent {
+	if status, raw := other.do("DELETE", "/orders/"+o["id"].(string), nil); status != http.StatusNoContent {
 		t.Fatalf("DELETE: status = %d: %s", status, raw)
 	}
 	if got := stockOf(t, api.client, manjar); !near(got, 1) {

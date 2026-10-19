@@ -43,11 +43,15 @@ func Auth(secret string) func(http.Handler) http.Handler {
 				return
 			}
 
-			claims := token.Claims.(jwt.MapClaims)
-			ctx := context.WithValue(r.Context(), UserKey, UserClaims{
-				ID:   claims["sub"].(string),
-				Role: claims["role"].(string),
-			})
+			// A token that does not carry what the server puts in it is not a token of ours.
+			claims, _ := token.Claims.(jwt.MapClaims)
+			id, okID := claims["sub"].(string)
+			role, okRole := claims["role"].(string)
+			if !okID || !okRole || id == "" {
+				unauthorized(w)
+				return
+			}
+			ctx := context.WithValue(r.Context(), UserKey, UserClaims{ID: id, Role: role})
 
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
