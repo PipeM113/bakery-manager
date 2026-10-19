@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { ingredientService } from "../api/ingredientService";
 import { recipeService } from "../api/recipeService";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/useAuth";
 import type { IIngredient } from "../types/ingredient";
 import type { IRecipe } from "../types/recipe";
 

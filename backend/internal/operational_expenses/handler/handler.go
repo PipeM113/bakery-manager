@@ -84,7 +84,7 @@ func (h *ExpenseHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("[expenses] POST /expenses user=%s description=%q amount=%d date=%s", userID(r), body.Description, body.Amount, body.ExpenseDate)
+	log.Printf("[expenses] POST /expenses user=%s amount=%d date=%s", userID(r), body.Amount, body.ExpenseDate)
 
 	expense, err := h.svc.Create(r.Context(), userID(r), body.Description, body.CategoryID, body.ExpenseDate, body.Amount)
 	if err != nil {
@@ -158,7 +158,7 @@ func (h *ExpenseHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("[expenses] PUT /expenses/%s user=%s description=%q amount=%d", id, userID(r), body.Description, body.Amount)
+	log.Printf("[expenses] PUT /expenses/%s user=%s amount=%d", id, userID(r), body.Amount)
 
 	expense, err := h.svc.Update(r.Context(), id, body.Description, body.CategoryID, body.ExpenseDate, body.Amount)
 	if err != nil {

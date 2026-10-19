@@ -6,8 +6,8 @@ import type { IOrder } from "../types/order";
 import type { IRecipe } from "../types/recipe";
 import type { SoldAs } from "../types/sale";
 import { todayInSantiago } from "../utils/businessDate";
+import { formatCLP } from "../utils/money";
 
-const clp = (n: number) => `$${Math.round(n).toLocaleString("es-CL")}`;
 
 interface FormLine {
   key: number;
@@ -163,7 +163,7 @@ export default function OrderForm({ recipes, onClose, onCreated }: Props) {
           <input type="number" min={0} value={total} onChange={(e) => setTotal(e.target.value)}
             placeholder={normalTotal > 0 ? String(Math.round(normalTotal)) : "Suma de los productos"} className={field} />
           <p className="text-xs text-negro/70 font-light mt-1">
-            Suma de los productos: <span className="text-negro">{clp(normalTotal)}</span>. Si indicas otro total, se reparte entre los productos.
+            Suma de los productos: <span className="text-negro">{formatCLP(normalTotal)}</span>. Si indicas otro total, se reparte entre los productos.
           </p>
         </div>
 

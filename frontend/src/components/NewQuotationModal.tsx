@@ -3,6 +3,7 @@ import Modal from "./Modal";
 import { recipeService } from "../api/recipeService";
 import { quotationService, type IQuotation, type SoldAs } from "../api/quotationService";
 import type { IRecipe } from "../types/recipe";
+import { formatCLP } from "../utils/money";
 
 const MAX_LINES = 30;
 
@@ -150,7 +151,7 @@ export default function NewQuotationModal({ onClose, onCreated }: Props) {
 
       {created && (
         <p className="text-sm font-light text-negro bg-salvia/40 border border-salvia px-3 py-2">
-          Cotización guardada por ${Math.round(created.total).toLocaleString("es-CL")}.
+          Cotización guardada por {formatCLP(created.total)}.
         </p>
       )}
       {error && <p role="alert" className="text-peligro text-xs">{error}</p>}

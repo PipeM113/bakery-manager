@@ -19,7 +19,6 @@ import (
 	mid "github.com/PipeM113/bakery-manager/pkg/middleware"
 	"github.com/PipeM113/bakery-manager/pkg/money"
 	"github.com/go-chi/chi/v5"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -75,9 +74,27 @@ func bad(format string, a ...any) error {
 	return &badRequest{http.StatusBadRequest, fmt.Sprintf(format, a...)}
 }
 
+// recipeCache reads each recipe of a quotation once, however many lines use it.
+type recipeCache struct {
+	svc  *costSvc.CostService
+	byID map[string]costSvc.Recipe
+}
+
+func (c *recipeCache) get(r *http.Request, id string) (costSvc.Recipe, error) {
+	if rec, ok := c.byID[id]; ok {
+		return rec, nil
+	}
+	rec, err := c.svc.LoadRecipe(r.Context(), id)
+	if err != nil {
+		return costSvc.Recipe{}, err
+	}
+	c.byID[id] = rec
+	return rec, nil
+}
+
 // priceLine quotes one line with the cost calculation of the recipe screen. A whole recipe costs
 // its suggested price; portions are priced as the recipe made for that many portions.
-func (h *QuotationHandler) priceLine(r *http.Request, n int, l lineRequest) (quoteRepo.LineInput, error) {
+func (h *QuotationHandler) priceLine(r *http.Request, recipes *recipeCache, n int, l lineRequest) (quoteRepo.LineInput, error) {
 	var out quoteRepo.LineInput
 	if !uuidRE.MatchString(l.RecipeID) {
 		return out, bad("la línea %d no tiene una receta válida", n)
@@ -113,18 +130,17 @@ func (h *QuotationHandler) priceLine(r *http.Request, n int, l lineRequest) (quo
 		return out, bad("línea %d: %s", n, err.Error())
 	}
 
-	var name string
-	var photo *string
-	var indirect, labor, margin float64
-	err := h.db.QueryRow(r.Context(), `
-		SELECT name, photo_url, indirect_cost_pct, labor_cost_pct, margin_pct FROM recipes WHERE id = $1`, l.RecipeID,
-	).Scan(&name, &photo, &indirect, &labor, &margin)
-	if errors.Is(err, pgx.ErrNoRows) {
+	recipe, err := recipes.get(r, l.RecipeID)
+	if errors.Is(err, costSvc.ErrRecipeNotFound) {
 		return out, bad("la receta de la línea %d no existe", n)
+	}
+	if errors.Is(err, costSvc.ErrInvalidYield) {
+		return out, &badRequest{http.StatusUnprocessableEntity, fmt.Sprintf("línea %d: %s", n, err.Error())}
 	}
 	if err != nil {
 		return out, err
 	}
+	indirect, labor, margin := recipe.IndirectCostPct, recipe.LaborCostPct, recipe.MarginPct
 	if l.IndirectCostPct != nil {
 		indirect = *l.IndirectCostPct
 	}
@@ -134,14 +150,8 @@ func (h *QuotationHandler) priceLine(r *http.Request, n int, l lineRequest) (quo
 	if l.MarginPct != nil {
 		margin = *l.MarginPct
 	}
-
-	breakdown, err := h.costSvc.GetCostBreakdown(r.Context(), l.RecipeID, params)
-	if errors.Is(err, costSvc.ErrInvalidYield) {
-		return out, &badRequest{http.StatusUnprocessableEntity, fmt.Sprintf("línea %d: %s", n, err.Error())}
-	}
-	if err != nil {
-		return out, err
-	}
+	name, photo := recipe.Name, recipe.PhotoURL
+	breakdown := recipe.Compute(params)
 	price := int64(breakdown.SuggestedPrice)
 	var unit, total int64
 	if soldAs == "portion" {
@@ -186,8 +196,9 @@ func (h *QuotationHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	in := quoteRepo.SaveInput{CreatedBy: userID(r), ClientName: req.ClientName, DeliveryCost: req.DeliveryCost, CreatedAt: h.clk()}
+	recipes := &recipeCache{svc: h.costSvc, byID: map[string]costSvc.Recipe{}}
 	for i, l := range req.Lines {
-		priced, err := h.priceLine(r, i+1, l)
+		priced, err := h.priceLine(r, recipes, i+1, l)
 		var br *badRequest
 		if errors.As(err, &br) {
 			httputil.JSONError(w, br.message, br.status)

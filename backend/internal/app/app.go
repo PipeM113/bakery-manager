@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -50,6 +51,9 @@ import (
 	mid "github.com/PipeM113/bakery-manager/pkg/middleware"
 )
 
+// maxJSONBody is the largest JSON body any endpoint reads (1 MiB).
+const maxJSONBody = 1 << 20
+
 // PhotoUploader stores recipe photos. It may be nil: then the upload route answers 503.
 type PhotoUploader = recHand.PhotoUploader
 
@@ -64,6 +68,11 @@ func NewWithClock(cfg config.Config, db *pgxpool.Pool, photos PhotoUploader, clk
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
+	// JSON bodies are small; only the multipart uploads (a recipe photo, the ingredient import), each with its own limit, may be bigger.
+	r.Use(mid.MaxBody(maxJSONBody, func(r *http.Request) bool {
+		return r.Method == http.MethodPost &&
+			((strings.HasPrefix(r.URL.Path, "/recipes/") && strings.HasSuffix(r.URL.Path, "/photo")) || r.URL.Path == "/ingredients/import")
+	}))
 
 	// go-chi/cors treats an empty origin list as "allow everything", so the middleware is
 	// only installed when origins are configured. Cookies are never allowed: the token
@@ -73,6 +82,7 @@ func NewWithClock(cfg config.Config, db *pgxpool.Pool, photos PhotoUploader, clk
 			AllowedOrigins:   cfg.CORSOrigins,
 			AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 			AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
+			ExposedHeaders:   []string{"Retry-After"}, // the login page shows how long to wait
 			AllowCredentials: false,
 			MaxAge:           600,
 		}))
@@ -84,7 +94,7 @@ func NewWithClock(cfg config.Config, db *pgxpool.Pool, photos PhotoUploader, clk
 		fmt.Fprintln(w, `{"status":"ok"}`)
 	})
 
-	authSvc := service.NewAuthService(db, cfg.JWTSecret)
+	authSvc := service.NewAuthService(db, cfg.JWTSecret, clk)
 	authHandler := handler.NewAuthHandler(authSvc)
 	r.Post("/auth/login", authHandler.Login)
 
@@ -103,6 +113,7 @@ func NewWithClock(cfg config.Config, db *pgxpool.Pool, photos PhotoUploader, clk
 
 	r.Group(func(r chi.Router) {
 		r.Use(mid.Auth(cfg.JWTSecret))
+		r.Put("/auth/password", authHandler.ChangePassword)
 		r.Get("/ingredients", ingredientHandler.GetAll)
 		r.Get("/ingredients/export", ingredientHandler.Export)
 		r.Post("/ingredients/import", ingredientHandler.Import)

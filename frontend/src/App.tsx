@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate } from "react-router-dom";
-import { useAuth } from "./context/AuthContext";
+import { useAuth } from "./context/useAuth";
 import AppLayout from "./components/layout/AppLayout";
 import LoginPage from "./pages/LoginPage";
 import IngredientsPage from "./pages/IngredientsPage";
@@ -9,6 +9,7 @@ import DashboardPage from "./pages/DashboardPage";
 import FixedCostsPage from "./pages/FixedCostsPage";
 import SalesPage from "./pages/SalesPage";
 import ExpensesPage from "./pages/ExpensesPage";
+import AccountPage from "./pages/AccountPage";
 import BusinessPage from "./pages/BusinessPage";
 import ProfitabilityPage from "./pages/ProfitabilityPage";
 
@@ -39,6 +40,7 @@ export default function App() {
         <Route path="expenses"        element={<ExpensesPage />} />
         <Route path="profitability"   element={<ProfitabilityPage />} />
         <Route path="/business"       element={<BusinessPage />} />
+        <Route path="/account"        element={<AccountPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>

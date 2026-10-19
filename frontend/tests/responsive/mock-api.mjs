@@ -110,8 +110,8 @@ export const expenses = Array.from({ length: 6 }, (_, i) => ({
 
 export const monthly = {
   month: 3, year: 2026, total_revenue: 12345678, total_ingredients_cost: 3456789, total_fixed_costs: 1200000,
-  total_operational_expenses: 456789, total_waste_cost: 25000, gross_profit: 8888889, net_profit: 7206100,
-  profit_margin: 58.4, expenses_by_category: [{ category_id: "cat-0", category: "Gas", total: 456789 }],
+  total_operational_expenses: 456789, total_waste_cost: 25000, gross_profit: 8888889, net_profit: -271000,
+  profit_margin: -2.2, expenses_by_category: [{ category_id: "cat-0", category: "Gas", total: 456789 }],
 };
 export const trends = ["2025-10", "2025-11", "2025-12", "2026-01", "2026-02", "2026-03"].map((date, i) => ({
   date, revenue: 900000 + i * 350000, net_profit: 300000 + i * 120000 - (i === 2 ? 450000 : 0),

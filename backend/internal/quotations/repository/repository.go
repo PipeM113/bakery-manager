@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -101,15 +102,24 @@ func (r *QuotationRepository) Save(ctx context.Context, in SaveInput) (Quotation
 	if err != nil {
 		return Quotation{}, fmt.Errorf("insert quotation: %w", err)
 	}
+	// One statement for every line, so the cost does not grow with the number of lines.
+	var values []string
+	args := []any{q.ID}
 	for i, l := range in.Lines {
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO quotation_lines (quotation_id, position, recipe_id, recipe_name, photo_url, sold_as, quantity,
-			                             unit_price, line_total, margin_pct, indirect_cost_pct, labor_cost_pct, extra_charge)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
-			q.ID, i+1, l.RecipeID, l.RecipeName, l.PhotoURL, l.SoldAs, l.Quantity,
-			l.UnitPrice, l.LineTotal, l.MarginPct, l.IndirectCostPct, l.LaborCostPct, l.ExtraCharge); err != nil {
-			return Quotation{}, fmt.Errorf("insert line %d: %w", i+1, err)
+		base := len(args)
+		args = append(args, i+1, l.RecipeID, l.RecipeName, l.PhotoURL, l.SoldAs, l.Quantity,
+			l.UnitPrice, l.LineTotal, l.MarginPct, l.IndirectCostPct, l.LaborCostPct, l.ExtraCharge)
+		ph := make([]string, 12)
+		for j := range ph {
+			ph[j] = fmt.Sprintf("$%d", base+j+1)
 		}
+		values = append(values, "($1, "+strings.Join(ph, ", ")+")")
+	}
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO quotation_lines (quotation_id, position, recipe_id, recipe_name, photo_url, sold_as, quantity,
+		                             unit_price, line_total, margin_pct, indirect_cost_pct, labor_cost_pct, extra_charge)
+		VALUES `+strings.Join(values, ", "), args...); err != nil {
+		return Quotation{}, fmt.Errorf("insert lines: %w", err)
 	}
 	if err := tx.Commit(ctx); err != nil {
 		return Quotation{}, fmt.Errorf("commit: %w", err)

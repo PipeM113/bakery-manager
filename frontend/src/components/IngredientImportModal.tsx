@@ -1,7 +1,7 @@
 import Modal from "./Modal";
 import { useRef, useState } from "react";
-import * as XLSX from "xlsx";
 import api from "../services/api";
+import { apiErrorMessage } from "../utils/apiError";
 
 interface ImportRowError {
   row: number;
@@ -20,11 +20,13 @@ interface Props {
   onSuccess: () => void;
 }
 
+// The server accepts up to 4 MiB (docs/acceso.md).
+const MAX_BYTES = 4 * 1024 * 1024;
+
 const EXPECTED_HEADERS = ["Nombre", "Marca", "Unidad", "Tamaño Presentación", "Precio Presentación"];
 
 export default function IngredientImportModal({ onClose, onSuccess }: Props) {
   const [file, setFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string[][]>([]);
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
   const [error, setError] = useState("");
@@ -37,19 +39,12 @@ export default function IngredientImportModal({ onClose, onSuccess }: Props) {
     setResult(null);
     setError("");
 
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      const data = evt.target?.result;
-      const wb = XLSX.read(data, { type: "array" });
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json<string[]>(ws, { header: 1, defval: "" }) as string[][];
-      setPreview(rows.slice(0, 6)); // header + up to 5 data rows
-    };
-    reader.readAsArrayBuffer(f);
+    // The file is not read here: the server reads it and says what is wrong with it.
+    if (f.size > MAX_BYTES) setError("El archivo pesa más de 4 MB");
   };
 
   const handleImport = async () => {
-    if (!file) return;
+    if (!file || file.size > MAX_BYTES) return;
     setImporting(true);
     setError("");
     try {
@@ -62,8 +57,8 @@ export default function IngredientImportModal({ onClose, onSuccess }: Props) {
       if (res.data.errors?.length === 0 && (res.data.imported > 0 || res.data.updated > 0)) {
         onSuccess();
       }
-    } catch (e: any) {
-      setError(e.response?.data?.error || "Error al importar");
+    } catch (e) {
+      setError(apiErrorMessage(e, "Error al importar"));
     } finally {
       setImporting(false);
     }
@@ -120,35 +115,6 @@ export default function IngredientImportModal({ onClose, onSuccess }: Props) {
             {file ? file.name : "Seleccionar archivo .xlsx"}
           </button>
         </div>
-
-        {/* Preview table */}
-        {preview.length > 0 && !result && (
-          <div className="overflow-x-auto border border-linea">
-            <table className="w-full text-xs text-negro/70 font-light">
-              <thead>
-                <tr className="bg-lino border-b border-linea">
-                  {(preview[0] || EXPECTED_HEADERS).map((h, i) => (
-                    <th key={i} className="text-left py-1.5 px-2 text-negro/70 uppercase tracking-wider font-light whitespace-nowrap">
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {preview.slice(1).map((row, i) => (
-                  <tr key={i} className="border-b border-linea last:border-0">
-                    {(preview[0] || EXPECTED_HEADERS).map((_, j) => (
-                      <td key={j} className="py-1.5 px-2 whitespace-nowrap">{row[j] ?? ""}</td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {preview.length > 6 && (
-              <p className="text-xs text-negro/70 font-light px-2 py-1">Mostrando primeras 5 filas de datos...</p>
-            )}
-          </div>
-        )}
 
         {/* Result */}
         {result && (

@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { fixedCostService } from "../api/fixedCostService";
 import type { IFixedCost } from "../types/fixedCost";
 import { todayInSantiago } from "../utils/businessDate";
+import { formatCLP } from "../utils/money";
 
-const clp = (n: number) => `$${Math.round(n).toLocaleString("es-CL")}`;
 
 const thisMonth = () => todayInSantiago().slice(0, 7);
 const emptyForm = (month: string) => ({ name: "", monthly_amount: "", from: month });
@@ -203,7 +203,7 @@ export default function FixedCostsPage() {
           {costs.length > 0 && (
             <span className="text-xs text-negro/70 font-light">
               Total del mes:{" "}
-              <span className="text-oro font-medium">{clp(totalActive)}/mes</span>
+              <span className="text-oro font-medium">{formatCLP(totalActive)}/mes</span>
             </span>
           )}
         </div>
@@ -226,7 +226,7 @@ export default function FixedCostsPage() {
               {costs.map((fc) => (
                 <tr key={fc.id} className="border-b border-linea last:border-0 hover:bg-lino transition-colors">
                   <td className="px-6 py-4 text-negro font-light">{fc.name}</td>
-                  <td className="px-6 py-4 text-right text-negro font-light">{clp(fc.monthly_amount)}</td>
+                  <td className="px-6 py-4 text-right text-negro font-light">{formatCLP(fc.monthly_amount)}</td>
                   <td className="px-6 py-4 text-center">
                     <button
                       onClick={() => handleToggle(fc)}

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import type { IRecipe, IIngredientOption, RecipeFormData } from "../types/recipe";
 import { emptyRecipeForm } from "../types/recipe";
 import RecipePhotoUpload from "./RecipePhotoUpload";
+import { apiErrorMessage } from "../utils/apiError";
 
 interface Props {
   editing: IRecipe | null;
@@ -127,8 +128,8 @@ export default function RecipeForm({ editing, ingredients, onSave, onSaveAs, onC
     setSaving(true);
     try {
       await onSave(form);
-    } catch (e: any) {
-      setError(e.response?.data?.error || "Error al guardar");
+    } catch (e) {
+      setError(apiErrorMessage(e, "Error al guardar"));
     } finally {
       setSaving(false);
     }
@@ -150,8 +151,8 @@ export default function RecipeForm({ editing, ingredients, onSave, onSaveAs, onC
     try {
       await onSaveAs!(form, name);
       setShowVersionModal(false);
-    } catch (e: any) {
-      setVersionError(e.response?.data?.error || "Error al crear versión");
+    } catch (e) {
+      setVersionError(apiErrorMessage(e, "Error al crear versión"));
     } finally {
       setSavingAs(false);
     }
