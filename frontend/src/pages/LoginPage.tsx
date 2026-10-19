@@ -30,8 +30,11 @@ export default function LoginPage() {
         setError(minutes
           ? `Demasiados intentos fallidos. Vuelve a intentar en ${minutes} ${minutes === 1 ? "minuto" : "minutos"}.`
           : apiErrorMessage(err, "Demasiados intentos fallidos. Espera unos minutos."));
-      } else {
+      } else if (res?.status === 401) {
         setError("Correo o contraseña incorrectos");
+      } else {
+        // Not the password's fault: the server or the network failed.
+        setError(res ? `El servidor no pudo responder (error ${res.status}). Intenta de nuevo en un momento.` : "No se pudo conectar con el servidor. Revisa tu conexión e intenta de nuevo.");
       }
     } finally {
       setLoading(false);
