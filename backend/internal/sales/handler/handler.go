@@ -31,11 +31,12 @@ func userID(r *http.Request) string {
 
 func (h *SaleHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var body struct {
-		RecipeID     string `json:"recipe_id"`
-		QuantitySold int    `json:"quantity_sold"`
-		UnitPrice    int64  `json:"unit_price"`
-		SaleDate     string `json:"sale_date"`
-		Notes        string `json:"notes"`
+		RecipeID     string  `json:"recipe_id"`
+		QuantitySold int     `json:"quantity_sold"`
+		UnitPrice    int64   `json:"unit_price"`
+		SoldAs       *string `json:"sold_as"`
+		SaleDate     string  `json:"sale_date"`
+		Notes        string  `json:"notes"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		log.Printf("[sales] decode body error: %v", err)
@@ -52,6 +53,15 @@ func (h *SaleHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	soldAs := "recipe"
+	if body.SoldAs != nil {
+		soldAs = *body.SoldAs
+	}
+	if soldAs != "recipe" && soldAs != "portion" {
+		httputil.JSONError(w, `"sold_as" debe ser "recipe" (receta completa) o "portion" (porción)`, http.StatusBadRequest)
+		return
+	}
+
 	// A sale without a date is dated with today's date in Santiago.
 	if body.SaleDate == "" {
 		body.SaleDate = h.clk.Today()
@@ -62,15 +72,16 @@ func (h *SaleHandler) Create(w http.ResponseWriter, r *http.Request) {
 		RecipeID:     body.RecipeID,
 		QuantitySold: body.QuantitySold,
 		UnitPrice:    body.UnitPrice,
+		SoldAs:       soldAs,
 		SaleDate:     body.SaleDate,
 		Notes:        body.Notes,
 	}
 
 	sale, err := h.svc.RegisterSale(r.Context(), input)
 	if err != nil {
-		var stockErr *repository.InsufficientStockError
-		if errors.As(err, &stockErr) {
-			httputil.JSONError(w, stockErr.Error(), http.StatusBadRequest)
+		var invalid *repository.ValidationError
+		if errors.As(err, &invalid) {
+			httputil.JSONError(w, invalid.Error(), http.StatusBadRequest)
 			return
 		}
 		log.Printf("[sales] RegisterSale error: %v", err)
