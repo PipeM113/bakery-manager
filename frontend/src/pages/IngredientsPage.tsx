@@ -3,6 +3,7 @@ import IngredientImportModal from "../components/IngredientImportModal";
 import { ingredientService } from "../api/ingredientService";
 import type { IIngredient, IngredientFormData } from "../types/ingredient";
 import { emptyIngredientForm } from "../types/ingredient";
+import type { IngredientKind } from "../types/ingredient";
 
 const UNITS = ["gr", "kg", "ml", "lt", "und"];
 
@@ -32,6 +33,7 @@ function PriceDisplay({ price, unit }: { price: number; unit: string }) {
 export default function IngredientsPage() {
   const [ingredients, setIngredients] = useState<IIngredient[]>([]);
   const [search, setSearch]           = useState("");
+  const [tab, setTab]                 = useState<IngredientKind>("ingredient");
   const [showForm, setShowForm]       = useState(false);
   const [editing, setEditing]         = useState<IIngredient | null>(null);
   const [form, setForm]               = useState<IngredientFormData>(emptyIngredientForm);
@@ -59,12 +61,13 @@ export default function IngredientsPage() {
   };
 
   const filtered = ingredients.filter((i) =>
-    i.name.toLowerCase().includes(search.toLowerCase())
+    (i.kind ?? "ingredient") === tab && i.name.toLowerCase().includes(search.toLowerCase())
   );
+  const singular = tab === "supply" ? "insumo" : "ingrediente";
 
   const openCreate = () => {
     setEditing(null);
-    setForm(emptyIngredientForm);
+    setForm({ ...emptyIngredientForm, kind: tab });
     setError("");
     setShowForm(true);
   };
@@ -72,6 +75,7 @@ export default function IngredientsPage() {
   const openEdit = (i: IIngredient) => {
     setEditing(i);
     setForm({
+      kind:            i.kind ?? "ingredient",
       name:            i.name,
       default_unit:    i.default_unit,
       package_size:    i.package_size,
@@ -94,10 +98,10 @@ export default function IngredientsPage() {
     try {
       if (editing) {
         await ingredientService.update(editing.id, form);
-        showSuccess("✅ Insumo actualizado");
+        showSuccess(`✅ ${form.kind === "supply" ? "Insumo" : "Ingrediente"} actualizado`);
       } else {
         await ingredientService.create(form);
-        showSuccess("✅ Insumo creado");
+        showSuccess(`✅ ${form.kind === "supply" ? "Insumo" : "Ingrediente"} creado`);
       }
       setShowForm(false);
       load();
@@ -116,7 +120,7 @@ export default function IngredientsPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `insumos_${date}.xlsx`;
+      a.download = `ingredientes_${date}.xlsx`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -127,7 +131,7 @@ export default function IngredientsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("¿Eliminar este insumo?")) return;
+    if (!confirm("¿Eliminar este elemento?")) return;
     await ingredientService.delete(id);
     load();
   };
@@ -162,7 +166,7 @@ export default function IngredientsPage() {
             <div className="h-px w-8 bg-gold opacity-40" />
             <span className="text-gold text-xs tracking-[0.3em] uppercase font-light">Catálogo</span>
           </div>
-          <h1 className="font-display text-4xl text-stone-800">Insumos</h1>
+          <h1 className="font-display text-4xl text-stone-800">Ingredientes e insumos</h1>
         </div>
         <div className="flex gap-2">
           <button onClick={handleExport} disabled={exporting}
@@ -183,10 +187,21 @@ export default function IngredientsPage() {
         </div>
       </div>
 
+      {/* Tipo: ingredientes o insumos (cajas, cartones) */}
+      <div className="flex gap-2 mb-4">
+        {([["ingredient", "Ingredientes"], ["supply", "Insumos (cajas, cartones)"]] as const).map(([k, label]) => (
+          <button key={k} onClick={() => setTab(k)}
+            className={`text-xs tracking-widest uppercase font-medium px-4 py-2 border transition-all duration-200
+              ${tab === k ? "bg-gold text-white border-gold" : "border-stone-200 text-stone-600 hover:border-gold hover:text-gold"}`}>
+            {label}
+          </button>
+        ))}
+      </div>
+
       {/* Búsqueda */}
       <input
         type="text"
-        placeholder="Buscar insumo..."
+        placeholder={`Buscar ${singular}...`}
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         className="w-full bg-white border border-stone-200 text-stone-800 text-sm
@@ -197,7 +212,7 @@ export default function IngredientsPage() {
       {/* Lista */}
       {filtered.length === 0 ? (
         <p className="text-center text-stone-400 text-sm font-light py-16 tracking-wide">
-          No hay insumos registrados
+          {`No hay ${tab === "supply" ? "insumos" : "ingredientes"} registrados`}
         </p>
       ) : (
         <div className="space-y-2">
@@ -253,10 +268,21 @@ export default function IngredientsPage() {
           <div className="bg-white border border-stone-200 w-full max-w-xs p-4 space-y-3 shadow-lg">
             <div className="flex items-center justify-between">
               <h2 className="font-display text-lg text-stone-800">
-                {editing ? "Editar insumo" : "Nuevo insumo"}
+                {editing ? `Editar ${singular}` : `Nuevo ${singular}`}
               </h2>
               <button onClick={() => setShowForm(false)}
                 className="text-stone-400 hover:text-stone-800 text-lg leading-none">×</button>
+            </div>
+
+            <div>
+              <label className="block text-xs tracking-widest uppercase text-stone-400 mb-1 font-light">Tipo</label>
+              <select value={form.kind}
+                onChange={(e) => setForm({ ...form, kind: e.target.value as IngredientKind })}
+                className="w-full bg-vanilla-100 border border-stone-200 text-stone-800
+                           px-3 py-1.5 text-sm font-light focus:outline-none focus:border-gold transition-all">
+                <option value="ingredient">Ingrediente</option>
+                <option value="supply">Insumo (caja, cartón)</option>
+              </select>
             </div>
 
             <div>

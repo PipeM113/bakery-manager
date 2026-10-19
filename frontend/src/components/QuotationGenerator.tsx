@@ -23,6 +23,7 @@ interface CostBreakdown {
   yield_unit: string;
   ingredients: IngredientCost[];
   ingredients_total: number;
+  supplies_total: number;
   indirect_costs: number;
   labor_costs: number;
   total_cost: number;
@@ -424,6 +425,9 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
             { label: "Costo de ingredientes", value: breakdown.ingredients_total },
             { label: "Costos fijos",          value: breakdown.indirect_costs    },
             { label: "Mano de obra",          value: breakdown.labor_costs       },
+            ...(breakdown.supplies_total > 0
+              ? [{ label: "Insumos (cajas, cartones)", value: breakdown.supplies_total }]
+              : []),
           ].map(({ label, value }) => (
             <div key={label} className="flex justify-between items-center">
               <span className="text-stone-400 text-xs tracking-wide font-light">{label}</span>

@@ -71,3 +71,21 @@ arriendo y similares, que no son líneas de receta, sí son gastos y se restan d
 
 El dashboard mensual trae `expenses_by_category`: cuánto se gastó en cada categoría, de mayor a
 menor.
+
+## Insumos de receta
+
+En la app, **ingredientes** son lo que se cocina (harina, huevos) e **insumos de receta** son lo
+que acompaña al producto final y se consume por unidad: cajas de transporte, cartones, bases
+para tortas. Son filas del mismo catálogo (`kind` = `supply`, los demás `ingredient`), con
+precio por paquete, unidad y stock.
+
+- Entran a la receta con una cantidad, como un ingrediente, y **escalan con las porciones**
+  (una caja por torta: para 10 tortas, 10 cajas).
+- Son un costo directo: el costo total es `ingredientes × (1 + indirectos + mano de obra) + insumos`.
+  Los porcentajes de indirectos y mano de obra se aplican solo a los ingredientes; los insumos se
+  suman tal cual, sin porcentajes. El desglose los muestra aparte (`supplies_total`).
+- Una venta descuenta su stock y su costo entra al costo de ventas del dashboard
+  (`total_ingredients_cost` suma ingredientes e insumos). Por eso no se registran además como
+  gasto: se contaría dos veces. La categoría de gasto "Envases" queda para lo que no va dentro de
+  una receta.
+- Los moldes quedan fuera por ahora: dependen del tamaño y a veces ya se tienen.

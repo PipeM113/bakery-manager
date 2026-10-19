@@ -2,7 +2,7 @@ import { NavLink } from "react-router-dom";
 
 const links = [
   { to: "/dashboard",      icon: "◉", label: "Dashboard"   },
-  { to: "/ingredients",    icon: "⚗", label: "Insumos"     },
+  { to: "/ingredients",    icon: "⚗", label: "Ingredientes" },
   { to: "/recipes",        icon: "✦", label: "Recetas"     },
   { to: "/costs",          icon: "◈", label: "Costos"      },
   { to: "/fixed-costs",    icon: "⊟", label: "Fijos"       },

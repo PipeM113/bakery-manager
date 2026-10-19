@@ -156,7 +156,7 @@ export default function SalesPage() {
     if (!recipeId)               { setFormError("Selecciona una receta"); return; }
     if (!qty || qty <= 0)        { setFormError("Cantidad debe ser mayor a 0"); return; }
     if (isNaN(price) || price < 0) { setFormError("Precio debe ser mayor o igual a 0"); return; }
-    if (stockIssues.length > 0)  { setFormError("No hay stock suficiente para algunos insumos"); return; }
+    if (stockIssues.length > 0)  { setFormError("No hay stock suficiente para algunos ingredientes o insumos"); return; }
     setPreview(buildPreview());
     setConfirming(true);
   };
@@ -297,7 +297,7 @@ export default function SalesPage() {
             </table>
             {preview.some((p) => p.insufficient) && (
               <p className="text-red-500 text-xs mb-4">
-                Algunos insumos no tienen stock suficiente. La venta será rechazada.
+                Algunos ingredientes o insumos no tienen stock suficiente. La venta será rechazada.
               </p>
             )}
             <div className="flex gap-2 justify-end">

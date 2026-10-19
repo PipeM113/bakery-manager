@@ -8,8 +8,18 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+// Kinds of ingredient row.
+const (
+	KindIngredient = "ingredient"
+	KindSupply     = "supply"
+)
+
+// ValidKind reports whether k is one of the two kinds.
+func ValidKind(k string) bool { return k == KindIngredient || k == KindSupply }
+
 type Ingredient struct {
 	ID             string    `json:"id"`
+	Kind           string    `json:"kind"`
 	Name           string    `json:"name"`
 	DefaultUnit    string    `json:"default_unit"`
 	PackageSize    float64   `json:"package_size"`
@@ -47,18 +57,21 @@ func calcPricePerUnit(packagePrice, packageSize float64) float64 {
 
 func (r *IngredientRepository) Create(ctx context.Context, i Ingredient) (Ingredient, error) {
 	i.PricePerUnit = calcPricePerUnit(i.PackagePrice, i.PackageSize)
+	if i.Kind == "" {
+		i.Kind = KindIngredient
+	}
 
 	err := r.db.QueryRow(ctx, `
 		INSERT INTO ingredients
 		  (name, default_unit, package_size, package_price, price_per_unit,
-		   stock_quantity, alert_threshold, brand)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
-		RETURNING id, name, default_unit, package_size, package_price, price_per_unit,
+		   stock_quantity, alert_threshold, brand, kind)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+		RETURNING id, kind, name, default_unit, package_size, package_price, price_per_unit,
 		          stock_quantity, alert_threshold, brand, created_at, updated_at`,
 		i.Name, i.DefaultUnit, i.PackageSize, i.PackagePrice, i.PricePerUnit,
-		i.StockQuantity, i.AlertThreshold, i.Brand,
+		i.StockQuantity, i.AlertThreshold, i.Brand, i.Kind,
 	).Scan(
-		&i.ID, &i.Name, &i.DefaultUnit, &i.PackageSize, &i.PackagePrice, &i.PricePerUnit,
+		&i.ID, &i.Kind, &i.Name, &i.DefaultUnit, &i.PackageSize, &i.PackagePrice, &i.PricePerUnit,
 		&i.StockQuantity, &i.AlertThreshold, &i.Brand,
 		&i.CreatedAt, &i.UpdatedAt,
 	)
@@ -78,11 +91,14 @@ func (r *IngredientRepository) Create(ctx context.Context, i Ingredient) (Ingred
 	return i, nil
 }
 
-func (r *IngredientRepository) GetAll(ctx context.Context) ([]Ingredient, error) {
+// GetAll lists the ingredient rows, optionally only one kind ("" means both), by name.
+func (r *IngredientRepository) GetAll(ctx context.Context, kind string) ([]Ingredient, error) {
 	rows, err := r.db.Query(ctx, `
-		SELECT id, name, default_unit, package_size, package_price, price_per_unit,
+		SELECT id, kind, name, default_unit, package_size, package_price, price_per_unit,
 		       stock_quantity, alert_threshold, brand, created_at, updated_at
-		FROM ingredients ORDER BY name ASC`)
+		FROM ingredients
+		WHERE ($1 = '' OR kind = $1)
+		ORDER BY name ASC`, kind)
 	if err != nil {
 		return nil, fmt.Errorf("get all ingredients: %w", err)
 	}
@@ -92,7 +108,7 @@ func (r *IngredientRepository) GetAll(ctx context.Context) ([]Ingredient, error)
 	for rows.Next() {
 		var i Ingredient
 		err := rows.Scan(
-			&i.ID, &i.Name, &i.DefaultUnit, &i.PackageSize, &i.PackagePrice, &i.PricePerUnit,
+			&i.ID, &i.Kind, &i.Name, &i.DefaultUnit, &i.PackageSize, &i.PackagePrice, &i.PricePerUnit,
 			&i.StockQuantity, &i.AlertThreshold, &i.Brand,
 			&i.CreatedAt, &i.UpdatedAt,
 		)
@@ -101,17 +117,20 @@ func (r *IngredientRepository) GetAll(ctx context.Context) ([]Ingredient, error)
 		}
 		ingredients = append(ingredients, i)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("read ingredients: %w", err)
+	}
 	return ingredients, nil
 }
 
 func (r *IngredientRepository) GetByID(ctx context.Context, id string) (Ingredient, error) {
 	var i Ingredient
 	err := r.db.QueryRow(ctx, `
-		SELECT id, name, default_unit, package_size, package_price, price_per_unit,
+		SELECT id, kind, name, default_unit, package_size, package_price, price_per_unit,
 		       stock_quantity, alert_threshold, brand, created_at, updated_at
 		FROM ingredients WHERE id = $1`, id,
 	).Scan(
-		&i.ID, &i.Name, &i.DefaultUnit, &i.PackageSize, &i.PackagePrice, &i.PricePerUnit,
+		&i.ID, &i.Kind, &i.Name, &i.DefaultUnit, &i.PackageSize, &i.PackagePrice, &i.PricePerUnit,
 		&i.StockQuantity, &i.AlertThreshold, &i.Brand,
 		&i.CreatedAt, &i.UpdatedAt,
 	)
@@ -136,14 +155,14 @@ func (r *IngredientRepository) Update(ctx context.Context, i Ingredient) (Ingred
 		UPDATE ingredients
 		SET name=$1, default_unit=$2, package_size=$3, package_price=$4,
 		    price_per_unit=$5, stock_quantity=$6, alert_threshold=$7,
-		    brand=$8, updated_at=NOW()
+		    brand=$8, kind=COALESCE(NULLIF($10, ''), kind), updated_at=NOW()
 		WHERE id=$9
-		RETURNING id, name, default_unit, package_size, package_price, price_per_unit,
+		RETURNING id, kind, name, default_unit, package_size, package_price, price_per_unit,
 		          stock_quantity, alert_threshold, brand, created_at, updated_at`,
 		i.Name, i.DefaultUnit, i.PackageSize, i.PackagePrice, i.PricePerUnit,
-		i.StockQuantity, i.AlertThreshold, i.Brand, i.ID,
+		i.StockQuantity, i.AlertThreshold, i.Brand, i.ID, i.Kind,
 	).Scan(
-		&i.ID, &i.Name, &i.DefaultUnit, &i.PackageSize, &i.PackagePrice, &i.PricePerUnit,
+		&i.ID, &i.Kind, &i.Name, &i.DefaultUnit, &i.PackageSize, &i.PackagePrice, &i.PricePerUnit,
 		&i.StockQuantity, &i.AlertThreshold, &i.Brand,
 		&i.CreatedAt, &i.UpdatedAt,
 	)

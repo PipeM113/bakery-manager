@@ -140,19 +140,26 @@ func calculate(
 	ingredients []IngredientCost,
 	factor *big.Rat,
 ) CostBreakdown {
+	// Ingredients and supplies are summed apart: the percentages only apply to the ingredients.
 	ingredientsTotal := new(big.Rat)
+	suppliesTotal := new(big.Rat)
 	for i, ing := range ingredients {
 		quantity := new(big.Rat).Mul(rat(ing.Quantity), factor)
 		subtotal := new(big.Rat).Mul(quantity, unitPrice(ing))
 		ingredients[i].Quantity = toFloat(quantity)
 		ingredients[i].Subtotal = toFloat(subtotal)
-		ingredientsTotal.Add(ingredientsTotal, subtotal)
+		if ing.Kind == KindSupply {
+			suppliesTotal.Add(suppliesTotal, subtotal)
+		} else {
+			ingredientsTotal.Add(ingredientsTotal, subtotal)
+		}
 	}
 
 	indirectCosts := new(big.Rat).Mul(ingredientsTotal, rat(indirectPct))
 	laborCosts := new(big.Rat).Mul(ingredientsTotal, rat(laborPct))
 	totalCost := new(big.Rat).Add(ingredientsTotal, indirectCosts)
 	totalCost.Add(totalCost, laborCosts)
+	totalCost.Add(totalCost, suppliesTotal)
 
 	markup := new(big.Rat).Add(big.NewRat(1, 1), rat(marginPct))
 	yieldR := rat(yield)
@@ -178,6 +185,7 @@ func calculate(
 		YieldUnit:              yieldUnit,
 		Ingredients:            ingredients,
 		IngredientsTotal:       roundHalfUp(ingredientsTotal),
+		SuppliesTotal:          roundHalfUp(suppliesTotal),
 		IndirectCosts:          roundHalfUp(indirectCosts),
 		LaborCosts:             roundHalfUp(laborCosts),
 		TotalCost:              roundHalfUp(totalCost),

@@ -55,7 +55,7 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-2 gap-4 mb-10 md:grid-cols-4">
         {[
-          { label: "Insumos",       value: ingredients.length },
+          { label: "Ingredientes e insumos", value: ingredients.length },
           { label: "Recetas base",  value: baseRecipes.length },
           { label: "Total recetas", value: recipes.length     },
           { label: "Alertas",       value: alerts.length      },

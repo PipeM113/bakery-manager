@@ -133,10 +133,10 @@ export default function IngredientImportModal({ onClose, onSuccess }: Props) {
             {succeeded ? (
               <div className="bg-green-50 border border-green-200 p-3 text-xs text-green-800 space-y-1">
                 {result.imported > 0 && (
-                  <p className="font-medium">{result.imported} insumo{result.imported !== 1 ? "s" : ""} nuevo{result.imported !== 1 ? "s" : ""} agregado{result.imported !== 1 ? "s" : ""}</p>
+                  <p className="font-medium">{result.imported} ingrediente{result.imported !== 1 ? "s" : ""} nuevo{result.imported !== 1 ? "s" : ""} agregado{result.imported !== 1 ? "s" : ""}</p>
                 )}
                 {result.updated > 0 && (
-                  <p className="font-medium">{result.updated} insumo{result.updated !== 1 ? "s" : ""} actualizado{result.updated !== 1 ? "s" : ""}</p>
+                  <p className="font-medium">{result.updated} ingrediente{result.updated !== 1 ? "s" : ""} actualizado{result.updated !== 1 ? "s" : ""}</p>
                 )}
                 {result.imported === 0 && result.updated === 0 && (
                   <p className="font-medium">Sin cambios</p>

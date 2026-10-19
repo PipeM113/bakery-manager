@@ -36,7 +36,12 @@ func userID(r *http.Request) string {
 }
 
 func (h *IngredientHandler) GetAll(w http.ResponseWriter, r *http.Request) {
-	ingredients, err := h.repo.GetAll(r.Context())
+	kind := r.URL.Query().Get("kind")
+	if kind != "" && !repository.ValidKind(kind) {
+		httputil.JSONError(w, "kind inválido, use: ingredient, supply", http.StatusBadRequest)
+		return
+	}
+	ingredients, err := h.repo.GetAll(r.Context(), kind)
 	if err != nil {
 		httputil.JSONError(w, "error obteniendo insumos", http.StatusInternalServerError)
 		return
@@ -57,6 +62,10 @@ func (h *IngredientHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	body.Name = strings.TrimSpace(body.Name)
 	body.Brand = strings.TrimSpace(body.Brand)
+	if body.Kind != "" && !repository.ValidKind(body.Kind) {
+		httputil.JSONError(w, "kind inválido, use: ingredient, supply", http.StatusBadRequest)
+		return
+	}
 	if body.Name == "" {
 		httputil.JSONError(w, "el nombre es requerido", http.StatusBadRequest)
 		return
@@ -108,6 +117,10 @@ func (h *IngredientHandler) Update(w http.ResponseWriter, r *http.Request) {
 	body.ID = id
 	body.Name = strings.TrimSpace(body.Name)
 	body.Brand = strings.TrimSpace(body.Brand)
+	if body.Kind != "" && !repository.ValidKind(body.Kind) {
+		httputil.JSONError(w, "kind inválido, use: ingredient, supply", http.StatusBadRequest)
+		return
+	}
 	if body.Name == "" {
 		httputil.JSONError(w, "el nombre es requerido", http.StatusBadRequest)
 		return
@@ -168,7 +181,12 @@ func (h *IngredientHandler) GetPriceHistory(w http.ResponseWriter, r *http.Reque
 }
 
 func (h *IngredientHandler) Export(w http.ResponseWriter, r *http.Request) {
-	ingredients, err := h.repo.GetAll(r.Context())
+	kind := r.URL.Query().Get("kind")
+	if kind != "" && !repository.ValidKind(kind) {
+		httputil.JSONError(w, "kind inválido, use: ingredient, supply", http.StatusBadRequest)
+		return
+	}
+	ingredients, err := h.repo.GetAll(r.Context(), kind)
 	if err != nil {
 		httputil.JSONError(w, "error obteniendo insumos", http.StatusInternalServerError)
 		return

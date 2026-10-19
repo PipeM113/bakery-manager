@@ -1,5 +1,8 @@
+export type IngredientKind = "ingredient" | "supply";
+
 export interface IIngredient {
   id: string;
+  kind: IngredientKind;
   name: string;
   default_unit: string;
   package_size: number;
@@ -13,6 +16,7 @@ export interface IIngredient {
 }
 
 export type IngredientFormData = {
+  kind: IngredientKind;
   name: string;
   default_unit: string;
   package_size: number | "";
@@ -23,6 +27,7 @@ export type IngredientFormData = {
 };
 
 export const emptyIngredientForm: IngredientFormData = {
+  kind: "ingredient",
   name: "",
   default_unit: "gr",
   package_size: "",
