@@ -98,14 +98,14 @@ func TestF1_DownRestoresAmountAndSwitch(t *testing.T) {
 	if err := pool.QueryRow(ctx, `insert into users (name, email, password, role) values ('Owner', 'o@example.test', 'x', 'owner') returning id`).Scan(&user); err != nil {
 		t.Fatal(err)
 	}
-	if err := pool.QueryRow(ctx, `insert into fixed_costs (user_id, name) values ($1, 'Gas') returning id`, user).Scan(&id); err != nil {
+	if err := pool.QueryRow(ctx, `insert into fixed_costs (created_by, name) values ($1, 'Gas') returning id`, user).Scan(&id); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := pool.Exec(ctx, `insert into fixed_cost_versions (fixed_cost_id, valid_from, monthly_amount)
 		values ($1, '2026-01-01', 100), ($1, '2026-03-01', 150)`, id); err != nil {
 		t.Fatal(err)
 	}
-	if err := pool.QueryRow(ctx, `insert into fixed_costs (user_id, name, ended_from) values ($1, 'Viejo', '2026-02-01') returning id`, user).Scan(&ended); err != nil {
+	if err := pool.QueryRow(ctx, `insert into fixed_costs (created_by, name, ended_from) values ($1, 'Viejo', '2026-02-01') returning id`, user).Scan(&ended); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := pool.Exec(ctx, `insert into fixed_cost_versions (fixed_cost_id, valid_from, monthly_amount) values ($1, '2025-12-01', 77)`, ended); err != nil {
