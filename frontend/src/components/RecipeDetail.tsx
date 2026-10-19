@@ -53,7 +53,7 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onSaved }: Props
 
   return (
     <>
-      <div className="fixed inset-0 z-50 bg-negro bg-opacity-40 flex items-end md:items-center justify-center p-4">
+      <div className="fixed inset-0 z-[60] bg-negro bg-opacity-40 flex items-end md:items-center justify-center p-4">
         <div className="bg-white border border-linea w-full max-w-lg max-h-[90vh] overflow-y-auto p-6 space-y-5 shadow-lg">
           <div className="flex items-center justify-between">
             <h2 className="font-display text-2xl text-negro truncate pr-4">{recipe.name}</h2>

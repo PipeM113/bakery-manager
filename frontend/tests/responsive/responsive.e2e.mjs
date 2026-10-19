@@ -412,3 +412,26 @@ for (const w of WIDTHS) {
     await page.getByText(/guardado/i).first().waitFor({ state: "visible", timeout: 5000 });
   }));
 }
+
+// Q16 (sprint 12): on a phone the bottom bar never covers the main button of a window (found when a tap
+// on "Crear y descargar PDF" went to the bar instead).
+const coveredPrimary = () => {
+  const btn = document.querySelector('[role="dialog"] [data-primary-action]');
+  if (!btn) return "no main button";
+  btn.scrollIntoView({ block: "nearest" });
+  const r = btn.getBoundingClientRect();
+  const top = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+  return btn.contains(top) ? "" : `covered by ${top?.tagName} ${top?.closest("nav")?.getAttribute("data-testid") ?? ""}`;
+};
+for (const w of PHONES) {
+  test(`Q16 windows are not covered by the bottom bar at ${w}px`, { timeout: 60000 }, withPage(w, "/sales", {}, async (page) => {
+    await page.getByRole("button", { name: "Nueva cotización" }).click();
+    await page.getByRole("dialog").waitFor({ state: "visible" });
+    assert.equal(await page.evaluate(coveredPrimary), "", "the quotation window's main button is covered");
+    await page.getByRole("button", { name: "Cancelar" }).first().click();
+    await page.getByRole("button", { name: "Pedidos", exact: true }).click();
+    await page.getByRole("button", { name: "Nuevo pedido" }).click();
+    await page.getByRole("dialog").waitFor({ state: "visible" });
+    assert.equal(await page.evaluate(coveredPrimary), "", "the order window's main button is covered");
+  }));
+}

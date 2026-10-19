@@ -12,7 +12,7 @@ interface Props {
 /** A window that always fits the screen: the body scrolls and the actions stay within reach. */
 export default function Modal({ title, onClose, children, footer, maxWidth = "max-w-md" }: Props) {
   return (
-    <div className="fixed inset-0 z-50 bg-negro bg-opacity-40 flex items-end md:items-center justify-center p-4">
+    <div className="fixed inset-0 z-[60] bg-negro bg-opacity-40 flex items-end md:items-center justify-center p-4">
       <div
         role="dialog"
         aria-modal="true"
