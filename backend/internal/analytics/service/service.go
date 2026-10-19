@@ -50,12 +50,16 @@ func (s *AnalyticsService) GetMonthlyMetrics(ctx context.Context, userID string,
 		return m, fmt.Errorf("total ingredients cost: %w", err)
 	}
 
-	// Total active fixed costs (monthly amount, applied in full)
+	// Fixed costs in force that month, each with the amount of that month
 	err = s.db.QueryRow(ctx, `
-		SELECT COALESCE(SUM(monthly_amount), 0)::bigint
-		FROM fixed_costs
-		WHERE user_id = $1 AND is_active = TRUE`,
-		userID,
+		SELECT COALESCE(SUM(v.monthly_amount), 0)::bigint
+		FROM fixed_costs fc
+		JOIN LATERAL (
+			SELECT monthly_amount FROM fixed_cost_versions
+			WHERE fixed_cost_id = fc.id AND valid_from <= $2::date
+			ORDER BY valid_from DESC LIMIT 1) v ON TRUE
+		WHERE fc.user_id = $1 AND (fc.ended_from IS NULL OR $2::date < fc.ended_from)`,
+		userID, fmt.Sprintf("%04d-%02d-01", year, month),
 	).Scan(&m.TotalFixedCosts)
 	if err != nil {
 		return m, fmt.Errorf("total fixed costs: %w", err)
@@ -216,15 +220,18 @@ func (s *AnalyticsService) GetTrendData(ctx context.Context, userID string, mont
 		return nil, err
 	}
 
-	// Active fixed costs, applied in full to every month (as in GetMonthlyMetrics).
-	var fixed int64
-	err = s.db.QueryRow(ctx, `
-		SELECT COALESCE(SUM(monthly_amount), 0)::bigint
-		FROM fixed_costs
-		WHERE user_id = $1 AND is_active = TRUE`, userID,
-	).Scan(&fixed)
+	// Fixed costs in force in each month, with that month's amount (as in GetMonthlyMetrics).
+	fixed, err := perMonth("fixed costs", `
+		SELECT to_char(m, 'YYYY-MM'), COALESCE(SUM(v.monthly_amount), 0)::bigint
+		FROM generate_series($2::date, $3::date - 1, interval '1 month') AS m
+		JOIN fixed_costs fc ON fc.user_id = $1 AND (fc.ended_from IS NULL OR m::date < fc.ended_from)
+		JOIN LATERAL (
+			SELECT monthly_amount FROM fixed_cost_versions
+			WHERE fixed_cost_id = fc.id AND valid_from <= m::date
+			ORDER BY valid_from DESC LIMIT 1) v ON TRUE
+		GROUP BY 1`)
 	if err != nil {
-		return nil, fmt.Errorf("trend fixed costs: %w", err)
+		return nil, err
 	}
 
 	result := make([]domain.TrendPoint, 0, len(months))
@@ -232,7 +239,7 @@ func (s *AnalyticsService) GetTrendData(ctx context.Context, userID string, mont
 		result = append(result, domain.TrendPoint{
 			Date:      ym,
 			Revenue:   revenue[ym],
-			NetProfit: revenue[ym] - ingredients[ym] - fixed - expenses[ym],
+			NetProfit: revenue[ym] - ingredients[ym] - fixed[ym] - expenses[ym],
 		})
 	}
 	return result, nil
