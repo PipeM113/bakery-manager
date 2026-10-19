@@ -64,8 +64,8 @@ function TrendChart({ data }: TrendChartProps) {
   return (
     <svg
       viewBox={`0 0 ${W} ${H}`}
-      className="w-full"
-      style={{ height: H }}
+      data-testid="trend-chart"
+      className="w-full h-auto"
       aria-label="Tendencia ingresos y ganancia neta"
     >
       {/* zero line */}
@@ -147,8 +147,8 @@ function KpiCard({ label, value, accent = "neutral", large = false }: KpiCardPro
     neutral:    "text-oro",
   };
   return (
-    <div className={`bg-white border border-linea p-5 hover:border-oro transition-all ${large ? "col-span-2 md:col-span-1" : ""}`}>
-      <p className={`font-display text-2xl ${colorMap[accent]} mb-1 leading-tight whitespace-nowrap tabular-nums`}>
+    <div className={`bg-white border border-linea p-4 hover:border-oro transition-all ${large ? "min-[480px]:col-span-2 xl:col-span-1" : ""}`}>
+      <p data-kpi className={`font-display text-2xl ${colorMap[accent]} mb-1 leading-tight whitespace-nowrap tabular-nums`}>
         {value}
       </p>
       <p className="text-xs tracking-widest uppercase text-negro/70 font-light">{label}</p>
@@ -234,7 +234,7 @@ export default function ProfitabilityPage() {
         <>
           {/* KPI grid */}
           {metrics && (
-            <div className="grid grid-cols-2 gap-4 mb-10 md:grid-cols-3 lg:grid-cols-7">
+            <div className="grid grid-cols-1 gap-4 mb-10 min-[480px]:grid-cols-2 xl:grid-cols-4">
               <KpiCard label="Ingresos Totales"      value={clp(metrics.total_revenue)}             accent="green" />
               <KpiCard label="Costo de ingredientes e insumos"       value={clp(metrics.total_ingredients_cost)}    accent="red" />
               <KpiCard label="Costos Fijos"          value={clp(metrics.total_fixed_costs)}         accent="yellow" />
@@ -304,7 +304,7 @@ export default function ProfitabilityPage() {
                           key={r.recipe_id}
                           className="border-b border-linea hover:bg-lino transition-colors"
                         >
-                          <td className="px-5 py-3 text-negro font-light">{r.recipe_name}</td>
+                          <td className="px-5 py-3 text-negro font-light min-w-[9rem]">{r.recipe_name}</td>
                           <td className="px-5 py-3 text-negro/70">{r.units_sold}</td>
                           <td className="px-5 py-3 text-negro/70">{clp(r.total_revenue)}</td>
                           <td className="px-5 py-3 text-negro/70">{clp(r.total_cost)}</td>

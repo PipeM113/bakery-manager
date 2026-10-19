@@ -23,10 +23,10 @@ export default function RecipeList({ recipes, onView, onEdit, onDelete }: Props)
           key={r.id}
           className="bg-white border border-linea hover:border-oro transition-all duration-200"
         >
-          <div className="flex items-center justify-between p-4">
+          <div className="flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <p className="text-negro text-sm font-light truncate">{r.name}</p>
+                <p className="text-negro text-sm font-light break-words md:truncate">{r.name}</p>
                 <span
                   className={`text-xs px-2 py-0.5 border shrink-0 ${
                     r.is_base
@@ -41,7 +41,7 @@ export default function RecipeList({ recipes, onView, onEdit, onDelete }: Props)
                 {r.yield} {r.yield_unit} · {r.ingredients?.length || 0} ingredientes
               </p>
             </div>
-            <div className="flex items-center gap-3 ml-4">
+            <div className="flex items-center gap-3 md:ml-4">
               <button
                 onClick={() => onView(r)}
                 className="text-xs text-negro/70 hover:text-oro tracking-wider transition-colors"
