@@ -21,6 +21,7 @@ var expectedTables = []string{
 	"ingredient_price_history",
 	"ingredients",
 	"operational_expenses",
+	"orders",
 	"quotations",
 	"recipe_ingredients",
 	"recipes",

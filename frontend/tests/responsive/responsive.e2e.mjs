@@ -299,7 +299,7 @@ for (const w of WIDTHS) {
       const text = await cards.first().innerText();
       assert.match(text, /María González|Cumpleaños|Evento/, "the card should show the customer");
       assert.match(text, /\$/, "the card should show the total");
-      assert.match(text, /Anular pedido/, "the card should offer to cancel the order");
+      assert.match(text, /anular pedido/i, "the card should offer to cancel the order");
       const bad = await page.evaluate(interactive);
       assert.deepEqual(bad.slice(0, 8), [], "things in the orders are too small");
     } else {
