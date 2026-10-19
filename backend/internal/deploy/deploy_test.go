@@ -228,8 +228,8 @@ func TestB1_MigrationsLandInTheManagerSchemaOnly(t *testing.T) {
 	if err := r.admin.QueryRow(context.Background(), `select version, dirty from manager.schema_migrations`).Scan(&version, &dirty); err != nil {
 		t.Fatal(err)
 	}
-	if version != 16 || dirty {
-		t.Errorf("schema_migrations = version %d dirty %v, want 16 and clean", version, dirty)
+	if want := latestMigration(t); version != want || dirty {
+		t.Errorf("schema_migrations = version %d dirty %v, want %d and clean", version, dirty, want)
 	}
 }
 
@@ -255,15 +255,15 @@ func TestB2_EveryManagerTableHasRLSAndNoPolicies(t *testing.T) {
 func TestB2_RLSMigrationIsReversible(t *testing.T) {
 	r := rehearse(t)
 
-	// Migration 16 (whole pesos and expense categories) sits on top of the RLS one.
-	migrate(t, r.url, r.password, "down", "2")
+	// The newer migrations sit on top of the RLS one (15): undo them all and it.
+	migrate(t, r.url, r.password, "down", strconv.Itoa(latestMigration(t)-14))
 
 	var version int
 	if err := r.admin.QueryRow(context.Background(), `select version from manager.schema_migrations`).Scan(&version); err != nil {
 		t.Fatal(err)
 	}
 	if version != 14 {
-		t.Errorf("version after down 2 = %d, want 14", version)
+		t.Errorf("version after reverting the RLS migration = %d, want 14", version)
 	}
 	on := names(t, r.admin, `select c.relname from pg_class c join pg_namespace n on n.oid = c.relnamespace
 		where n.nspname = 'manager' and c.relkind = 'r' and c.relname <> 'schema_migrations' and c.relrowsecurity order by 1`)
@@ -401,4 +401,22 @@ func TestB5_FirstUserCanLogInThroughTheRealAPI(t *testing.T) {
 	if status != http.StatusCreated {
 		t.Fatalf("creating an ingredient with the new token: status = %d, want 201: %s", status, raw)
 	}
+}
+
+// latestMigration is the highest version among the up migrations of the repository.
+func latestMigration(t *testing.T) int {
+	t.Helper()
+	files, err := filepath.Glob("../../db/migrations/*.up.sql")
+	if err != nil || len(files) == 0 {
+		t.Fatalf("no migrations found: %v", err)
+	}
+	latest := 0
+	for _, f := range files {
+		v, err := strconv.Atoi(strings.SplitN(filepath.Base(f), "_", 2)[0])
+		if err != nil {
+			t.Fatal(err)
+		}
+		latest = max(latest, v)
+	}
+	return latest
 }

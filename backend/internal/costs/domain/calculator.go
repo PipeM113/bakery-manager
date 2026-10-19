@@ -10,7 +10,11 @@ import (
 // one is read as the shortest decimal that identifies it (0.2 is one fifth, not
 // 0.200000000000000011...), which is what the person typed.
 
+// KindSupply marks an ingredient row that is a supply (a box, cardboard): a direct cost.
+const KindSupply = "supply"
+
 type IngredientCost struct {
+	Kind         string  `json:"kind"` // "ingredient" (or empty) or KindSupply
 	IngredientID string  `json:"ingredient_id"`
 	Name         string  `json:"name"`
 	Quantity     float64 `json:"quantity"`
@@ -31,6 +35,7 @@ type CostBreakdown struct {
 	YieldUnit        string           `json:"yield_unit"`
 	Ingredients      []IngredientCost `json:"ingredients"`
 	IngredientsTotal float64          `json:"ingredients_total"` // whole pesos
+	SuppliesTotal    float64          `json:"supplies_total"`    // whole pesos
 	IndirectCosts    float64          `json:"indirect_costs"`    // whole pesos
 	LaborCosts       float64          `json:"labor_costs"`       // whole pesos
 	TotalCost        float64          `json:"total_cost"`        // whole pesos, rounded from the exact sum
