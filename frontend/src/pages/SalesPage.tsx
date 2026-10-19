@@ -3,7 +3,7 @@ import { saleService } from "../api/saleService";
 import { recipeService } from "../api/recipeService";
 import { ingredientService } from "../api/ingredientService";
 import { quotationService, type IQuotation } from "../api/quotationService";
-import type { ISale } from "../types/sale";
+import type { ISale, SoldAs } from "../types/sale";
 import type { IRecipe } from "../types/recipe";
 import type { IIngredient } from "../types/ingredient";
 import api from "../services/api";
@@ -45,8 +45,11 @@ export default function SalesPage() {
   // Form state
   const [recipeId, setRecipeId]     = useState("");
   const [quantity, setQuantity]     = useState("");
+  const [soldAs, setSoldAs]         = useState<SoldAs>("recipe");
   const [unitPrice, setUnitPrice]   = useState("");
   const [recipeMargin, setRecipeMargin] = useState<number | null>(null);
+  // Suggested price of the whole recipe; a portion costs its share of it.
+  const [suggestedPrice, setSuggestedPrice] = useState<number | null>(null);
   const [saleDate, setSaleDate]     = useState(today());
   const [notes, setNotes]           = useState("");
   const [formError, setFormError] = useState("");
@@ -73,7 +76,7 @@ export default function SalesPage() {
   const showSuccess = (msg: string) => {
     setSuccessMsg(msg);
     if (successTimer.current) clearTimeout(successTimer.current);
-    successTimer.current = setTimeout(() => setSuccessMsg(""), 3000);
+    successTimer.current = setTimeout(() => setSuccessMsg(""), 8000);
   };
 
   const loadSales = (from = filterFrom, to = filterTo) =>
@@ -100,33 +103,46 @@ export default function SalesPage() {
     if (!recipe) { setStockIssues([]); return; }
     const qty = parseInt(quantity, 10) || 0;
     if (qty <= 0) { setStockIssues([]); return; }
+    const share = soldAs === "portion" && recipe.yield > 0 ? 1 / recipe.yield : 1;
 
     const stockMap = new Map(ingredients.map((i) => [i.id, i.stock_quantity]));
     const issues: IngredientPreview[] = recipe.ingredients
       .map((ing) => {
-        const needed = ing.quantity * qty;
+        const needed = ing.quantity * qty * share;
         const available = stockMap.get(ing.ingredient_id) ?? 0;
         return { name: ing.name, quantity_used: needed, unit: ing.unit, available, insufficient: available < needed };
       })
       .filter((p) => p.insufficient);
     setStockIssues(issues);
-  }, [recipeId, quantity, ingredients, recipes]);
+  }, [recipeId, quantity, soldAs, ingredients, recipes]);
+
+  const priceFor = (id: string, as: SoldAs, wholeRecipePrice: number): number => {
+    const recipe = recipes.find((r) => r.id === id);
+    return as === "portion" && recipe && recipe.yield > 0 ? Math.round(wholeRecipePrice / recipe.yield) : wholeRecipePrice;
+  };
+
+  const handleSoldAsChange = (as: SoldAs) => {
+    setSoldAs(as);
+    if (recipeId && suggestedPrice !== null) setUnitPrice(String(priceFor(recipeId, as, suggestedPrice)));
+  };
 
   // When recipe changes: fetch cost to pre-fill unit price with suggested price (margin applied, rounded to 500)
   const handleRecipeChange = async (id: string) => {
     setRecipeId(id);
     setStockIssues([]);
-    if (!id) { setUnitPrice(""); setRecipeMargin(null); return; }
+    if (!id) { setUnitPrice(""); setRecipeMargin(null); setSuggestedPrice(null); return; }
     try {
       const DEFAULT_MARGIN = 0.30;
       const { data } = await api.get<{ suggested_price: number; margin_pct: number }>(
         `/recipes/${id}/cost?margin_pct=${DEFAULT_MARGIN}`
       );
-      setUnitPrice(String(data.suggested_price));
+      setSuggestedPrice(data.suggested_price);
+      setUnitPrice(String(priceFor(id, soldAs, data.suggested_price)));
       setRecipeMargin(data.margin_pct);
     } catch {
       setUnitPrice("");
       setRecipeMargin(null);
+      setSuggestedPrice(null);
     }
   };
 
@@ -141,9 +157,10 @@ export default function SalesPage() {
     const recipe = recipes.find((r) => r.id === recipeId);
     if (!recipe) return [];
     const qty = parseInt(quantity, 10) || 1;
+    const share = soldAs === "portion" && recipe.yield > 0 ? 1 / recipe.yield : 1;
     const stockMap = new Map(ingredients.map((i) => [i.id, i.stock_quantity]));
     return recipe.ingredients.map((ing) => {
-      const needed = ing.quantity * qty;
+      const needed = ing.quantity * qty * share;
       const available = stockMap.get(ing.ingredient_id) ?? 0;
       return { name: ing.name, quantity_used: needed, unit: ing.unit, available, insufficient: available < needed };
     });
@@ -157,7 +174,6 @@ export default function SalesPage() {
     if (!recipeId)               { setFormError("Selecciona una receta"); return; }
     if (!qty || qty <= 0)        { setFormError("Cantidad debe ser mayor a 0"); return; }
     if (isNaN(price) || price < 0) { setFormError("Precio debe ser mayor o igual a 0"); return; }
-    if (stockIssues.length > 0)  { setFormError("No hay stock suficiente para algunos ingredientes o insumos"); return; }
     setPreview(buildPreview());
     setConfirming(true);
   };
@@ -170,14 +186,22 @@ export default function SalesPage() {
         recipe_id: recipeId,
         quantity_sold: parseInt(quantity, 10),
         unit_price: parseFloat(unitPrice),
+        sold_as: soldAs,
         sale_date: saleDate,
         notes,
       });
       setSales((prev) => [sale, ...prev]);
       ingredientService.getAll().then(setIngredients).catch(() => {});
-      showSuccess("✅ Venta registrada");
+      if (sale.stock_shortfalls?.length) {
+        const list = sale.stock_shortfalls.map((f) => `${f.missing} ${f.unit} de ${f.ingredient}`).join(", ");
+        showSuccess(`⚠️ Venta registrada, pero faltaron: ${list}. El stock quedó en 0.`);
+      } else {
+        showSuccess("✅ Venta registrada");
+      }
       setRecipeId("");
       setQuantity("");
+      setSoldAs("recipe");
+      setSuggestedPrice(null);
       setUnitPrice("");
       setRecipeMargin(null);
       setSaleDate(today());
@@ -348,6 +372,22 @@ export default function SalesPage() {
             </select>
           </div>
 
+          {/* Sold as */}
+          <div>
+            <label className="block text-xs tracking-widest uppercase text-negro/70 mb-1.5 font-light">
+              Vendida como
+            </label>
+            <select
+              value={soldAs}
+              onChange={(e) => handleSoldAsChange(e.target.value as SoldAs)}
+              className="w-full bg-crema border border-linea text-negro
+                         px-4 py-2.5 text-sm font-light focus:outline-none focus:border-oro transition-all"
+            >
+              <option value="recipe">Receta completa</option>
+              <option value="portion">Porción</option>
+            </select>
+          </div>
+
           {/* Quantity */}
           <div>
             <label className="block text-xs tracking-widest uppercase text-negro/70 mb-1.5 font-light">
@@ -419,7 +459,7 @@ export default function SalesPage() {
         {hasStockIssue && (
           <div className="mb-3 p-3 bg-rosa/30 border border-peligro">
             <p className="text-peligro text-xs font-medium mb-1.5 tracking-wide uppercase">
-              Stock insuficiente
+              Podría faltar stock (la venta se registra igual)
             </p>
             {stockIssues.map((issue, i) => (
               <p key={i} className="text-peligro text-xs font-light">
@@ -447,7 +487,7 @@ export default function SalesPage() {
 
         <button
           type="submit"
-          disabled={hasStockIssue}
+
           className="bg-negro text-crema text-xs tracking-widest uppercase font-medium
                      px-6 py-2.5 hover:bg-black transition-all disabled:opacity-40 disabled:cursor-not-allowed"
         >

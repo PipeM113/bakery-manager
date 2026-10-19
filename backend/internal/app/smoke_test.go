@@ -217,12 +217,18 @@ func TestAC5_CoreFlowsWorkWithoutPreparedStatements(t *testing.T) {
 		}
 	})
 
-	t.Run("a sale that needs more stock than available is refused (400 today)", func(t *testing.T) {
-		status, _ := api.do("POST", "/sales", map[string]any{
+	t.Run("a sale without enough stock is registered anyway and says what was missing", func(t *testing.T) {
+		status, raw := api.do("POST", "/sales", map[string]any{
 			"recipe_id": recipeID, "quantity_sold": 100, "unit_price": 3500,
 		})
-		if status != http.StatusBadRequest {
-			t.Fatalf("status = %d, want 400", status)
+		if status != http.StatusCreated {
+			t.Fatalf("status = %d, want 201: %s", status, raw)
+		}
+		if short, _ := decode(t, raw)["stock_shortfalls"].([]any); len(short) == 0 {
+			t.Errorf("stock_shortfalls is empty, want what the stock could not give: %s", raw)
+		}
+		if got := stockOf(t, api, ingredientID); got != 0 {
+			t.Errorf("stock = %v, want 0 (never negative)", got)
 		}
 	})
 

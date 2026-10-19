@@ -96,3 +96,10 @@ Un gasto que se repite cada mes (arriendo, gas, luz, contador). Tiene un **monto
 cambia, el nuevo monto vale desde el mes que se indique ("Vigente desde") y el histórico no cambia.
 Terminar un costo lo saca desde ese mes en adelante pero conserva los meses anteriores. Ver
 `docs/costos-fijos.md`.
+
+## Porción
+
+Una venta puede ser de **recetas completas** o de **porciones**. Una porción es `1 ÷ rendimiento`
+de la receta: en una torta que rinde 12 porciones, 3 porciones descuentan 3/12 de cada
+ingrediente. El precio unitario de una venta por porción es el precio de una porción. Ver
+`docs/ventas-y-stock.md`.
