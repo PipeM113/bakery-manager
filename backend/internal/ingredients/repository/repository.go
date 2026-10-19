@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/PipeM113/bakery-manager/internal/shared/clock"
@@ -143,18 +144,26 @@ func (r *IngredientRepository) GetByID(ctx context.Context, id string) (Ingredie
 	return i, nil
 }
 
-func (r *IngredientRepository) Update(ctx context.Context, i Ingredient) (Ingredient, error) {
-	var oldPrice float64
-	err := r.db.QueryRow(ctx,
-		`SELECT price_per_unit FROM ingredients WHERE id = $1`, i.ID,
-	).Scan(&oldPrice)
+// Update edits an ingredient. A change of the stock leaves a "correccion" in the stock
+// adjustments, so no change of the stock goes without a record.
+func (r *IngredientRepository) Update(ctx context.Context, i Ingredient, userID string) (Ingredient, error) {
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return Ingredient{}, fmt.Errorf("begin tx: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	var oldPrice, oldStock float64
+	err = tx.QueryRow(ctx,
+		`SELECT price_per_unit, stock_quantity FROM ingredients WHERE id = $1 FOR UPDATE`, i.ID,
+	).Scan(&oldPrice, &oldStock)
 	if err != nil {
 		return Ingredient{}, fmt.Errorf("get old price: %w", err)
 	}
 
 	i.PricePerUnit = calcPricePerUnit(i.PackagePrice, i.PackageSize)
 
-	err = r.db.QueryRow(ctx, `
+	err = tx.QueryRow(ctx, `
 		UPDATE ingredients
 		SET name=$1, default_unit=$2, package_size=$3, package_price=$4,
 		    price_per_unit=$5, stock_quantity=$6, alert_threshold=$7,
@@ -174,7 +183,7 @@ func (r *IngredientRepository) Update(ctx context.Context, i Ingredient) (Ingred
 	}
 
 	if oldPrice != i.PricePerUnit {
-		_, err = r.db.Exec(ctx,
+		_, err = tx.Exec(ctx,
 			`INSERT INTO ingredient_price_history (ingredient_id, price_per_unit, unit, effective_date)
 			 VALUES ($1, $2, $3, $4::date)`,
 			i.ID, i.PricePerUnit, i.DefaultUnit, r.clk.Today(),
@@ -184,6 +193,20 @@ func (r *IngredientRepository) Update(ctx context.Context, i Ingredient) (Ingred
 		}
 	}
 
+	if before, after := math.Round(oldStock*1000)/1000, math.Round(i.StockQuantity*1000)/1000; before != after {
+		_, err = tx.Exec(ctx, `
+			INSERT INTO stock_adjustments (user_id, ingredient_id, reason, quantity_delta, unit, stock_before, stock_after, adjusted_on)
+			VALUES ($1, $2, 'correccion', $3, $4, $5, $6, $7::date)`,
+			userID, i.ID, math.Round((after-before)*1000)/1000, i.DefaultUnit, before, after, r.clk.Today(),
+		)
+		if err != nil {
+			return Ingredient{}, fmt.Errorf("record stock correction: %w", err)
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return Ingredient{}, fmt.Errorf("commit tx: %w", err)
+	}
 	return i, nil
 }
 

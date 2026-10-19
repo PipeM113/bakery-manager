@@ -145,7 +145,7 @@ func (h *IngredientHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("[ingredients] PUT /ingredients/%s user=%s name=%q", id, userID(r), body.Name)
 
-	updated, err := h.repo.Update(r.Context(), body)
+	updated, err := h.repo.Update(r.Context(), body, userID(r))
 	if err != nil {
 		log.Printf("[ingredients] Update error id=%s: %v", id, err)
 		httputil.JSONError(w, "error actualizando insumo", http.StatusInternalServerError)

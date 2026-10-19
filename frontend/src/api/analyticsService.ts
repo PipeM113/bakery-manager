@@ -7,6 +7,8 @@ export interface MonthlyMetrics {
   total_ingredients_cost: number;
   total_fixed_costs: number;
   total_operational_expenses: number;
+  /** Mermas of the month, valued at what they cost; already taken off the net profit. */
+  total_waste_cost: number;
   gross_profit: number;
   net_profit: number;
   profit_margin: number;

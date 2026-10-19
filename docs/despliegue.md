@@ -54,7 +54,7 @@ go run -tags postgres github.com/golang-migrate/migrate/v4/cmd/migrate@v4.20.1 \
 - La migración 18 pasa las columnas `TIMESTAMP` (usuarios, ingredientes, historial de precios y recetas) a `TIMESTAMPTZ`; los valores existentes se leen como UTC. Haz una copia de seguridad antes de correrla.
 - La migración 19 pasa el monto de los costos fijos a la tabla `fixed_cost_versions` (un monto por mes) y reemplaza `is_active` por `ended_from` (ver `docs/costos-fijos.md`). Hazla **antes** de desplegar el backend nuevo: el backend anterior lee las columnas que la migración quita.
 - La migración 20 agrega `sales.sold_as` y `sale_ingredients.stock_deducted` (ver `docs/ventas-y-stock.md`). Solo agrega columnas: se puede aplicar antes o después del deploy, pero el backend nuevo las necesita, así que aplícala **antes**.
-- Verifica: `select version, dirty from manager.schema_migrations;` debe dar `20` y `false` (la 19 dejó `fixed_cost_versions`, ver arriba), y `select count(*) from manager.fixed_cost_versions;` debe igualar la cantidad de costos fijos que tenías.
+- Verifica: `select version, dirty from manager.schema_migrations;` debe dar `21` y `false` (la 21 crea `stock_adjustments`, ver `docs/ajustes-de-stock.md`; la 19 dejó `fixed_cost_versions`, ver arriba), y `select count(*) from manager.fixed_cost_versions;` debe igualar la cantidad de costos fijos que tenías.
 - Deshacer la última: mismo comando con `down 1`.
 - Cuando termines, `unset MIGRATE_URL`.
 

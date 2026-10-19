@@ -234,11 +234,12 @@ export default function ProfitabilityPage() {
         <>
           {/* KPI grid */}
           {metrics && (
-            <div className="grid grid-cols-2 gap-4 mb-10 md:grid-cols-3 lg:grid-cols-6">
+            <div className="grid grid-cols-2 gap-4 mb-10 md:grid-cols-3 lg:grid-cols-7">
               <KpiCard label="Ingresos Totales"      value={clp(metrics.total_revenue)}             accent="green" />
               <KpiCard label="Costo de ingredientes e insumos"       value={clp(metrics.total_ingredients_cost)}    accent="red" />
               <KpiCard label="Costos Fijos"          value={clp(metrics.total_fixed_costs)}         accent="yellow" />
               <KpiCard label="Gastos Operacionales"  value={clp(metrics.total_operational_expenses)} accent="red" />
+              <KpiCard label="Mermas del mes"        value={clp(metrics.total_waste_cost)}          accent="red" />
               <KpiCard label="Ganancia Neta"         value={clp(metrics.net_profit)}                accent="dark-green" large />
               <KpiCard label="Margen de Ganancia"    value={pct(metrics.profit_margin)}             accent={metrics.profit_margin >= 0 ? "green" : "red"} />
             </div>
@@ -336,6 +337,7 @@ export default function ProfitabilityPage() {
                   { label: "= Ganancia bruta",        value: metrics.gross_profit,              color: metrics.gross_profit >= 0 ? "text-negro" : "text-peligro", bold: true },
                   { label: "− Costos fijos",          value: -metrics.total_fixed_costs,        color: "text-oro" },
                   { label: "− Gastos operacionales",  value: -metrics.total_operational_expenses, color: "text-peligro" },
+                  { label: "− Mermas",                value: -metrics.total_waste_cost,         color: "text-peligro" },
                   { label: "= Ganancia neta",         value: metrics.net_profit,                color: metrics.net_profit >= 0 ? "text-negro" : "text-peligro", bold: true },
                 ].map(({ label, value, color, bold }) => (
                   <div
@@ -352,7 +354,7 @@ export default function ProfitabilityPage() {
                 ))}
                 {/* Audit row */}
                 {(() => {
-                  const allCosts = metrics.total_ingredients_cost + metrics.total_fixed_costs + metrics.total_operational_expenses;
+                  const allCosts = metrics.total_ingredients_cost + metrics.total_fixed_costs + metrics.total_operational_expenses + metrics.total_waste_cost;
                   const computed = metrics.total_revenue - allCosts;
                   const diff = Math.abs(computed - metrics.net_profit);
                   const ok = diff < 0.01;
@@ -360,7 +362,7 @@ export default function ProfitabilityPage() {
                     <div className="mt-4 pt-3 border-t border-linea">
                       <p className="text-xs text-negro/70 font-light mb-1 tracking-wide uppercase">Auditoría</p>
                       <p className="text-xs text-negro/70 font-mono">
-                        Ganancia neta = {clp(metrics.total_revenue)} − ({clp(metrics.total_ingredients_cost)} + {clp(metrics.total_fixed_costs)} + {clp(metrics.total_operational_expenses)}) = {clp(computed)}
+                        Ganancia neta = {clp(metrics.total_revenue)} − ({clp(metrics.total_ingredients_cost)} + {clp(metrics.total_fixed_costs)} + {clp(metrics.total_operational_expenses)} + {clp(metrics.total_waste_cost)}) = {clp(computed)}
                         {" "}<span className={ok ? "text-negro" : "text-peligro"}>{ok ? "✓" : `⚠ diff ${clp(diff)}`}</span>
                       </p>
                     </div>

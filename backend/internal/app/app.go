@@ -41,6 +41,8 @@ import (
 	saleSvc "github.com/PipeM113/bakery-manager/internal/sales/service"
 	"github.com/PipeM113/bakery-manager/internal/shared/clock"
 	"github.com/PipeM113/bakery-manager/internal/shared/kernel"
+	saHand "github.com/PipeM113/bakery-manager/internal/stock_adjustments/handler"
+	saRepo "github.com/PipeM113/bakery-manager/internal/stock_adjustments/repository"
 	"github.com/PipeM113/bakery-manager/internal/storage"
 	"github.com/PipeM113/bakery-manager/pkg/httputil"
 	mid "github.com/PipeM113/bakery-manager/pkg/middleware"
@@ -92,6 +94,7 @@ func NewWithClock(cfg config.Config, db *pgxpool.Pool, photos PhotoUploader, clk
 	recipeHandler := recHand.NewRecipeHandler(recipeRepo, photos)
 	costSvc := costService.NewCostService(db)
 	costHandler := costHandler.NewCostHandler(costSvc, recipeRepo)
+	stockAdjustmentHandler := saHand.New(saRepo.New(db), clk)
 	fixedCostRepo := fcRepo.NewFixedCostRepository(db)
 	fixedCostSvc := fcSvc.NewFixedCostService(fixedCostRepo)
 	fixedCostHandler := fcHand.NewFixedCostHandler(fixedCostSvc, clk)
@@ -105,6 +108,9 @@ func NewWithClock(cfg config.Config, db *pgxpool.Pool, photos PhotoUploader, clk
 		r.Put("/ingredients/{id}", ingredientHandler.Update)
 		r.Delete("/ingredients/{id}", ingredientHandler.Delete)
 		r.Get("/ingredients/{id}/history", ingredientHandler.GetPriceHistory)
+		r.Get("/ingredients/{id}/stock-adjustments", stockAdjustmentHandler.ForIngredient)
+		r.Post("/ingredients/{id}/stock-adjustments", stockAdjustmentHandler.Create)
+		r.Get("/stock-adjustments", stockAdjustmentHandler.ForMonth)
 		r.Get("/recipes", recipeHandler.GetAll)
 		r.Get("/recipes/{id}", recipeHandler.GetByID)
 		r.Post("/recipes", recipeHandler.Create)
