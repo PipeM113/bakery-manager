@@ -379,7 +379,7 @@ export default function SalesPage() {
             />
             {recipeMargin !== null && (
               <p className="text-stone-400 text-xs mt-1 font-light">
-                Basado en margen {Math.round(recipeMargin * 100)}% — múltiplo de $500
+                Basado en recargo {Math.round(recipeMargin * 100)}% — múltiplo de $500
               </p>
             )}
           </div>

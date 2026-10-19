@@ -3,6 +3,8 @@ package service
 import (
 	"context"
 	"fmt"
+	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -21,6 +23,8 @@ type IngredientImportRow struct {
 	PackageSize  float64
 	PackagePrice float64
 	DefaultUnit  string
+	// ParseError is set when the size or the price could not be read; the row is rejected.
+	ParseError string
 }
 
 type ImportRowError struct {
@@ -94,20 +98,16 @@ func ParseIngredientsFromExcel(filePath string) ([]IngredientImportRow, int, err
 			unit = "und"
 		}
 
-		// D: Tamaño Presentación (numeric)
-		sizeStr := strings.TrimSpace(row[3])
-		var pkgSize float64
-		if sizeStr != "" {
-			fmt.Sscanf(sizeStr, "%f", &pkgSize)
+		// D: Tamaño Presentación (numeric, > 0) and E: Precio Presentación (numeric, > 0)
+		var parseError string
+		pkgSize, err := ParseCLDecimal(row[3])
+		if err != nil || pkgSize <= 0 {
+			parseError = fmt.Sprintf("el tamaño de la presentación debe ser un número mayor a 0 (se leyó '%s')", strings.TrimSpace(row[3]))
 		}
-		if pkgSize <= 0 {
-			pkgSize = 1
+		pkgPrice, err := ParseCLDecimal(row[4])
+		if parseError == "" && (err != nil || pkgPrice <= 0) {
+			parseError = fmt.Sprintf("el precio debe ser un número mayor a 0 (se leyó '%s')", strings.TrimSpace(row[4]))
 		}
-
-		// E: Precio Presentación (numeric)
-		priceStr := strings.TrimSpace(row[4])
-		var pkgPrice float64
-		fmt.Sscanf(priceStr, "%f", &pkgPrice)
 
 		rows = append(rows, IngredientImportRow{
 			RowNum:       excelRow,
@@ -116,6 +116,7 @@ func ParseIngredientsFromExcel(filePath string) ([]IngredientImportRow, int, err
 			PackageSize:  pkgSize,
 			PackagePrice: pkgPrice,
 			DefaultUnit:  unit,
+			ParseError:   parseError,
 		})
 	}
 
@@ -132,37 +133,34 @@ func (s *IngredientImportService) Import(ctx context.Context, rows []IngredientI
 		return result, nil
 	}
 
-	// Validate: duplicates within file, price > 0, valid unit
+	// Validate row by row. A rejected row is reported with its reason; the rest are imported.
 	seenNames := map[string]int{} // lowercase name -> first row number
+	valid := make([]IngredientImportRow, 0, len(rows))
 
 	for _, row := range rows {
+		reject := func(reason string) {
+			result.Errors = append(result.Errors, ImportRowError{Row: row.RowNum, Reason: reason})
+		}
 		norm := strings.ToLower(row.Name)
 
+		if row.ParseError != "" {
+			reject(row.ParseError)
+			continue
+		}
 		if firstRow, seen := seenNames[norm]; seen {
-			result.Errors = append(result.Errors, ImportRowError{
-				Row:    row.RowNum,
-				Reason: fmt.Sprintf("nombre duplicado en el archivo (primera aparición: fila %d)", firstRow),
-			})
-		} else {
-			seenNames[norm] = row.RowNum
+			reject(fmt.Sprintf("nombre duplicado en el archivo (primera aparición: fila %d)", firstRow))
+			continue
 		}
-
-		if row.PackagePrice <= 0 {
-			result.Errors = append(result.Errors, ImportRowError{
-				Row:    row.RowNum,
-				Reason: "el precio debe ser mayor a 0",
-			})
-		}
+		seenNames[norm] = row.RowNum
 
 		if row.DefaultUnit == "" || !validUnits[row.DefaultUnit] {
-			result.Errors = append(result.Errors, ImportRowError{
-				Row:    row.RowNum,
-				Reason: fmt.Sprintf("unidad inválida '%s' (válidas: gr, kg, ml, lt, und)", row.DefaultUnit),
-			})
+			reject(fmt.Sprintf("unidad inválida '%s' (válidas: gr, kg, ml, lt, und)", row.DefaultUnit))
+			continue
 		}
+		valid = append(valid, row)
 	}
-
-	if len(result.Errors) > 0 {
+	rows = valid
+	if len(rows) == 0 {
 		return result, nil
 	}
 
@@ -245,4 +243,43 @@ func (s *IngredientImportService) Import(ctx context.Context, rows []IngredientI
 	}
 
 	return result, nil
+}
+
+var (
+	thousandsGrouped = regexp.MustCompile(`^[1-9]\d{0,2}(\.\d{3})+$`) // 1.500  1.500.000
+	plainNumber      = regexp.MustCompile(`^\d+(\.\d+)?$`)            // 1500  2.5  0.250
+	commaDecimal     = regexp.MustCompile(`^(\d+|[1-9]\d{0,2}(\.\d{3})+),\d+$`)
+)
+
+// ParseCLDecimal reads a number the way it is written in Chile: "." groups thousands and ","
+// marks the decimals ("1.500,50"), a leading "$" is ignored, and a plain "2.5" is 2.5.
+// "1.500" is fifteen hundred; "0.250" is a quarter, because a group of thousands never
+// starts with 0.
+func ParseCLDecimal(s string) (float64, error) {
+	t := strings.TrimSpace(s)
+	t = strings.TrimSpace(strings.TrimPrefix(t, "$"))
+	negative := strings.HasPrefix(t, "-")
+	t = strings.TrimPrefix(t, "-")
+	if t == "" {
+		return 0, fmt.Errorf("número vacío")
+	}
+
+	switch {
+	case commaDecimal.MatchString(t):
+		t = strings.ReplaceAll(t, ".", "")
+		t = strings.Replace(t, ",", ".", 1)
+	case thousandsGrouped.MatchString(t):
+		t = strings.ReplaceAll(t, ".", "")
+	case plainNumber.MatchString(t):
+	default:
+		return 0, fmt.Errorf("'%s' no es un número", s)
+	}
+	v, err := strconv.ParseFloat(t, 64)
+	if err != nil {
+		return 0, fmt.Errorf("'%s' no es un número", s)
+	}
+	if negative {
+		v = -v
+	}
+	return v, nil
 }

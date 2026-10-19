@@ -273,6 +273,9 @@ func (r *RecipeRepository) SaveScaled(ctx context.Context, recipeID string, scal
 		ScaleFactor:     scaleFactor,
 		IndirectCostPct: original.IndirectCostPct,
 		LaborCostPct:    original.LaborCostPct,
+		MarginPct:       original.MarginPct,
+		ExtraCharge:     original.ExtraCharge,
+		DeliveryCost:    original.DeliveryCost,
 	}
 	for _, ing := range original.Ingredients {
 		scaled.Ingredients = append(scaled.Ingredients, RecipeIngredient{

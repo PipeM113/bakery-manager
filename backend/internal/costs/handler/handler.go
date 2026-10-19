@@ -2,6 +2,8 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
+	"math"
 	"net/http"
 	"strconv"
 
@@ -21,12 +23,30 @@ func NewCostHandler(svc *service.CostService, recipeRepo *recipeRepo.RecipeRepos
 	return &CostHandler{svc: svc, recipeRepo: recipeRepo}
 }
 
-func parseQueryFloat(r *http.Request, key string) float64 {
-	v, err := strconv.ParseFloat(r.URL.Query().Get(key), 64)
-	if err != nil {
-		return 0
+// queryPct reads an optional percentage. Absent gives nil; present but not a number is an error.
+func queryPct(r *http.Request, key string) (*float64, error) {
+	raw := r.URL.Query().Get(key)
+	if raw == "" {
+		return nil, nil
 	}
-	return v
+	v, err := strconv.ParseFloat(raw, 64)
+	if err != nil || math.IsNaN(v) || math.IsInf(v, 0) {
+		return nil, &service.ParamError{Message: key + " no es un número válido"}
+	}
+	return &v, nil
+}
+
+// writeCostError maps a failure of the cost calculation to a response.
+func writeCostError(w http.ResponseWriter, err error) {
+	var pe *service.ParamError
+	switch {
+	case errors.As(err, &pe):
+		httputil.JSONError(w, pe.Message, http.StatusBadRequest)
+	case errors.Is(err, service.ErrInvalidYield):
+		httputil.JSONError(w, err.Error(), http.StatusUnprocessableEntity)
+	default:
+		httputil.JSONError(w, "receta no encontrada", http.StatusNotFound)
+	}
 }
 
 func parseQueryInt(r *http.Request, key string) int {
@@ -40,15 +60,33 @@ func parseQueryInt(r *http.Request, key string) int {
 func (h *CostHandler) GetBreakdown(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	params := service.CostParams{
-		IndirectCostPct: parseQueryFloat(r, "indirect_cost_pct"),
-		LaborCostPct:    parseQueryFloat(r, "labor_cost_pct"),
-		MarginPct:       parseQueryFloat(r, "margin_pct"),
-		ExtraCharge:     parseQueryInt(r, "extra_charge"),
-		DeliveryCost:    parseQueryInt(r, "delivery_cost"),
+		ExtraCharge:  parseQueryInt(r, "extra_charge"),
+		DeliveryCost: parseQueryInt(r, "delivery_cost"),
+	}
+	var err error
+	if params.IndirectCostPct, err = queryPct(r, "indirect_cost_pct"); err != nil {
+		writeCostError(w, err)
+		return
+	}
+	if params.LaborCostPct, err = queryPct(r, "labor_cost_pct"); err != nil {
+		writeCostError(w, err)
+		return
+	}
+	if params.MarginPct, err = queryPct(r, "margin_pct"); err != nil {
+		writeCostError(w, err)
+		return
+	}
+	if params.Portions, err = queryPct(r, "portions"); err != nil {
+		writeCostError(w, err)
+		return
+	}
+	if err := params.Validate(); err != nil {
+		writeCostError(w, err)
+		return
 	}
 	breakdown, err := h.svc.GetCostBreakdown(r.Context(), id, params)
 	if err != nil {
-		httputil.JSONError(w, "receta no encontrada", http.StatusNotFound)
+		writeCostError(w, err)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -86,8 +124,10 @@ func (h *CostHandler) UpdateCosts(w http.ResponseWriter, r *http.Request) {
 		httputil.JSONError(w, "request inválido", http.StatusBadRequest)
 		return
 	}
-	if req.IndirectCostPct < 0 || req.LaborCostPct < 0 || req.MarginPct < 0 {
-		httputil.JSONError(w, "los valores no pueden ser negativos", http.StatusBadRequest)
+	if err := (service.CostParams{
+		IndirectCostPct: &req.IndirectCostPct, LaborCostPct: &req.LaborCostPct, MarginPct: &req.MarginPct,
+	}).Validate(); err != nil {
+		writeCostError(w, err)
 		return
 	}
 	if req.ExtraCharge < 0 || req.DeliveryCost < 0 {
@@ -120,14 +160,14 @@ func (h *CostHandler) Simulate(w http.ResponseWriter, r *http.Request) {
 		httputil.JSONError(w, "request inválido", http.StatusBadRequest)
 		return
 	}
-	if req.MarginPct < 0 {
-		httputil.JSONError(w, "margin_pct debe ser mayor o igual a 0", http.StatusBadRequest)
+	if err := service.CheckPct("margin_pct", req.MarginPct, service.MaxMarkupPct); err != nil {
+		writeCostError(w, err)
 		return
 	}
 
-	breakdown, err := h.svc.GetCostBreakdown(r.Context(), id, service.CostParams{MarginPct: req.MarginPct})
+	breakdown, err := h.svc.GetCostBreakdown(r.Context(), id, service.CostParams{})
 	if err != nil {
-		httputil.JSONError(w, "receta no encontrada", http.StatusNotFound)
+		writeCostError(w, err)
 		return
 	}
 
