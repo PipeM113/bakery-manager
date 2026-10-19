@@ -24,7 +24,7 @@ export default function DashboardPage() {
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center">
-      <span className="text-gold text-sm tracking-widest uppercase font-light animate-pulse">Cargando...</span>
+      <span className="text-oro text-sm tracking-widest uppercase font-light animate-pulse">Cargando...</span>
     </div>
   );
 
@@ -33,20 +33,20 @@ export default function DashboardPage() {
 
       <div className="mb-10">
         <div className="flex items-center gap-3 mb-3">
-          <div className="h-px w-8 bg-gold opacity-40" />
-          <span className="text-gold text-xs tracking-[0.3em] uppercase font-light">Panel principal</span>
+          <div className="h-px w-8 bg-oro/40" />
+          <span className="text-oro text-xs tracking-[0.3em] uppercase font-light">Panel principal</span>
         </div>
-        <h1 className="font-display text-4xl text-stone-800">Bienvenida{firstName ? `, ${firstName}` : ""}</h1>
+        <h1 className="font-display text-4xl text-negro">Bienvenida{firstName ? `, ${firstName}` : ""}</h1>
       </div>
 
       {alerts.length > 0 && (
-        <div className="mb-8 border border-terracota-400 bg-terracota-400 bg-opacity-5 p-5">
-          <p className="text-xs tracking-widest uppercase text-terracota-500 font-light mb-3">◆ Stock bajo</p>
+        <div className="mb-8 border border-peligro bg-peligro bg-opacity-5 p-5">
+          <p className="text-xs tracking-widest uppercase text-peligro font-light mb-3">◆ Stock bajo</p>
           <div className="space-y-2">
             {alerts.map((a) => (
               <div key={a.id} className="flex justify-between items-center">
-                <span className="text-stone-800 text-sm font-light">{a.name}</span>
-                <span className="text-terracota-500 text-xs">{a.stock_quantity} {a.default_unit} restantes</span>
+                <span className="text-negro text-sm font-light">{a.name}</span>
+                <span className="text-peligro text-xs">{a.stock_quantity} {a.default_unit} restantes</span>
               </div>
             ))}
           </div>
@@ -60,35 +60,35 @@ export default function DashboardPage() {
           { label: "Total recetas", value: recipes.length     },
           { label: "Alertas",       value: alerts.length      },
         ].map(({ label, value }) => (
-          <div key={label} className="bg-white border border-stone-200 p-5 hover:border-gold transition-all">
-            <p className="font-display text-3xl text-gold mb-1">{value}</p>
-            <p className="text-xs tracking-widest uppercase text-stone-400 font-light">{label}</p>
+          <div key={label} className="bg-white border border-linea p-5 hover:border-oro transition-all">
+            <p className="font-display text-3xl text-oro mb-1">{value}</p>
+            <p className="text-xs tracking-widest uppercase text-negro/70 font-light">{label}</p>
           </div>
         ))}
       </div>
 
       <div>
         <div className="flex items-center gap-4 mb-5">
-          <h2 className="font-display text-xl text-stone-800">Recetas recientes</h2>
-          <div className="flex-1 h-px bg-stone-200" />
+          <h2 className="font-display text-xl text-negro">Recetas recientes</h2>
+          <div className="flex-1 h-px bg-lino" />
         </div>
 
         {recipes.length === 0 ? (
-          <p className="text-stone-400 text-sm font-light text-center py-8">No hay recetas aún</p>
+          <p className="text-negro/70 text-sm font-light text-center py-8">No hay recetas aún</p>
         ) : (
           <div className="space-y-2">
             {recipes.slice(0, 5).map((r) => (
               <div key={r.id}
-                className="flex items-center justify-between p-4 bg-white border border-stone-200
-                           hover:border-gold transition-all duration-200">
+                className="flex items-center justify-between p-4 bg-white border border-linea
+                           hover:border-oro transition-all duration-200">
                 <div>
-                  <p className="text-stone-800 text-sm font-light">{r.name}</p>
-                  <p className="text-stone-400 text-xs mt-0.5">{r.yield} {r.yield_unit}</p>
+                  <p className="text-negro text-sm font-light">{r.name}</p>
+                  <p className="text-negro/70 text-xs mt-0.5">{r.yield} {r.yield_unit}</p>
                 </div>
                 <span className={`text-xs tracking-widest uppercase px-2 py-1 border
                   ${r.is_base
-                    ? "text-gold border-gold border-opacity-40"
-                    : "text-stone-400 border-stone-200"}`}>
+                    ? "text-oro border-oro border-opacity-40"
+                    : "text-negro/70 border-linea"}`}>
                   {r.is_base ? "Base" : "Versión"}
                 </span>
               </div>

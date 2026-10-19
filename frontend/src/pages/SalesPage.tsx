@@ -19,9 +19,9 @@ const STATUS_LABEL: Record<IQuotation["status"], string> = {
 };
 
 const STATUS_STYLE: Record<IQuotation["status"], string> = {
-  pending:   "bg-amber-50 text-amber-700 border border-amber-200",
-  confirmed: "bg-green-50 text-green-700 border border-green-200",
-  cancelled: "bg-red-50 text-red-500 border border-red-200 line-through",
+  pending:   "bg-rosa/30 text-oro border border-oro",
+  confirmed: "bg-salvia/40 text-negro border border-salvia",
+  cancelled: "bg-rosa/30 text-peligro border border-peligro line-through",
 };
 
 interface IngredientPreview {
@@ -244,17 +244,17 @@ export default function SalesPage() {
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
-          <div className="h-px w-8 bg-gold opacity-40" />
-          <span className="text-gold text-xs tracking-[0.3em] uppercase font-light">Registro</span>
+          <div className="h-px w-8 bg-oro/40" />
+          <span className="text-oro text-xs tracking-[0.3em] uppercase font-light">Registro</span>
         </div>
-        <h1 className="font-display text-4xl text-stone-800">Ventas</h1>
+        <h1 className="font-display text-4xl text-negro">Ventas</h1>
       </div>
 
-      {error && <p className="text-red-500 text-xs mb-4">{error}</p>}
+      {error && <p className="text-peligro text-xs mb-4">{error}</p>}
 
       {/* Success toast */}
       {successMsg && (
-        <div className="fixed top-4 right-4 z-50 bg-white border border-green-200 text-green-800 px-4 py-3 text-sm font-light shadow-md">
+        <div className="fixed top-4 right-4 z-50 bg-white border border-salvia text-negro px-4 py-3 text-sm font-light shadow-md">
           {successMsg}
         </div>
       )}
@@ -262,33 +262,33 @@ export default function SalesPage() {
       {/* Confirmation Modal */}
       {confirming && preview && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
-          <div className="bg-white border border-stone-200 p-8 max-w-md w-full">
+          <div className="bg-white border border-linea p-8 max-w-md w-full">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-display text-2xl text-stone-800">Confirmar Venta</h2>
+              <h2 className="font-display text-2xl text-negro">Confirmar Venta</h2>
               <button
                 onClick={() => { setConfirming(false); setPreview(null); }}
-                className="text-stone-400 hover:text-stone-800 text-xl leading-none"
+                className="text-negro/70 hover:text-negro text-xl leading-none"
               >×</button>
             </div>
-            <p className="text-sm text-stone-500 font-light mb-4">
+            <p className="text-sm text-negro/70 font-light mb-4">
               Se descontará el siguiente stock:
             </p>
             <table className="w-full text-sm mb-6">
               <thead>
-                <tr className="border-b border-stone-100">
-                  <th className="text-left py-2 text-xs tracking-widest uppercase text-stone-400 font-light">Insumo</th>
-                  <th className="text-right py-2 text-xs tracking-widest uppercase text-stone-400 font-light">Requerido</th>
-                  <th className="text-right py-2 text-xs tracking-widest uppercase text-stone-400 font-light">Disponible</th>
+                <tr className="border-b border-linea">
+                  <th className="text-left py-2 text-xs tracking-widest uppercase text-negro/70 font-light">Insumo</th>
+                  <th className="text-right py-2 text-xs tracking-widest uppercase text-negro/70 font-light">Requerido</th>
+                  <th className="text-right py-2 text-xs tracking-widest uppercase text-negro/70 font-light">Disponible</th>
                 </tr>
               </thead>
               <tbody>
                 {preview.map((p, i) => (
-                  <tr key={i} className={`border-b border-stone-100 last:border-0 ${p.insufficient ? "bg-red-50" : ""}`}>
-                    <td className={`py-2 font-light ${p.insufficient ? "text-red-700" : "text-stone-800"}`}>{p.name}</td>
-                    <td className={`py-2 text-right font-light ${p.insufficient ? "text-red-700 font-medium" : "text-stone-600"}`}>
+                  <tr key={i} className={`border-b border-linea last:border-0 ${p.insufficient ? "bg-rosa/30" : ""}`}>
+                    <td className={`py-2 font-light ${p.insufficient ? "text-peligro" : "text-negro"}`}>{p.name}</td>
+                    <td className={`py-2 text-right font-light ${p.insufficient ? "text-peligro font-medium" : "text-negro/70"}`}>
                       {p.quantity_used % 1 === 0 ? p.quantity_used : p.quantity_used.toFixed(3)} {p.unit}
                     </td>
-                    <td className={`py-2 text-right font-light ${p.insufficient ? "text-red-500" : "text-stone-400"}`}>
+                    <td className={`py-2 text-right font-light ${p.insufficient ? "text-peligro" : "text-negro/70"}`}>
                       {p.available % 1 === 0 ? p.available : p.available.toFixed(3)} {p.unit}
                     </td>
                   </tr>
@@ -296,7 +296,7 @@ export default function SalesPage() {
               </tbody>
             </table>
             {preview.some((p) => p.insufficient) && (
-              <p className="text-red-500 text-xs mb-4">
+              <p className="text-peligro text-xs mb-4">
                 Algunos ingredientes o insumos no tienen stock suficiente. La venta será rechazada.
               </p>
             )}
@@ -304,15 +304,15 @@ export default function SalesPage() {
               <button
                 onClick={() => { setConfirming(false); setPreview(null); }}
                 className="text-xs tracking-widest uppercase font-medium px-5 py-2.5
-                           border border-stone-200 text-stone-400 hover:border-stone-400 transition-all"
+                           border border-linea text-negro/70 hover:border-oro transition-all"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleConfirm}
                 disabled={loading}
-                className="bg-gold text-white text-xs tracking-widest uppercase font-medium
-                           px-5 py-2.5 hover:bg-gold-light transition-all disabled:opacity-50"
+                className="bg-negro text-crema text-xs tracking-widest uppercase font-medium
+                           px-5 py-2.5 hover:bg-black transition-all disabled:opacity-50"
               >
                 {loading ? "Registrando..." : "Confirmar"}
               </button>
@@ -322,23 +322,23 @@ export default function SalesPage() {
       )}
 
       {/* Form */}
-      <form onSubmit={handleSubmitForm} className="bg-white border border-stone-200 p-6 mb-8">
+      <form onSubmit={handleSubmitForm} className="bg-white border border-linea p-6 mb-8">
         <div className="flex items-center gap-4 mb-5">
-          <h2 className="font-display text-xl text-stone-800">Nueva Venta</h2>
-          <div className="flex-1 h-px bg-stone-200" />
+          <h2 className="font-display text-xl text-negro">Nueva Venta</h2>
+          <div className="flex-1 h-px bg-lino" />
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
           {/* Recipe */}
           <div className="sm:col-span-2 lg:col-span-1">
-            <label className="block text-xs tracking-widest uppercase text-stone-400 mb-1.5 font-light">
-              Receta <span className="text-gold">*</span>
+            <label className="block text-xs tracking-widest uppercase text-negro/70 mb-1.5 font-light">
+              Receta <span className="text-oro">*</span>
             </label>
             <select
               value={recipeId}
               onChange={(e) => handleRecipeChange(e.target.value)}
-              className="w-full bg-vanilla-100 border border-stone-200 text-stone-800
-                         px-4 py-2.5 text-sm font-light focus:outline-none focus:border-gold transition-all"
+              className="w-full bg-crema border border-linea text-negro
+                         px-4 py-2.5 text-sm font-light focus:outline-none focus:border-oro transition-all"
             >
               <option value="">Seleccionar receta...</option>
               {recipes.map((r) => (
@@ -349,8 +349,8 @@ export default function SalesPage() {
 
           {/* Quantity */}
           <div>
-            <label className="block text-xs tracking-widest uppercase text-stone-400 mb-1.5 font-light">
-              Cantidad <span className="text-gold">*</span>
+            <label className="block text-xs tracking-widest uppercase text-negro/70 mb-1.5 font-light">
+              Cantidad <span className="text-oro">*</span>
             </label>
             <input
               type="number"
@@ -358,15 +358,15 @@ export default function SalesPage() {
               value={quantity}
               onChange={(e) => setQuantity(e.target.value)}
               placeholder="ej. 10"
-              className="w-full bg-vanilla-100 border border-stone-200 text-stone-800
-                         px-4 py-2.5 text-sm font-light focus:outline-none focus:border-gold transition-all"
+              className="w-full bg-crema border border-linea text-negro
+                         px-4 py-2.5 text-sm font-light focus:outline-none focus:border-oro transition-all"
             />
           </div>
 
           {/* Unit price */}
           <div>
-            <label className="block text-xs tracking-widest uppercase text-stone-400 mb-1.5 font-light">
-              Precio unitario (CLP) <span className="text-gold">*</span>
+            <label className="block text-xs tracking-widest uppercase text-negro/70 mb-1.5 font-light">
+              Precio unitario (CLP) <span className="text-oro">*</span>
             </label>
             <input
               type="number"
@@ -374,11 +374,11 @@ export default function SalesPage() {
               value={unitPrice}
               onChange={(e) => setUnitPrice(e.target.value)}
               placeholder="ej. 2500"
-              className="w-full bg-vanilla-100 border border-stone-200 text-stone-800
-                         px-4 py-2.5 text-sm font-light focus:outline-none focus:border-gold transition-all"
+              className="w-full bg-crema border border-linea text-negro
+                         px-4 py-2.5 text-sm font-light focus:outline-none focus:border-oro transition-all"
             />
             {recipeMargin !== null && (
-              <p className="text-stone-400 text-xs mt-1 font-light">
+              <p className="text-negro/70 text-xs mt-1 font-light">
                 Basado en recargo {Math.round(recipeMargin * 100)}% — múltiplo de $500
               </p>
             )}
@@ -386,21 +386,21 @@ export default function SalesPage() {
 
           {/* Date */}
           <div>
-            <label className="block text-xs tracking-widest uppercase text-stone-400 mb-1.5 font-light">
+            <label className="block text-xs tracking-widest uppercase text-negro/70 mb-1.5 font-light">
               Fecha
             </label>
             <input
               type="date"
               value={saleDate}
               onChange={(e) => setSaleDate(e.target.value)}
-              className="w-full bg-vanilla-100 border border-stone-200 text-stone-800
-                         px-4 py-2.5 text-sm font-light focus:outline-none focus:border-gold transition-all"
+              className="w-full bg-crema border border-linea text-negro
+                         px-4 py-2.5 text-sm font-light focus:outline-none focus:border-oro transition-all"
             />
           </div>
 
           {/* Notes */}
           <div className="sm:col-span-2">
-            <label className="block text-xs tracking-widest uppercase text-stone-400 mb-1.5 font-light">
+            <label className="block text-xs tracking-widest uppercase text-negro/70 mb-1.5 font-light">
               Notas
             </label>
             <input
@@ -408,20 +408,20 @@ export default function SalesPage() {
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Opcional"
-              className="w-full bg-vanilla-100 border border-stone-200 text-stone-800
-                         px-4 py-2.5 text-sm font-light focus:outline-none focus:border-gold transition-all"
+              className="w-full bg-crema border border-linea text-negro
+                         px-4 py-2.5 text-sm font-light focus:outline-none focus:border-oro transition-all"
             />
           </div>
         </div>
 
         {/* Live stock warnings */}
         {hasStockIssue && (
-          <div className="mb-3 p-3 bg-red-50 border border-red-200">
-            <p className="text-red-600 text-xs font-medium mb-1.5 tracking-wide uppercase">
+          <div className="mb-3 p-3 bg-rosa/30 border border-peligro">
+            <p className="text-peligro text-xs font-medium mb-1.5 tracking-wide uppercase">
               Stock insuficiente
             </p>
             {stockIssues.map((issue, i) => (
-              <p key={i} className="text-red-500 text-xs font-light">
+              <p key={i} className="text-peligro text-xs font-light">
                 {issue.name}: disponible{" "}
                 <span className="font-medium">{issue.available % 1 === 0 ? issue.available : issue.available.toFixed(3)} {issue.unit}</span>
                 , requerido{" "}
@@ -432,13 +432,13 @@ export default function SalesPage() {
         )}
 
         {formError && (
-          <p className="text-red-500 text-xs mb-3">{formError}</p>
+          <p className="text-peligro text-xs mb-3">{formError}</p>
         )}
 
         {quantity && unitPrice && (
-          <p className="text-stone-400 text-xs mb-3 font-light">
+          <p className="text-negro/70 text-xs mb-3 font-light">
             Total:{" "}
-            <span className="text-gold font-medium">
+            <span className="text-oro font-medium">
               {clp((parseInt(quantity) || 0) * (parseFloat(unitPrice) || 0))}
             </span>
           </p>
@@ -447,21 +447,21 @@ export default function SalesPage() {
         <button
           type="submit"
           disabled={hasStockIssue}
-          className="bg-gold text-white text-xs tracking-widest uppercase font-medium
-                     px-6 py-2.5 hover:bg-gold-light transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+          className="bg-negro text-crema text-xs tracking-widest uppercase font-medium
+                     px-6 py-2.5 hover:bg-black transition-all disabled:opacity-40 disabled:cursor-not-allowed"
         >
           Registrar Venta
         </button>
       </form>
 
       {/* Tabs: Cotizaciones / Historial de ventas */}
-      <div className="flex border-b border-stone-200 mb-6">
+      <div className="flex border-b border-linea mb-6">
         <button
           onClick={() => setQuotationTab("quotations")}
           className={`px-5 py-2.5 text-xs tracking-widest uppercase font-medium transition-all
             ${quotationTab === "quotations"
-              ? "border-b-2 border-gold text-gold"
-              : "text-stone-400 hover:text-stone-600"}`}
+              ? "border-b-2 border-oro text-oro"
+              : "text-negro/70 hover:text-negro"}`}
         >
           Cotizaciones
         </button>
@@ -469,8 +469,8 @@ export default function SalesPage() {
           onClick={() => setQuotationTab("sales")}
           className={`px-5 py-2.5 text-xs tracking-widest uppercase font-medium transition-all
             ${quotationTab === "sales"
-              ? "border-b-2 border-gold text-gold"
-              : "text-stone-400 hover:text-stone-600"}`}
+              ? "border-b-2 border-oro text-oro"
+              : "text-negro/70 hover:text-negro"}`}
         >
           Historial de ventas
         </button>
@@ -478,9 +478,9 @@ export default function SalesPage() {
 
       {/* Quotations panel */}
       {quotationTab === "quotations" && (
-        <div className="bg-white border border-stone-200">
-          <div className="px-6 py-4 border-b border-stone-100 flex flex-col sm:flex-row sm:items-center gap-3">
-            <h2 className="font-display text-xl text-stone-800 mr-auto">Cotizaciones</h2>
+        <div className="bg-white border border-linea">
+          <div className="px-6 py-4 border-b border-linea flex flex-col sm:flex-row sm:items-center gap-3">
+            <h2 className="font-display text-xl text-negro mr-auto">Cotizaciones</h2>
             {/* Status filter */}
             <div className="flex gap-1.5 flex-wrap">
               {(["", "pending", "confirmed", "cancelled"] as QuotationStatusFilter[]).map((s) => (
@@ -489,8 +489,8 @@ export default function SalesPage() {
                   onClick={() => handleQuotationFilterChange(s)}
                   className={`text-xs tracking-widest uppercase font-medium px-3 py-1.5 border transition-all
                     ${quotationFilter === s
-                      ? "bg-gold text-white border-gold"
-                      : "border-stone-200 text-stone-400 hover:border-gold hover:text-gold"}`}
+                      ? "bg-negro text-crema border-oro"
+                      : "border-linea text-negro/70 hover:border-oro hover:text-oro"}`}
                 >
                   {s === "" ? "Todas" : STATUS_LABEL[s as IQuotation["status"]]}
                 </button>
@@ -499,35 +499,35 @@ export default function SalesPage() {
           </div>
 
           {displayedQuotations.length === 0 ? (
-            <p className="text-stone-400 text-sm font-light text-center py-10">
+            <p className="text-negro/70 text-sm font-light text-center py-10">
               No hay cotizaciones
             </p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-stone-100">
-                    <th className="text-left px-6 py-3 text-xs tracking-widest uppercase text-stone-400 font-light">Fecha</th>
-                    <th className="text-left px-6 py-3 text-xs tracking-widest uppercase text-stone-400 font-light">Cliente</th>
-                    <th className="text-left px-6 py-3 text-xs tracking-widest uppercase text-stone-400 font-light">Producto</th>
-                    <th className="text-right px-6 py-3 text-xs tracking-widest uppercase text-stone-400 font-light">Monto</th>
-                    <th className="text-center px-6 py-3 text-xs tracking-widest uppercase text-stone-400 font-light">Estado</th>
+                  <tr className="border-b border-linea">
+                    <th className="text-left px-6 py-3 text-xs tracking-widest uppercase text-negro/70 font-light">Fecha</th>
+                    <th className="text-left px-6 py-3 text-xs tracking-widest uppercase text-negro/70 font-light">Cliente</th>
+                    <th className="text-left px-6 py-3 text-xs tracking-widest uppercase text-negro/70 font-light">Producto</th>
+                    <th className="text-right px-6 py-3 text-xs tracking-widest uppercase text-negro/70 font-light">Monto</th>
+                    <th className="text-center px-6 py-3 text-xs tracking-widest uppercase text-negro/70 font-light">Estado</th>
                     <th className="px-6 py-3" />
                   </tr>
                 </thead>
                 <tbody>
                   {displayedQuotations.map((q) => (
-                    <tr key={q.id} className="border-b border-stone-100 last:border-0 hover:bg-vanilla-100 transition-colors">
-                      <td className="px-6 py-4 text-stone-600 font-light whitespace-nowrap">
+                    <tr key={q.id} className="border-b border-linea last:border-0 hover:bg-lino transition-colors">
+                      <td className="px-6 py-4 text-negro/70 font-light whitespace-nowrap">
                         {new Date(q.created_at).toLocaleDateString("es-CL")}
                       </td>
-                      <td className={`px-6 py-4 font-light ${q.status === "cancelled" ? "line-through text-stone-400" : "text-stone-800"}`}>
+                      <td className={`px-6 py-4 font-light ${q.status === "cancelled" ? "line-through text-negro/70" : "text-negro"}`}>
                         {q.client_name}
                       </td>
-                      <td className={`px-6 py-4 font-light ${q.status === "cancelled" ? "line-through text-stone-400" : "text-stone-600"}`}>
+                      <td className={`px-6 py-4 font-light ${q.status === "cancelled" ? "line-through text-negro/70" : "text-negro/70"}`}>
                         {q.recipe_name}
                       </td>
-                      <td className={`px-6 py-4 text-right font-medium ${q.status === "cancelled" ? "text-stone-300" : "text-stone-800"}`}>
+                      <td className={`px-6 py-4 text-right font-medium ${q.status === "cancelled" ? "text-negro/70" : "text-negro"}`}>
                         {clp(q.final_price)}
                       </td>
                       <td className="px-6 py-4 text-center">
@@ -541,14 +541,14 @@ export default function SalesPage() {
                             <button
                               onClick={() => handleConfirmQuotation(q.id)}
                               className="text-xs tracking-widest uppercase font-medium px-3 py-1.5
-                                         bg-green-600 text-white hover:bg-green-700 transition-all"
+                                         bg-negro text-crema hover:bg-black transition-all"
                             >
                               Confirmar venta
                             </button>
                             <button
                               onClick={() => handleCancelQuotation(q.id)}
                               className="text-xs tracking-widest uppercase font-medium px-3 py-1.5
-                                         border border-stone-200 text-stone-400 hover:border-red-400 hover:text-red-500 transition-all"
+                                         border border-linea text-negro/70 hover:border-peligro hover:text-peligro transition-all"
                             >
                               Cancelar
                             </button>
@@ -566,9 +566,9 @@ export default function SalesPage() {
 
       {/* Sales history panel */}
       {quotationTab === "sales" && (
-        <div className="bg-white border border-stone-200">
-          <div className="px-6 py-4 border-b border-stone-100 flex flex-col sm:flex-row sm:items-center gap-3">
-            <h2 className="font-display text-xl text-stone-800 mr-auto">Historial</h2>
+        <div className="bg-white border border-linea">
+          <div className="px-6 py-4 border-b border-linea flex flex-col sm:flex-row sm:items-center gap-3">
+            <h2 className="font-display text-xl text-negro mr-auto">Historial</h2>
 
             {/* Date filters */}
             <div className="flex items-center gap-2 flex-wrap">
@@ -576,62 +576,62 @@ export default function SalesPage() {
                 type="date"
                 value={filterFrom}
                 onChange={(e) => setFilterFrom(e.target.value)}
-                className="bg-vanilla-100 border border-stone-200 text-stone-700 px-3 py-1.5
-                           text-xs font-light focus:outline-none focus:border-gold transition-all"
+                className="bg-crema border border-linea text-negro/70 px-3 py-1.5
+                           text-xs font-light focus:outline-none focus:border-oro transition-all"
               />
-              <span className="text-stone-400 text-xs">–</span>
+              <span className="text-negro/70 text-xs">–</span>
               <input
                 type="date"
                 value={filterTo}
                 onChange={(e) => setFilterTo(e.target.value)}
-                className="bg-vanilla-100 border border-stone-200 text-stone-700 px-3 py-1.5
-                           text-xs font-light focus:outline-none focus:border-gold transition-all"
+                className="bg-crema border border-linea text-negro/70 px-3 py-1.5
+                           text-xs font-light focus:outline-none focus:border-oro transition-all"
               />
               <button
                 onClick={handleFilter}
                 className="text-xs tracking-widest uppercase font-medium px-4 py-1.5
-                           border border-stone-200 text-stone-500 hover:border-gold hover:text-gold transition-all"
+                           border border-linea text-negro/70 hover:border-oro hover:text-oro transition-all"
               >
                 Filtrar
               </button>
             </div>
 
             {sales.length > 0 && (
-              <span className="text-xs text-stone-400 font-light whitespace-nowrap">
-                Total: <span className="text-gold font-medium">{clp(totalRevenue)}</span>
+              <span className="text-xs text-negro/70 font-light whitespace-nowrap">
+                Total: <span className="text-oro font-medium">{clp(totalRevenue)}</span>
               </span>
             )}
           </div>
 
           {sales.length === 0 ? (
-            <p className="text-stone-400 text-sm font-light text-center py-10">
+            <p className="text-negro/70 text-sm font-light text-center py-10">
               No hay ventas registradas
             </p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-stone-100">
-                    <th className="text-left px-6 py-3 text-xs tracking-widest uppercase text-stone-400 font-light">Fecha</th>
-                    <th className="text-left px-6 py-3 text-xs tracking-widest uppercase text-stone-400 font-light">Receta</th>
-                    <th className="text-right px-6 py-3 text-xs tracking-widest uppercase text-stone-400 font-light">Cant.</th>
-                    <th className="text-right px-6 py-3 text-xs tracking-widest uppercase text-stone-400 font-light">P. Unit.</th>
-                    <th className="text-right px-6 py-3 text-xs tracking-widest uppercase text-stone-400 font-light">Total</th>
+                  <tr className="border-b border-linea">
+                    <th className="text-left px-6 py-3 text-xs tracking-widest uppercase text-negro/70 font-light">Fecha</th>
+                    <th className="text-left px-6 py-3 text-xs tracking-widest uppercase text-negro/70 font-light">Receta</th>
+                    <th className="text-right px-6 py-3 text-xs tracking-widest uppercase text-negro/70 font-light">Cant.</th>
+                    <th className="text-right px-6 py-3 text-xs tracking-widest uppercase text-negro/70 font-light">P. Unit.</th>
+                    <th className="text-right px-6 py-3 text-xs tracking-widest uppercase text-negro/70 font-light">Total</th>
                     <th className="px-6 py-3" />
                   </tr>
                 </thead>
                 <tbody>
                   {sales.map((s) => (
-                    <tr key={s.id} className="border-b border-stone-100 last:border-0 hover:bg-vanilla-100 transition-colors">
-                      <td className="px-6 py-4 text-stone-600 font-light whitespace-nowrap">{s.sale_date}</td>
-                      <td className="px-6 py-4 text-stone-800 font-light">{s.recipe_name}</td>
-                      <td className="px-6 py-4 text-right text-stone-600 font-light">{s.quantity_sold}</td>
-                      <td className="px-6 py-4 text-right text-stone-600 font-light">{clp(s.unit_price)}</td>
-                      <td className="px-6 py-4 text-right font-medium text-stone-800">{clp(s.total_price)}</td>
+                    <tr key={s.id} className="border-b border-linea last:border-0 hover:bg-lino transition-colors">
+                      <td className="px-6 py-4 text-negro/70 font-light whitespace-nowrap">{s.sale_date}</td>
+                      <td className="px-6 py-4 text-negro font-light">{s.recipe_name}</td>
+                      <td className="px-6 py-4 text-right text-negro/70 font-light">{s.quantity_sold}</td>
+                      <td className="px-6 py-4 text-right text-negro/70 font-light">{clp(s.unit_price)}</td>
+                      <td className="px-6 py-4 text-right font-medium text-negro">{clp(s.total_price)}</td>
                       <td className="px-6 py-4 text-right">
                         <button
                           onClick={() => handleDelete(s.id)}
-                          className="text-xs text-stone-400 hover:text-red-500 tracking-widest uppercase transition-colors"
+                          className="text-xs text-negro/70 hover:text-peligro tracking-widest uppercase transition-colors"
                         >
                           Eliminar
                         </button>

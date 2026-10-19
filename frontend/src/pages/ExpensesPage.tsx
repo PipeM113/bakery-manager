@@ -213,8 +213,8 @@ export default function ExpensesPage() {
               key={t.id}
               className={`px-4 py-3 text-sm font-light shadow-md transition-all
                 ${t.type === "success"
-                  ? "bg-white border border-green-200 text-green-800"
-                  : "bg-white border border-red-200 text-red-700"}`}
+                  ? "bg-white border border-salvia text-negro"
+                  : "bg-white border border-peligro text-peligro"}`}
             >
               {t.message}
             </div>
@@ -224,25 +224,25 @@ export default function ExpensesPage() {
 
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
-          <div className="h-px w-8 bg-gold opacity-40" />
-          <span className="text-gold text-xs tracking-[0.3em] uppercase font-light">Gestión</span>
+          <div className="h-px w-8 bg-oro/40" />
+          <span className="text-oro text-xs tracking-[0.3em] uppercase font-light">Gestión</span>
         </div>
-        <h1 className="font-display text-4xl text-stone-800">Gastos Operacionales</h1>
+        <h1 className="font-display text-4xl text-negro">Gastos Operacionales</h1>
       </div>
 
       {/* Form */}
-      <form onSubmit={handleSubmit} className="bg-white border border-stone-200 p-6 mb-8">
+      <form onSubmit={handleSubmit} className="bg-white border border-linea p-6 mb-8">
         <div className="flex items-center gap-4 mb-5">
-          <h2 className="font-display text-xl text-stone-800">
+          <h2 className="font-display text-xl text-negro">
             {editingId ? "Editar gasto" : "Registrar Gasto"}
           </h2>
-          <div className="flex-1 h-px bg-stone-200" />
+          <div className="flex-1 h-px bg-lino" />
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
           {/* Description */}
           <div className="sm:col-span-2">
-            <label className="block text-xs tracking-widest uppercase text-stone-400 mb-1.5 font-light">
+            <label className="block text-xs tracking-widest uppercase text-negro/70 mb-1.5 font-light">
               Descripción
             </label>
             <input
@@ -250,14 +250,14 @@ export default function ExpensesPage() {
               value={form.description}
               onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
               placeholder="ej. Gas mensual"
-              className="w-full bg-vanilla-100 border border-stone-200 text-stone-800
-                         px-4 py-2.5 text-sm font-light focus:outline-none focus:border-gold transition-all"
+              className="w-full bg-crema border border-linea text-negro
+                         px-4 py-2.5 text-sm font-light focus:outline-none focus:border-oro transition-all"
             />
           </div>
 
           {/* Amount */}
           <div>
-            <label className="block text-xs tracking-widest uppercase text-stone-400 mb-1.5 font-light">
+            <label className="block text-xs tracking-widest uppercase text-negro/70 mb-1.5 font-light">
               Monto (CLP)
             </label>
             <input
@@ -267,21 +267,21 @@ export default function ExpensesPage() {
               value={form.amount}
               onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
               placeholder="ej. 50000"
-              className="w-full bg-vanilla-100 border border-stone-200 text-stone-800
-                         px-4 py-2.5 text-sm font-light focus:outline-none focus:border-gold transition-all"
+              className="w-full bg-crema border border-linea text-negro
+                         px-4 py-2.5 text-sm font-light focus:outline-none focus:border-oro transition-all"
             />
           </div>
 
           {/* Category */}
           <div>
-            <label className="block text-xs tracking-widest uppercase text-stone-400 mb-1.5 font-light">
+            <label className="block text-xs tracking-widest uppercase text-negro/70 mb-1.5 font-light">
               Categoría
             </label>
             <select
               value={form.category_id}
               onChange={(e) => setForm((f) => ({ ...f, category_id: e.target.value }))}
-              className="w-full bg-vanilla-100 border border-stone-200 text-stone-800
-                         px-4 py-2.5 text-sm font-light focus:outline-none focus:border-gold transition-all"
+              className="w-full bg-crema border border-linea text-negro
+                         px-4 py-2.5 text-sm font-light focus:outline-none focus:border-oro transition-all"
             >
               <option value="" disabled>Elige una categoría</option>
               {categories.map((c) => (
@@ -295,24 +295,24 @@ export default function ExpensesPage() {
                 maxLength={50}
                 onChange={(e) => setNewCategory(e.target.value)}
                 placeholder="Nueva categoría (ej. Mantención)"
-                className="flex-1 bg-vanilla-100 border border-stone-200 text-stone-800
-                           px-3 py-2 text-xs font-light focus:outline-none focus:border-gold transition-all"
+                className="flex-1 bg-crema border border-linea text-negro
+                           px-3 py-2 text-xs font-light focus:outline-none focus:border-oro transition-all"
               />
               <button
                 type="button"
                 onClick={handleCreateCategory}
                 disabled={!newCategory.trim()}
-                className="text-xs tracking-widest uppercase text-gold hover:text-gold-light
+                className="text-xs tracking-widest uppercase text-oro hover:text-negro
                            disabled:opacity-40 transition-all px-2"
               >
                 Agregar
               </button>
             </div>
             <details className="mt-2">
-              <summary className="text-xs text-stone-400 font-light cursor-pointer">Administrar categorías</summary>
+              <summary className="text-xs text-negro/70 font-light cursor-pointer">Administrar categorías</summary>
               <ul className="mt-2 space-y-1">
                 {categories.map((c) => (
-                  <li key={c.id} className="flex items-center gap-2 text-xs text-stone-600 font-light">
+                  <li key={c.id} className="flex items-center gap-2 text-xs text-negro/70 font-light">
                     {renamingId === c.id ? (
                       <>
                         <input
@@ -320,16 +320,16 @@ export default function ExpensesPage() {
                           value={renameValue}
                           maxLength={50}
                           onChange={(e) => setRenameValue(e.target.value)}
-                          className="flex-1 bg-vanilla-100 border border-stone-200 px-2 py-1"
+                          className="flex-1 bg-crema border border-linea px-2 py-1"
                         />
-                        <button type="button" onClick={() => handleRenameCategory(c.id)} className="text-gold">Guardar</button>
-                        <button type="button" onClick={() => setRenamingId(null)} className="text-stone-400">Cancelar</button>
+                        <button type="button" onClick={() => handleRenameCategory(c.id)} className="text-oro">Guardar</button>
+                        <button type="button" onClick={() => setRenamingId(null)} className="text-negro/70">Cancelar</button>
                       </>
                     ) : (
                       <>
                         <span className="flex-1">{c.name}</span>
-                        <button type="button" onClick={() => { setRenamingId(c.id); setRenameValue(c.name); }} className="text-stone-400 hover:text-gold">Renombrar</button>
-                        <button type="button" onClick={() => handleDeleteCategory(c)} className="text-stone-400 hover:text-red-500">Borrar</button>
+                        <button type="button" onClick={() => { setRenamingId(c.id); setRenameValue(c.name); }} className="text-negro/70 hover:text-oro">Renombrar</button>
+                        <button type="button" onClick={() => handleDeleteCategory(c)} className="text-negro/70 hover:text-peligro">Borrar</button>
                       </>
                     )}
                   </li>
@@ -340,7 +340,7 @@ export default function ExpensesPage() {
 
           {/* Date */}
           <div>
-            <label className="block text-xs tracking-widest uppercase text-stone-400 mb-1.5 font-light">
+            <label className="block text-xs tracking-widest uppercase text-negro/70 mb-1.5 font-light">
               Fecha del gasto
             </label>
             <input
@@ -348,20 +348,20 @@ export default function ExpensesPage() {
               value={form.expense_date}
               max={today()}
               onChange={(e) => setForm((f) => ({ ...f, expense_date: e.target.value }))}
-              className="w-full bg-vanilla-100 border border-stone-200 text-stone-800
-                         px-4 py-2.5 text-sm font-light focus:outline-none focus:border-gold transition-all"
+              className="w-full bg-crema border border-linea text-negro
+                         px-4 py-2.5 text-sm font-light focus:outline-none focus:border-oro transition-all"
             />
           </div>
         </div>
 
-        {error && <p className="text-red-500 text-xs mb-3">{error}</p>}
+        {error && <p className="text-peligro text-xs mb-3">{error}</p>}
 
         <div className="flex gap-2">
           <button
             type="submit"
             disabled={loading}
-            className="bg-gold text-white text-xs tracking-widest uppercase font-medium
-                       px-6 py-2.5 hover:bg-gold-light transition-all disabled:opacity-50"
+            className="bg-negro text-crema text-xs tracking-widest uppercase font-medium
+                       px-6 py-2.5 hover:bg-black transition-all disabled:opacity-50"
           >
             {loading ? "Guardando..." : editingId ? "Actualizar" : "Registrar Gasto"}
           </button>
@@ -370,7 +370,7 @@ export default function ExpensesPage() {
               type="button"
               onClick={cancelEdit}
               className="text-xs tracking-widest uppercase font-medium px-6 py-2.5
-                         border border-stone-200 text-stone-400 hover:border-stone-400 transition-all"
+                         border border-linea text-negro/70 hover:border-oro transition-all"
             >
               Cancelar
             </button>
@@ -379,11 +379,11 @@ export default function ExpensesPage() {
       </form>
 
       {/* List */}
-      <div className="bg-white border border-stone-200">
-        <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 border-b border-stone-100">
-          <h2 className="font-display text-xl text-stone-800">
+      <div className="bg-white border border-linea">
+        <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 border-b border-linea">
+          <h2 className="font-display text-xl text-negro">
             Gastos de{" "}
-            <span className="text-gold">
+            <span className="text-oro">
               {MONTHS[filterMonth - 1]} {filterYear}
             </span>
           </h2>
@@ -392,8 +392,8 @@ export default function ExpensesPage() {
             <select
               value={filterMonth}
               onChange={(e) => setFilterMonth(Number(e.target.value))}
-              className="bg-vanilla-100 border border-stone-200 text-stone-600 px-3 py-1.5
-                         text-xs font-light focus:outline-none focus:border-gold transition-all"
+              className="bg-crema border border-linea text-negro/70 px-3 py-1.5
+                         text-xs font-light focus:outline-none focus:border-oro transition-all"
             >
               {MONTHS.map((m, i) => (
                 <option key={i + 1} value={i + 1}>{m}</option>
@@ -402,8 +402,8 @@ export default function ExpensesPage() {
             <select
               value={filterYear}
               onChange={(e) => setFilterYear(Number(e.target.value))}
-              className="bg-vanilla-100 border border-stone-200 text-stone-600 px-3 py-1.5
-                         text-xs font-light focus:outline-none focus:border-gold transition-all"
+              className="bg-crema border border-linea text-negro/70 px-3 py-1.5
+                         text-xs font-light focus:outline-none focus:border-oro transition-all"
             >
               {yearOptions.map((y) => (
                 <option key={y} value={y}>{y}</option>
@@ -414,59 +414,59 @@ export default function ExpensesPage() {
               type="button"
               onClick={() => load(filterMonth, filterYear)}
               title="Recargar"
-              className="text-xs text-stone-400 hover:text-gold tracking-widest uppercase transition-colors px-2 py-1.5 border border-stone-200 hover:border-gold"
+              className="text-xs text-negro/70 hover:text-oro tracking-widest uppercase transition-colors px-2 py-1.5 border border-linea hover:border-oro"
             >
               🔄 Recargar
             </button>
 
             {expenses.length > 0 && (
-              <span className="text-xs text-stone-400 font-light ml-2">
+              <span className="text-xs text-negro/70 font-light ml-2">
                 Total:{" "}
-                <span className="text-gold font-medium">{clp(totalMonth)}</span>
+                <span className="text-oro font-medium">{clp(totalMonth)}</span>
               </span>
             )}
           </div>
         </div>
 
         {expenses.length === 0 ? (
-          <p className="text-stone-400 text-sm font-light text-center py-10">
+          <p className="text-negro/70 text-sm font-light text-center py-10">
             No hay gastos registrados para este período
           </p>
         ) : (
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-stone-100">
-                <th className="text-left px-6 py-3 text-xs tracking-widest uppercase text-stone-400 font-light">Fecha</th>
-                <th className="text-left px-6 py-3 text-xs tracking-widest uppercase text-stone-400 font-light">Descripción</th>
-                <th className="text-left px-6 py-3 text-xs tracking-widest uppercase text-stone-400 font-light">Categoría</th>
-                <th className="text-right px-6 py-3 text-xs tracking-widest uppercase text-stone-400 font-light">Monto</th>
+              <tr className="border-b border-linea">
+                <th className="text-left px-6 py-3 text-xs tracking-widest uppercase text-negro/70 font-light">Fecha</th>
+                <th className="text-left px-6 py-3 text-xs tracking-widest uppercase text-negro/70 font-light">Descripción</th>
+                <th className="text-left px-6 py-3 text-xs tracking-widest uppercase text-negro/70 font-light">Categoría</th>
+                <th className="text-right px-6 py-3 text-xs tracking-widest uppercase text-negro/70 font-light">Monto</th>
                 <th className="px-6 py-3" />
               </tr>
             </thead>
             <tbody>
               {expenses.map((e) => (
-                <tr key={e.id} className="border-b border-stone-100 last:border-0 hover:bg-vanilla-100 transition-colors">
-                  <td className="px-6 py-4 text-stone-500 font-light whitespace-nowrap">
+                <tr key={e.id} className="border-b border-linea last:border-0 hover:bg-lino transition-colors">
+                  <td className="px-6 py-4 text-negro/70 font-light whitespace-nowrap">
                     {e.expense_date}
                   </td>
-                  <td className="px-6 py-4 text-stone-800 font-light">{e.description}</td>
+                  <td className="px-6 py-4 text-negro font-light">{e.description}</td>
                   <td className="px-6 py-4">
-                    <span className="text-xs tracking-widest uppercase font-medium px-2 py-1 border border-stone-200 text-stone-500">
+                    <span className="text-xs tracking-widest uppercase font-medium px-2 py-1 border border-linea text-negro/70">
                       {e.category}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-right text-stone-800 font-light">{clp(e.amount)}</td>
+                  <td className="px-6 py-4 text-right text-negro font-light">{clp(e.amount)}</td>
                   <td className="px-6 py-4">
                     <div className="flex gap-3 justify-end">
                       <button
                         onClick={() => startEdit(e)}
-                        className="text-xs text-stone-400 hover:text-gold tracking-widest uppercase transition-colors"
+                        className="text-xs text-negro/70 hover:text-oro tracking-widest uppercase transition-colors"
                       >
                         Editar
                       </button>
                       <button
                         onClick={() => handleDelete(e.id)}
-                        className="text-xs text-stone-400 hover:text-red-500 tracking-widest uppercase transition-colors"
+                        className="text-xs text-negro/70 hover:text-peligro tracking-widest uppercase transition-colors"
                       >
                         Eliminar
                       </button>

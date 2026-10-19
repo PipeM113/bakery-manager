@@ -295,8 +295,8 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
 
       {/* Toast */}
       {toast && (
-        <div className={`fixed top-4 right-4 z-50 px-4 py-2 text-xs tracking-widest uppercase font-medium text-white transition-all
-          ${toast.ok ? "bg-stone-700" : "bg-terracota-500"}`}>
+        <div className={`fixed top-4 right-4 z-50 px-4 py-2 text-xs tracking-widest uppercase font-medium text-crema transition-all
+          ${toast.ok ? "bg-negro" : "bg-peligro"}`}>
           {toast.msg}
         </div>
       )}
@@ -304,41 +304,41 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
       {/* Save-as modal – Fix 3: no backdrop click */}
       {showSaveModal && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black bg-opacity-40">
-          <div className="bg-white border border-stone-200 shadow-lg p-6 w-full max-w-sm space-y-4">
+          <div className="bg-white border border-linea shadow-lg p-6 w-full max-w-sm space-y-4">
             <div className="flex items-center justify-between">
-              <p className="text-xs tracking-widest uppercase text-stone-400 font-light">
+              <p className="text-xs tracking-widest uppercase text-negro/70 font-light">
                 Guardar escalado como nueva versión
               </p>
-              <button onClick={() => setShowSaveModal(false)} className="text-stone-400 hover:text-stone-800 text-xl leading-none">×</button>
+              <button onClick={() => setShowSaveModal(false)} className="text-negro/70 hover:text-negro text-xl leading-none">×</button>
             </div>
-            <p className="text-stone-500 text-sm font-light">
-              Se creará una copia de <strong className="font-medium text-stone-700">{recipe.name}</strong> con {portionsNum} porciones.
+            <p className="text-negro/70 text-sm font-light">
+              Se creará una copia de <strong className="font-medium text-negro/70">{recipe.name}</strong> con {portionsNum} porciones.
             </p>
             <div>
-              <label className="block text-xs tracking-widest uppercase text-stone-400 mb-1.5 font-light">
+              <label className="block text-xs tracking-widest uppercase text-negro/70 mb-1.5 font-light">
                 Nombre
               </label>
               <input
                 type="text"
                 value={saveAsName}
                 onChange={(e) => setSaveAsName(e.target.value)}
-                className="w-full bg-vanilla-100 border border-stone-200 text-stone-800
-                           px-3 py-2.5 text-sm font-light focus:outline-none focus:border-gold transition-all"
+                className="w-full bg-crema border border-linea text-negro
+                           px-3 py-2.5 text-sm font-light focus:outline-none focus:border-oro transition-all"
               />
             </div>
             <div className="flex gap-2 pt-1">
               <button
                 onClick={() => setShowSaveModal(false)}
-                className="flex-1 border border-stone-200 text-stone-500 text-xs tracking-widest uppercase
-                           font-medium py-2.5 hover:bg-stone-50 transition-all"
+                className="flex-1 border border-linea text-negro/70 text-xs tracking-widest uppercase
+                           font-medium py-2.5 hover:bg-lino transition-all"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleSaveAs}
                 disabled={!saveAsName.trim() || saving}
-                className="flex-1 bg-gold text-white text-xs tracking-widest uppercase font-medium
-                           py-2.5 hover:bg-gold-light transition-all
+                className="flex-1 bg-negro text-crema text-xs tracking-widest uppercase font-medium
+                           py-2.5 hover:bg-black transition-all
                            disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {saving ? "Guardando..." : "Crear versión"}
@@ -349,13 +349,13 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
       )}
 
       {/* Porciones */}
-      <div className="border border-stone-200 bg-vanilla-100 p-4 space-y-3">
-        <p className="text-xs tracking-widest uppercase text-stone-400 font-light">
+      <div className="border border-linea bg-crema p-4 space-y-3">
+        <p className="text-xs tracking-widest uppercase text-negro/70 font-light">
           Ajuste de porciones
         </p>
         <div className="flex items-end gap-4">
           <div className="flex-1">
-            <label className="block text-xs tracking-widest uppercase text-stone-400 mb-1.5 font-light">
+            <label className="block text-xs tracking-widest uppercase text-negro/70 mb-1.5 font-light">
               Número de porciones
             </label>
             <input
@@ -364,18 +364,18 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
               min="1"
               step="1"
               onChange={(e) => handlePortionsChange(e.target.value)}
-              className="w-full bg-white border border-stone-200 text-stone-800
-                         px-3 py-2.5 text-sm font-light focus:outline-none focus:border-gold transition-all"
+              className="w-full bg-white border border-linea text-negro
+                         px-3 py-2.5 text-sm font-light focus:outline-none focus:border-oro transition-all"
             />
-            <p className="text-stone-400 text-xs mt-1 font-light">
+            <p className="text-negro/70 text-xs mt-1 font-light">
               Original: {Math.round(recipe.yield)} {recipe.yield_unit}
             </p>
           </div>
           {portionsChanged && (
             <button
               onClick={openSaveModal}
-              className="bg-stone-800 text-white text-xs tracking-widest uppercase font-medium
-                         px-4 py-2.5 hover:bg-stone-700 transition-all whitespace-nowrap"
+              className="bg-negro text-crema text-xs tracking-widest uppercase font-medium
+                         px-4 py-2.5 hover:bg-black transition-all whitespace-nowrap"
             >
               Guardar escalado
             </button>
@@ -383,20 +383,20 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
         </div>
 
         {portionsChanged && breakdown && (
-          <div className="space-y-1.5 pt-2 border-t border-stone-200">
+          <div className="space-y-1.5 pt-2 border-t border-linea">
             <div className="flex justify-between items-center">
-              <span className="text-stone-400 text-xs tracking-wide font-light">
+              <span className="text-negro/70 text-xs tracking-wide font-light">
                 Costo por porción
               </span>
-              <span className="text-stone-700 text-sm font-medium">{clp(breakdown.cost_per_portion)}</span>
+              <span className="text-negro/70 text-sm font-medium">{clp(breakdown.cost_per_portion)}</span>
             </div>
-            <div className="flex justify-between items-center bg-white border border-gold border-opacity-30 px-3 py-2">
-              <span className="text-gold text-xs tracking-wide font-medium uppercase tracking-widest">
+            <div className="flex justify-between items-center bg-white border border-oro border-opacity-30 px-3 py-2">
+              <span className="text-oro text-xs tracking-wide font-medium uppercase tracking-widest">
                 Precio final ({portionsNum} porciones)
               </span>
-              <span className="text-gold font-display text-xl">{clp(breakdown.suggested_price)}</span>
+              <span className="text-oro font-display text-xl">{clp(breakdown.suggested_price)}</span>
             </div>
-            <p className="text-stone-400 text-xs font-light">
+            <p className="text-negro/70 text-xs font-light">
               Este ajuste es temporal. Usa "Guardar escalado" para crear una versión permanente.
             </p>
           </div>
@@ -405,22 +405,22 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
 
       {/* Desglose de costos */}
       <div>
-        <p className="text-xs tracking-widest uppercase text-stone-400 font-light mb-3">Desglose</p>
+        <p className="text-xs tracking-widest uppercase text-negro/70 font-light mb-3">Desglose</p>
         <div className="space-y-1 mb-4">
           {breakdown.ingredients.map((ing) => (
             <div key={ing.ingredient_id}
-              className="flex justify-between items-center py-1.5 border-b border-stone-100 last:border-0">
+              className="flex justify-between items-center py-1.5 border-b border-linea last:border-0">
               <div>
-                <p className="text-stone-800 text-sm font-light">{ing.name}</p>
-                <p className="text-stone-400 text-xs mt-0.5">
+                <p className="text-negro text-sm font-light">{ing.name}</p>
+                <p className="text-negro/70 text-xs mt-0.5">
                   {ing.quantity % 1 === 0 ? ing.quantity : ing.quantity.toFixed(2)} {ing.unit} × {clp(ing.price_per_unit)}
                 </p>
               </div>
-              <span className="text-stone-700 text-sm font-light">{clp(ing.subtotal)}</span>
+              <span className="text-negro/70 text-sm font-light">{clp(ing.subtotal)}</span>
             </div>
           ))}
         </div>
-        <div className="space-y-1.5 pt-2 border-t border-stone-200">
+        <div className="space-y-1.5 pt-2 border-t border-linea">
           {[
             { label: "Costo de ingredientes", value: breakdown.ingredients_total },
             { label: "Costos fijos",          value: breakdown.indirect_costs    },
@@ -430,57 +430,57 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
               : []),
           ].map(({ label, value }) => (
             <div key={label} className="flex justify-between items-center">
-              <span className="text-stone-400 text-xs tracking-wide font-light">{label}</span>
-              <span className="text-stone-700 text-sm font-light">{clp(value)}</span>
+              <span className="text-negro/70 text-xs tracking-wide font-light">{label}</span>
+              <span className="text-negro/70 text-sm font-light">{clp(value)}</span>
             </div>
           ))}
-          <div className="flex justify-between items-center bg-vanilla-100 border border-stone-200 px-3 py-2 mt-1">
-            <span className="text-stone-600 text-xs tracking-wide font-medium">Costo total (sin recargo)</span>
-            <span className="text-stone-800 text-sm font-medium">{clp(breakdown.total_cost)}</span>
+          <div className="flex justify-between items-center bg-crema border border-linea px-3 py-2 mt-1">
+            <span className="text-negro/70 text-xs tracking-wide font-medium">Costo total (sin recargo)</span>
+            <span className="text-negro text-sm font-medium">{clp(breakdown.total_cost)}</span>
           </div>
           <div className="flex justify-between items-center">
-            <span className="text-stone-400 text-xs tracking-wide font-light">Recargo sobre costo (%)</span>
-            <span className="text-stone-700 text-sm font-light">{Math.round(breakdown.margin_pct * 100)}%</span>
+            <span className="text-negro/70 text-xs tracking-wide font-light">Recargo sobre costo (%)</span>
+            <span className="text-negro/70 text-sm font-light">{Math.round(breakdown.margin_pct * 100)}%</span>
           </div>
           <div className="flex justify-between items-center">
-            <span className="text-stone-400 text-xs tracking-wide font-light">
+            <span className="text-negro/70 text-xs tracking-wide font-light">
               Costo por porción (con recargo)
             </span>
-            <span className="text-stone-700 text-sm font-medium">{clp(breakdown.cost_per_portion)}</span>
+            <span className="text-negro/70 text-sm font-medium">{clp(breakdown.cost_per_portion)}</span>
           </div>
 
           {/* Fix 5+6: extras breakdown before final price */}
           <div className="flex justify-between items-center">
-            <span className="text-stone-400 text-xs tracking-wide font-light">Base con recargo</span>
-            <span className="text-stone-700 text-sm font-light">{clp(breakdown.base_price)}</span>
+            <span className="text-negro/70 text-xs tracking-wide font-light">Base con recargo</span>
+            <span className="text-negro/70 text-sm font-light">{clp(breakdown.base_price)}</span>
           </div>
           {breakdown.extra_charge > 0 && (
             <div className="flex justify-between items-center">
-              <span className="text-stone-400 text-xs tracking-wide font-light">
-                + Cobro extra <span className="text-stone-300">(oculto en cotización)</span>
+              <span className="text-negro/70 text-xs tracking-wide font-light">
+                + Cobro extra <span className="text-negro/70">(oculto en cotización)</span>
               </span>
-              <span className="text-stone-500 text-sm font-light">{clp(breakdown.extra_charge)}</span>
+              <span className="text-negro/70 text-sm font-light">{clp(breakdown.extra_charge)}</span>
             </div>
           )}
           {breakdown.delivery_cost > 0 && (
             <div className="flex justify-between items-center">
-              <span className="text-stone-400 text-xs tracking-wide font-light">+ Envío</span>
-              <span className="text-stone-700 text-sm font-light">{clp(breakdown.delivery_cost)}</span>
+              <span className="text-negro/70 text-xs tracking-wide font-light">+ Envío</span>
+              <span className="text-negro/70 text-sm font-light">{clp(breakdown.delivery_cost)}</span>
             </div>
           )}
 
-          <div className="flex justify-between items-center bg-vanilla-100 border border-gold border-opacity-30 px-3 py-2 mt-1">
-            <span className="text-gold text-xs tracking-wide font-medium uppercase tracking-widest">
+          <div className="flex justify-between items-center bg-crema border border-oro border-opacity-30 px-3 py-2 mt-1">
+            <span className="text-oro text-xs tracking-wide font-medium uppercase tracking-widest">
               Precio final torta completa
             </span>
-            <span className="text-gold font-display text-2xl">{clp(breakdown.suggested_price)}</span>
+            <span className="text-oro font-display text-2xl">{clp(breakdown.suggested_price)}</span>
           </div>
         </div>
       </div>
 
       {/* Datos del cliente */}
-      <div className="border-t border-stone-200 pt-4">
-        <label className="block text-xs tracking-widest uppercase text-stone-400 mb-1.5 font-light">
+      <div className="border-t border-linea pt-4">
+        <label className="block text-xs tracking-widest uppercase text-negro/70 mb-1.5 font-light">
           Nombre del cliente
         </label>
         <input
@@ -489,12 +489,12 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
           maxLength={100}
           placeholder="ej. María González"
           onChange={(e) => { setClientName(e.target.value); if (clientError) setClientError(false); }}
-          className={`w-full bg-vanilla-100 border text-stone-800 px-3 py-2.5 text-sm font-light
+          className={`w-full bg-crema border text-negro px-3 py-2.5 text-sm font-light
                       focus:outline-none transition-all
-                      ${clientError ? "border-terracota-500 focus:border-terracota-500" : "border-stone-200 focus:border-gold"}`}
+                      ${clientError ? "border-peligro focus:border-peligro" : "border-linea focus:border-oro"}`}
         />
         {clientError && (
-          <p className="text-terracota-500 text-xs tracking-wide mt-1">
+          <p className="text-peligro text-xs tracking-wide mt-1">
             El nombre del cliente es requerido para generar la cotización.
           </p>
         )}
@@ -504,7 +504,7 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
       <div className="space-y-4">
         <div className="grid grid-cols-3 gap-3">
           <div>
-            <label className="block text-xs tracking-widest uppercase text-stone-400 mb-1.5 font-light">
+            <label className="block text-xs tracking-widest uppercase text-negro/70 mb-1.5 font-light">
               Costos indirectos (%)
             </label>
             <input
@@ -513,12 +513,12 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
               min="0"
               placeholder="ej. 15"
               onChange={(e) => handleIndirectChange(e.target.value)}
-              className="w-full bg-vanilla-100 border border-stone-200 text-stone-800
-                         px-3 py-2.5 text-sm font-light focus:outline-none focus:border-gold transition-all"
+              className="w-full bg-crema border border-linea text-negro
+                         px-3 py-2.5 text-sm font-light focus:outline-none focus:border-oro transition-all"
             />
           </div>
           <div>
-            <label className="block text-xs tracking-widest uppercase text-stone-400 mb-1.5 font-light">
+            <label className="block text-xs tracking-widest uppercase text-negro/70 mb-1.5 font-light">
               Mano de obra (%)
             </label>
             <input
@@ -527,12 +527,12 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
               min="0"
               placeholder="ej. 30"
               onChange={(e) => handleLaborChange(e.target.value)}
-              className="w-full bg-vanilla-100 border border-stone-200 text-stone-800
-                         px-3 py-2.5 text-sm font-light focus:outline-none focus:border-gold transition-all"
+              className="w-full bg-crema border border-linea text-negro
+                         px-3 py-2.5 text-sm font-light focus:outline-none focus:border-oro transition-all"
             />
           </div>
           <div>
-            <label className="block text-xs tracking-widest uppercase text-stone-400 mb-1.5 font-light">
+            <label className="block text-xs tracking-widest uppercase text-negro/70 mb-1.5 font-light">
               Recargo sobre costo (%)
             </label>
             <input
@@ -541,18 +541,18 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
               min="0"
               placeholder="ej. 30"
               onChange={(e) => handleMarginChange(e.target.value)}
-              className="w-full bg-vanilla-100 border border-stone-200 text-stone-800
-                         px-3 py-2.5 text-sm font-light focus:outline-none focus:border-gold transition-all"
+              className="w-full bg-crema border border-linea text-negro
+                         px-3 py-2.5 text-sm font-light focus:outline-none focus:border-oro transition-all"
             />
           </div>
         </div>
 
         {/* Fix 5: additional charges section */}
-        <div className="border border-stone-200 p-4 space-y-3 bg-vanilla-100">
-          <p className="text-xs tracking-widest uppercase text-stone-400 font-light">Costos adicionales</p>
+        <div className="border border-linea p-4 space-y-3 bg-crema">
+          <p className="text-xs tracking-widest uppercase text-negro/70 font-light">Costos adicionales</p>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs tracking-widest uppercase text-stone-400 mb-1.5 font-light">
+              <label className="block text-xs tracking-widest uppercase text-negro/70 mb-1.5 font-light">
                 Cobro extra
               </label>
               <input
@@ -562,13 +562,13 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
                 step="1"
                 placeholder="ej. 3000"
                 onChange={(e) => handleExtraChargeChange(e.target.value)}
-                className="w-full bg-white border border-stone-200 text-stone-800
-                           px-3 py-2 text-sm font-light focus:outline-none focus:border-gold transition-all"
+                className="w-full bg-white border border-linea text-negro
+                           px-3 py-2 text-sm font-light focus:outline-none focus:border-oro transition-all"
               />
-              <p className="text-stone-400 text-xs mt-1 font-light">No visible en cotización</p>
+              <p className="text-negro/70 text-xs mt-1 font-light">No visible en cotización</p>
             </div>
             <div>
-              <label className="block text-xs tracking-widest uppercase text-stone-400 mb-1.5 font-light">
+              <label className="block text-xs tracking-widest uppercase text-negro/70 mb-1.5 font-light">
                 Costo de envío
               </label>
               <input
@@ -578,16 +578,16 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
                 step="500"
                 placeholder="ej. 2000"
                 onChange={(e) => handleDeliveryCostChange(e.target.value)}
-                className="w-full bg-white border border-stone-200 text-stone-800
-                           px-3 py-2 text-sm font-light focus:outline-none focus:border-gold transition-all"
+                className="w-full bg-white border border-linea text-negro
+                           px-3 py-2 text-sm font-light focus:outline-none focus:border-oro transition-all"
               />
-              <p className="text-stone-400 text-xs mt-1 font-light">Múltiplos de 500</p>
+              <p className="text-negro/70 text-xs mt-1 font-light">Múltiplos de 500</p>
             </div>
           </div>
         </div>
 
         {noDescError && (
-          <p className="text-terracota-500 text-xs tracking-wide">
+          <p className="text-peligro text-xs tracking-wide">
             La receta no tiene descripción. Agrégala antes de generar la cotización.
           </p>
         )}
@@ -595,8 +595,8 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
         <button
           onClick={handleDownload}
           disabled={!margin || downloading}
-          className="w-full bg-gold text-white text-xs tracking-widest uppercase font-medium
-                     py-3 hover:bg-gold-light transition-all
+          className="w-full bg-negro text-crema text-xs tracking-widest uppercase font-medium
+                     py-3 hover:bg-black transition-all
                      disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {downloading ? "Generando PDF..." : "Descargar PDF"}

@@ -1,5 +1,6 @@
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import logo from "../../assets/brand/logo-color.svg";
 
 const links = [
   { to: "/dashboard",   icon: "◉", label: "Dashboard"    },
@@ -17,7 +18,7 @@ export default function Sidebar() {
 
   return (
     <aside
-      className="hidden md:flex flex-col bg-white border-r border-stone-200"
+      className="hidden md:flex flex-col bg-white border-r border-linea"
       style={{
         position: "fixed",
         top: 0,
@@ -28,10 +29,10 @@ export default function Sidebar() {
         zIndex: 100,
       }}
     >
-      <div className="flex-shrink-0 px-8 py-10 border-b border-stone-100">
-        <h1 className="font-display text-2xl text-gold leading-tight">Angeles'S</h1>
-        <p className="text-stone-400 text-xs tracking-widest uppercase mt-1 font-light">
-          Coffee & Bakery
+      <div className="flex-shrink-0 px-8 py-10 border-b border-linea">
+        <img src={logo} alt="Angeles Bakery" className="h-14 w-auto" />
+        <p className="text-negro/70 text-xs tracking-[0.25em] uppercase mt-3 font-light">
+          Gestión
         </p>
       </div>
 
@@ -43,8 +44,8 @@ export default function Sidebar() {
             className={({ isActive }) =>
               `flex items-center gap-3 px-4 py-3 transition-all duration-200 text-sm tracking-wider ${
                 isActive
-                  ? "bg-vanilla-100 text-gold border-l-2 border-gold"
-                  : "text-stone-400 hover:text-stone-800 hover:bg-stone-100"
+                  ? "bg-crema text-oro border-l-2 border-oro"
+                  : "text-negro/70 hover:text-negro hover:bg-lino"
               }`
             }
           >
@@ -54,10 +55,10 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      <div className="flex-shrink-0 px-8 py-6 border-t border-stone-100">
+      <div className="flex-shrink-0 px-8 py-6 border-t border-linea">
         <button
           onClick={logout}
-          className="text-xs text-stone-400 hover:text-gold tracking-widest uppercase transition-colors"
+          className="text-xs text-negro/70 hover:text-oro tracking-widest uppercase transition-colors"
         >
           Cerrar sesión
         </button>

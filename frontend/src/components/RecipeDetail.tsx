@@ -53,11 +53,11 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onSaved }: Props
 
   return (
     <>
-      <div className="fixed inset-0 z-50 bg-stone-800 bg-opacity-40 flex items-end md:items-center justify-center p-4">
-        <div className="bg-white border border-stone-200 w-full max-w-lg max-h-[90vh] overflow-y-auto p-6 space-y-5 shadow-lg">
+      <div className="fixed inset-0 z-50 bg-negro bg-opacity-40 flex items-end md:items-center justify-center p-4">
+        <div className="bg-white border border-linea w-full max-w-lg max-h-[90vh] overflow-y-auto p-6 space-y-5 shadow-lg">
           <div className="flex items-center justify-between">
-            <h2 className="font-display text-2xl text-stone-800 truncate pr-4">{recipe.name}</h2>
-            <button onClick={onClose} className="text-stone-400 hover:text-stone-800 text-xl shrink-0">
+            <h2 className="font-display text-2xl text-negro truncate pr-4">{recipe.name}</h2>
+            <button onClick={onClose} className="text-negro/70 hover:text-negro text-xl shrink-0">
               ×
             </button>
           </div>
@@ -66,22 +66,22 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onSaved }: Props
             <span
               className={`text-xs px-2 py-0.5 border ${
                 recipe.is_base
-                  ? "text-gold border-gold border-opacity-40"
-                  : "text-stone-400 border-stone-200"
+                  ? "text-oro border-oro border-opacity-40"
+                  : "text-negro/70 border-linea"
               }`}
             >
               {recipe.is_base ? "Base" : "Versión"}
             </span>
-            <span className="text-stone-400 text-xs font-light">
+            <span className="text-negro/70 text-xs font-light">
               Rendimiento base: {recipe.yield} {recipe.yield_unit}
             </span>
-            <span className="text-stone-400 text-xs font-light">
+            <span className="text-negro/70 text-xs font-light">
               {recipe.ingredients.length} ingredientes
             </span>
           </div>
 
           {recipe.description && (
-            <p className="text-stone-500 text-sm font-light leading-relaxed">{recipe.description}</p>
+            <p className="text-negro/70 text-sm font-light leading-relaxed">{recipe.description}</p>
           )}
 
           {/* Foto */}
@@ -90,11 +90,11 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onSaved }: Props
               <img
                 src={photoUrl}
                 alt={recipe.name}
-                className="w-full h-44 object-cover border border-stone-200"
+                className="w-full h-44 object-cover border border-linea"
               />
               <button
                 onClick={() => setShowPhotoUpload(true)}
-                className="absolute bottom-2 right-2 bg-white border border-stone-200 text-stone-600 text-xs px-2 py-1 hover:border-gold hover:text-gold transition-all"
+                className="absolute bottom-2 right-2 bg-white border border-linea text-negro/70 text-xs px-2 py-1 hover:border-oro hover:text-oro transition-all"
               >
                 Reemplazar foto
               </button>
@@ -113,15 +113,15 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onSaved }: Props
           )}
 
           {/* Escalado dinámico */}
-          <div className="bg-vanilla-100 p-4 space-y-3">
+          <div className="bg-crema p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <label className="text-xs tracking-widest uppercase text-stone-400 font-light">
+              <label className="text-xs tracking-widest uppercase text-negro/70 font-light">
                 Escalar rendimiento
               </label>
               {isScaled && (
                 <button
                   onClick={() => setTargetYield(recipe.yield)}
-                  className="text-xs text-stone-400 hover:text-gold transition-colors tracking-wide"
+                  className="text-xs text-negro/70 hover:text-oro transition-colors tracking-wide"
                 >
                   Restablecer
                 </button>
@@ -135,7 +135,7 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onSaved }: Props
                 step={0.5}
                 value={targetYield}
                 onChange={(e) => setTargetYield(parseFloat(e.target.value))}
-                className="flex-1 accent-gold"
+                className="flex-1 accent-negro"
               />
               <input
                 type="number"
@@ -146,18 +146,18 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onSaved }: Props
                   const v = parseFloat(e.target.value);
                   if (v > 0) setTargetYield(v);
                 }}
-                className="w-20 bg-white border border-stone-200 text-stone-800 px-3 py-1.5 text-sm font-light focus:outline-none focus:border-gold transition-all text-center"
+                className="w-20 bg-white border border-linea text-negro px-3 py-1.5 text-sm font-light focus:outline-none focus:border-oro transition-all text-center"
               />
-              <span className="text-stone-400 text-xs shrink-0 w-16 truncate">
+              <span className="text-negro/70 text-xs shrink-0 w-16 truncate">
                 {recipe.yield_unit}
               </span>
             </div>
             {isScaled && (
               <div className="flex items-center justify-between">
-                <p className="text-xs text-gold font-light">Factor ×{factor.toFixed(2)}</p>
+                <p className="text-xs text-oro font-light">Factor ×{factor.toFixed(2)}</p>
                 <button
                   onClick={openSaveModal}
-                  className="text-xs bg-gold text-white px-3 py-1.5 tracking-widest uppercase font-medium hover:bg-gold-light transition-all"
+                  className="text-xs bg-negro text-crema px-3 py-1.5 tracking-widest uppercase font-medium hover:bg-black transition-all"
                 >
                   Guardar escalada
                 </button>
@@ -167,11 +167,11 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onSaved }: Props
 
           {/* Lista de ingredientes */}
           <div>
-            <p className="text-xs tracking-widest uppercase text-stone-400 font-light mb-3">
+            <p className="text-xs tracking-widest uppercase text-negro/70 font-light mb-3">
               Ingredientes{isScaled ? ` · para ${targetYield} ${recipe.yield_unit}` : ""}
             </p>
             {recipe.ingredients.length === 0 ? (
-              <p className="text-stone-400 text-xs font-light">Sin ingredientes registrados</p>
+              <p className="text-negro/70 text-xs font-light">Sin ingredientes registrados</p>
             ) : (
               <div className="space-y-1">
                 {recipe.ingredients.filter((ing) => (ing.kind ?? "ingredient") === "ingredient").map((ing) => {
@@ -179,10 +179,10 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onSaved }: Props
                   return (
                     <div
                       key={ing.ingredient_id}
-                      className="flex justify-between items-center py-2 border-b border-stone-100 last:border-0"
+                      className="flex justify-between items-center py-2 border-b border-linea last:border-0"
                     >
-                      <span className="text-stone-800 text-sm font-light">{ing.name}</span>
-                      <span className={`text-sm tabular-nums ${isScaled ? "text-gold" : "text-stone-600"}`}>
+                      <span className="text-negro text-sm font-light">{ing.name}</span>
+                      <span className={`text-sm tabular-nums ${isScaled ? "text-oro" : "text-negro/70"}`}>
                         {qty.toFixed(2)} {ing.unit}
                       </span>
                     </div>
@@ -194,7 +194,7 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onSaved }: Props
 
           {recipe.ingredients.some((ing) => ing.kind === "supply") && (
             <div>
-              <p className="text-xs tracking-widest uppercase text-stone-400 font-light mb-3">
+              <p className="text-xs tracking-widest uppercase text-negro/70 font-light mb-3">
                 Insumos (cajas, cartones)
               </p>
               <div className="space-y-1">
@@ -203,10 +203,10 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onSaved }: Props
                   return (
                     <div
                       key={ing.ingredient_id}
-                      className="flex justify-between items-center py-2 border-b border-stone-100 last:border-0"
+                      className="flex justify-between items-center py-2 border-b border-linea last:border-0"
                     >
-                      <span className="text-stone-800 text-sm font-light">{ing.name}</span>
-                      <span className={`text-sm tabular-nums ${isScaled ? "text-gold" : "text-stone-600"}`}>
+                      <span className="text-negro text-sm font-light">{ing.name}</span>
+                      <span className={`text-sm tabular-nums ${isScaled ? "text-oro" : "text-negro/70"}`}>
                         {qty.toFixed(2)} {ing.unit}
                       </span>
                     </div>
@@ -217,12 +217,12 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onSaved }: Props
           )}
 
           {/* Cotización */}
-          <div className="bg-white border border-stone-200 p-5 space-y-1">
+          <div className="bg-white border border-linea p-5 space-y-1">
             <div className="flex items-center gap-4 mb-4">
-              <p className="text-xs tracking-widest uppercase text-stone-400 font-light">
+              <p className="text-xs tracking-widest uppercase text-negro/70 font-light">
                 Cotización
               </p>
-              <div className="flex-1 h-px bg-stone-100" />
+              <div className="flex-1 h-px bg-lino" />
             </div>
             <QuotationGenerator recipe={recipe} />
           </div>
@@ -230,13 +230,13 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onSaved }: Props
           <div className="flex gap-3 pt-2">
             <button
               onClick={() => onEdit(recipe)}
-              className="flex-1 border border-stone-200 text-stone-600 text-xs tracking-widest uppercase font-medium py-2.5 hover:border-gold hover:text-gold transition-all"
+              className="flex-1 border border-linea text-negro/70 text-xs tracking-widest uppercase font-medium py-2.5 hover:border-oro hover:text-oro transition-all"
             >
               Editar
             </button>
             <button
               onClick={onClose}
-              className="flex-1 bg-gold text-white text-xs tracking-widest uppercase font-medium py-2.5 hover:bg-gold-light transition-all"
+              className="flex-1 bg-negro text-crema text-xs tracking-widest uppercase font-medium py-2.5 hover:bg-black transition-all"
             >
               Cerrar
             </button>
@@ -246,51 +246,51 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onSaved }: Props
 
       {/* Modal guardar receta escalada */}
       {showSaveModal && (
-        <div className="fixed inset-0 z-[60] bg-stone-800 bg-opacity-60 flex items-center justify-center p-4">
-          <div className="bg-white border border-stone-200 w-full max-w-sm p-6 space-y-4 shadow-xl">
+        <div className="fixed inset-0 z-[60] bg-negro bg-opacity-60 flex items-center justify-center p-4">
+          <div className="bg-white border border-linea w-full max-w-sm p-6 space-y-4 shadow-xl">
             <div className="flex items-center justify-between">
-              <h3 className="font-display text-xl text-stone-800">Guardar receta escalada</h3>
+              <h3 className="font-display text-xl text-negro">Guardar receta escalada</h3>
               <button
                 onClick={() => setShowSaveModal(false)}
-                className="text-stone-400 hover:text-stone-800 text-xl"
+                className="text-negro/70 hover:text-negro text-xl"
               >
                 ×
               </button>
             </div>
 
-            <div className="bg-vanilla-100 px-4 py-3 text-xs font-light text-stone-500 space-y-0.5">
+            <div className="bg-crema px-4 py-3 text-xs font-light text-negro/70 space-y-0.5">
               <p>Base: {recipe.yield} {recipe.yield_unit}</p>
-              <p className="text-gold font-medium">
+              <p className="text-oro font-medium">
                 Nueva: {targetYield} {recipe.yield_unit} (×{factor.toFixed(2)})
               </p>
             </div>
 
             <div>
-              <label className="block text-xs tracking-widest uppercase text-stone-400 mb-1.5 font-light">
+              <label className="block text-xs tracking-widest uppercase text-negro/70 mb-1.5 font-light">
                 Nombre de la nueva receta
               </label>
               <input
                 type="text"
                 value={saveName}
                 onChange={(e) => setSaveName(e.target.value)}
-                className="w-full bg-vanilla-100 border border-stone-200 text-stone-800 px-3 py-2 text-sm font-light focus:outline-none focus:border-gold transition-all"
+                className="w-full bg-crema border border-linea text-negro px-3 py-2 text-sm font-light focus:outline-none focus:border-oro transition-all"
                 autoFocus
               />
             </div>
 
             {saveError && (
-              <p className="text-terracota-500 text-xs tracking-wide">{saveError}</p>
+              <p className="text-peligro text-xs tracking-wide">{saveError}</p>
             )}
 
             {saveSuccess ? (
-              <p className="text-center text-sm font-light text-gold py-2">
+              <p className="text-center text-sm font-light text-oro py-2">
                 Receta guardada correctamente
               </p>
             ) : (
               <button
                 onClick={handleSaveScaled}
                 disabled={saving}
-                className="w-full bg-gold text-white text-xs tracking-widest uppercase font-medium py-3 hover:bg-gold-light transition-all disabled:opacity-50"
+                className="w-full bg-negro text-crema text-xs tracking-widest uppercase font-medium py-3 hover:bg-black transition-all disabled:opacity-50"
               >
                 {saving ? "Guardando..." : "Guardar"}
               </button>

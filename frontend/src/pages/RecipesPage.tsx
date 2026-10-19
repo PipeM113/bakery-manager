@@ -61,7 +61,7 @@ export default function RecipesPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <span className="text-gold text-sm tracking-widest uppercase animate-pulse">Cargando...</span>
+        <span className="text-oro text-sm tracking-widest uppercase animate-pulse">Cargando...</span>
       </div>
     );
   }
@@ -71,14 +71,14 @@ export default function RecipesPage() {
       <div className="flex items-end justify-between mb-8">
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <div className="h-px w-8 bg-gold opacity-40" />
-            <span className="text-gold text-xs tracking-[0.3em] uppercase font-light">Recetario</span>
+            <div className="h-px w-8 bg-oro/40" />
+            <span className="text-oro text-xs tracking-[0.3em] uppercase font-light">Recetario</span>
           </div>
-          <h1 className="font-display text-4xl text-stone-800">Recetas</h1>
+          <h1 className="font-display text-4xl text-negro">Recetas</h1>
         </div>
         <button
           onClick={openCreate}
-          className="bg-gold text-white text-xs tracking-widest uppercase font-medium px-5 py-3 hover:bg-gold-light transition-all duration-200"
+          className="bg-negro text-crema text-xs tracking-widest uppercase font-medium px-5 py-3 hover:bg-black transition-all duration-200"
         >
           + Nueva
         </button>
