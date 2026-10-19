@@ -1,3 +1,4 @@
+import Modal from "./Modal";
 import { useRef, useState } from "react";
 import * as XLSX from "xlsx";
 import api from "../services/api";
@@ -71,15 +72,37 @@ export default function IngredientImportModal({ onClose, onSuccess }: Props) {
   const succeeded = result && result.errors.length === 0;
 
   return (
-    <div className="fixed inset-0 z-50 bg-negro bg-opacity-40 flex items-end md:items-center justify-center p-4">
-      <div className="bg-white border border-linea w-full max-w-lg p-6 space-y-4 shadow-lg">
-
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <h2 className="font-display text-lg text-negro">Importar desde Excel</h2>
-          <button onClick={onClose} className="text-negro/70 hover:text-negro text-lg leading-none">×</button>
+    <Modal
+      title="Importar desde Excel"
+      onClose={onClose}
+      maxWidth="max-w-lg"
+      footer={
+        <div>
+          {error && <p className="text-peligro text-xs tracking-wide mb-2">{error}</p>}
+          <div className="flex gap-3 pt-1">
+          {!succeeded && (
+            <button
+              onClick={handleImport}
+              disabled={!file || importing}
+              data-primary-action
+              className="flex-1 bg-negro text-crema text-xs tracking-widest uppercase font-medium
+                         py-2.5 hover:bg-black transition-all disabled:opacity-50"
+            >
+              {importing ? "Importando..." : "Importar"}
+            </button>
+          )}
+          <button
+            onClick={onClose}
+            {...(succeeded ? { "data-primary-action": true } : {})}
+            className="flex-1 border border-linea text-negro/70 text-xs tracking-widest uppercase
+                       font-medium py-2.5 hover:border-oro hover:text-oro transition-all"
+          >
+            {succeeded ? "Cerrar" : "Cancelar"}
+          </button>
         </div>
-
+        </div>
+      }
+    >
         {/* Instructions */}
         <p className="text-xs text-negro/70 font-light leading-relaxed">
           El archivo .xlsx debe tener la fila 1 como encabezado con columnas:{" "}
@@ -163,29 +186,7 @@ export default function IngredientImportModal({ onClose, onSuccess }: Props) {
           </div>
         )}
 
-        {error && <p className="text-peligro text-xs tracking-wide">{error}</p>}
 
-        {/* Actions */}
-        <div className="flex gap-3 pt-1">
-          {!succeeded && (
-            <button
-              onClick={handleImport}
-              disabled={!file || importing}
-              className="flex-1 bg-negro text-crema text-xs tracking-widest uppercase font-medium
-                         py-2.5 hover:bg-black transition-all disabled:opacity-50"
-            >
-              {importing ? "Importando..." : "Importar"}
-            </button>
-          )}
-          <button
-            onClick={onClose}
-            className="flex-1 border border-linea text-negro/70 text-xs tracking-widest uppercase
-                       font-medium py-2.5 hover:border-oro hover:text-oro transition-all"
-          >
-            {succeeded ? "Cerrar" : "Cancelar"}
-          </button>
-        </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

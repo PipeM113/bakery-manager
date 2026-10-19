@@ -3,6 +3,7 @@ import { stockAdjustmentService } from "../api/stockAdjustmentService";
 import type { IIngredient } from "../types/ingredient";
 import type { AdjustmentReason, IStockAdjustment, StockAdjustmentForm } from "../types/stockAdjustment";
 import { todayInSantiago } from "../utils/businessDate";
+import Modal from "./Modal";
 
 const clp = (n: number) => `$${Math.round(n).toLocaleString("es-CL")}`;
 const num = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(3).replace(/0+$/, "").replace(/\.$/, ""));
@@ -75,17 +76,24 @@ export default function StockAdjustmentModal({ ingredient, onClose, onSaved }: P
   const label = "block text-xs tracking-widest uppercase text-negro/70 mb-1 font-light";
 
   return (
-    <div className="fixed inset-0 z-50 bg-negro bg-opacity-40 flex items-end md:items-center justify-center p-4">
-      <div className="bg-white border border-linea w-full max-w-md max-h-full overflow-y-auto p-4 space-y-3 shadow-lg">
-        <div className="flex items-center justify-between">
-          <h2 className="font-display text-lg text-negro">Ajustar stock · {ingredient.name}</h2>
-          <button onClick={onClose} className="text-negro/70 hover:text-negro text-lg leading-none" aria-label="Cerrar">×</button>
+    <Modal
+      title={`Ajustar stock · ${ingredient.name}`}
+      onClose={onClose}
+      footer={
+        <div className="space-y-2">
+          {error && <p className="text-peligro text-xs">{error}</p>}
+          <button type="submit" form="stock-adjustment-form" disabled={saving} data-primary-action
+            className="w-full bg-negro text-crema text-xs tracking-widest uppercase font-medium px-6 py-2.5 hover:bg-black transition-all disabled:opacity-50">
+            {saving ? "Guardando..." : "Guardar ajuste"}
+          </button>
         </div>
+      }
+    >
         <p className="text-xs text-negro/70 font-light">
           Stock actual: <span className="text-negro font-medium">{num(ingredient.stock_quantity)} {ingredient.default_unit}</span>
         </p>
 
-        <form onSubmit={submit} className="space-y-3">
+        <form id="stock-adjustment-form" onSubmit={submit} className="space-y-3">
           <div>
             <label className={label}>Motivo</label>
             <select value={reason} onChange={(e) => setReason(e.target.value as AdjustmentReason)} className={field}>
@@ -127,13 +135,6 @@ export default function StockAdjustmentModal({ ingredient, onClose, onSaved }: P
             <label className={label}>Fecha</label>
             <input type="date" value={date} max={todayInSantiago()} onChange={(e) => setDate(e.target.value)} className={field} />
           </div>
-
-          {error && <p className="text-peligro text-xs">{error}</p>}
-
-          <button type="submit" disabled={saving}
-            className="bg-negro text-crema text-xs tracking-widest uppercase font-medium px-6 py-2.5 hover:bg-black transition-all disabled:opacity-50">
-            {saving ? "Guardando..." : "Guardar ajuste"}
-          </button>
         </form>
 
         <div className="pt-2 border-t border-linea">
@@ -155,7 +156,6 @@ export default function StockAdjustmentModal({ ingredient, onClose, onSaved }: P
             </ul>
           )}
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

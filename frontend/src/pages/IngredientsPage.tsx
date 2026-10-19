@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import IngredientImportModal from "../components/IngredientImportModal";
 import StockAdjustmentModal from "../components/StockAdjustmentModal";
+import Modal from "../components/Modal";
 import { ingredientService } from "../api/ingredientService";
 import type { IIngredient, IngredientFormData } from "../types/ingredient";
 import { emptyIngredientForm } from "../types/ingredient";
@@ -278,18 +279,20 @@ export default function IngredientsPage() {
 
       {/* Modal */}
       {showForm && (
-        <div
-          className="fixed inset-0 z-50 bg-negro bg-opacity-40 flex items-end md:items-center justify-center p-4"
-        >
-          <div className="bg-white border border-linea w-full max-w-xs p-4 space-y-3 shadow-lg">
-            <div className="flex items-center justify-between">
-              <h2 className="font-display text-lg text-negro">
-                {editing ? `Editar ${singular}` : `Nuevo ${singular}`}
-              </h2>
-              <button onClick={() => setShowForm(false)}
-                className="text-negro/70 hover:text-negro text-lg leading-none">×</button>
+        <Modal
+          title={editing ? `Editar ${singular}` : `Nuevo ${singular}`}
+          onClose={() => setShowForm(false)}
+          footer={
+            <div className="space-y-2">
+              {error && <p className="text-peligro text-xs tracking-wide">{error}</p>}
+              <button onClick={handleSave} disabled={saving} data-primary-action
+                className="w-full bg-negro text-crema text-xs tracking-widest uppercase font-medium
+                           py-2 hover:bg-black transition-all disabled:opacity-50">
+                {saving ? "Guardando..." : "Guardar"}
+              </button>
             </div>
-
+          }
+        >
             <div>
               <label className="block text-xs tracking-widest uppercase text-negro/70 mb-1 font-light">Tipo</label>
               <select value={form.kind}
@@ -337,15 +340,7 @@ export default function IngredientsPage() {
                            px-3 py-1.5 text-sm font-light focus:outline-none focus:border-oro transition-all" />
             </div>
 
-            {error && <p className="text-peligro text-xs tracking-wide">{error}</p>}
-
-            <button onClick={handleSave} disabled={saving}
-              className="w-full bg-negro text-crema text-xs tracking-widest uppercase font-medium
-                         py-2 hover:bg-black transition-all disabled:opacity-50">
-              {saving ? "Guardando..." : "Guardar"}
-            </button>
-          </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

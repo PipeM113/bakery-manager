@@ -11,7 +11,7 @@
   --sidebar-width: 280px;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767px) {
   :root {
     --sidebar-width: 0px;
   }
@@ -44,5 +44,26 @@
   .ornament::after {
     content: '◆';
     @apply text-oro text-xs mx-2 opacity-50;
+  }
+}
+/* On a phone: what is tapped is at least 44 px and the fields are 16 px, so the phone does not zoom. */
+@media (max-width: 767px) {
+  button,
+  [role="button"],
+  select,
+  textarea,
+  input:not([type="hidden"]):not([type="file"]):not([type="checkbox"]):not([type="radio"]) {
+    min-height: 44px;
+  }
+  button, [role="button"] { min-width: 44px; }
+  a[href] {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: 16px !important;
   }
 }
