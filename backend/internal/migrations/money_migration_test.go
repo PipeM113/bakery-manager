@@ -95,7 +95,7 @@ func TestD1_MoneyColumnsAreIntegers(t *testing.T) {
 	migrationFileExists(t)
 	pgtest.Migrate(t, pool, migrationsDir, "up")
 	for _, c := range [][2]string{
-		{"sales", "unit_price"}, {"fixed_costs", "monthly_amount"},
+		{"sales", "unit_price"}, {"fixed_cost_versions", "monthly_amount"},
 		{"operational_expenses", "amount"}, {"quotations", "final_price"},
 	} {
 		var typ string

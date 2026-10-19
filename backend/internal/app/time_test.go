@@ -329,7 +329,7 @@ func TestT6_TrendEqualsTheMonthlyDashboardInFewQueries(t *testing.T) {
 			t.Fatalf("sale: status = %d: %s", status, raw)
 		}
 	}
-	if status, raw := api.do("POST", "/fixed-costs", map[string]any{"name": "Arriendo", "monthly_amount": 300}); status != http.StatusCreated {
+	if status, raw := api.do("POST", "/fixed-costs", map[string]any{"name": "Arriendo", "monthly_amount": 300, "valid_from": "2026-01"}); status != http.StatusCreated {
 		t.Fatalf("fixed cost: status = %d: %s", status, raw)
 	}
 	if status, raw := api.do("POST", "/expenses", map[string]any{
