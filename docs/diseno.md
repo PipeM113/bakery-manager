@@ -47,8 +47,8 @@ Playfair Display para títulos y DM Sans Light para el texto, las mismas de la w
 
 ## Pendiente
 
-- El PDF de las cotizaciones aún no usa estos colores ni las tipografías: requiere incluir las
-  fuentes en el servidor.
+- (Resuelto en el sprint 12) El PDF de las cotizaciones usa `crema`, `oro` y `negro`, Playfair Display
+  y DM Sans (incluidas en el servidor) y el logo en color. Ver `docs/cotizaciones.md`.
 - Sinera, la tipografía de título del manual, se usará cuando haya licencia comercial (como en la
   web).
 

@@ -81,11 +81,10 @@ func newBusiness(t *testing.T) *business {
 	b.expense = decode(t, raw)["id"].(string)
 	b.fixed = newFixed(t, b.a, map[string]any{"name": "Arriendo", "monthly_amount": 100, "valid_from": "2026-01"})
 
-	status, raw = b.a.do("POST", "/quotations/generate", map[string]any{
-		"recipe_id": pie, "client_name": "María", "margin_pct": 0.3, "indirect_cost_pct": 0.3,
-		"labor_cost_pct": 0.3, "extra_charge": 0, "delivery_cost": 0,
-	})
-	if status != http.StatusOK {
+	status, raw = b.a.do("POST", "/quotations", quote("María", 0, map[string]any{
+		"recipe_id": pie, "quantity": 1, "margin_pct": 0.3, "indirect_cost_pct": 0.3, "labor_cost_pct": 0.3,
+	}))
+	if status != http.StatusCreated {
 		t.Fatalf("quotation: status = %d: %.200s", status, raw)
 	}
 	if err := api.db.QueryRow(context.Background(), `select id from quotations limit 1`).Scan(&b.quotation); err != nil {

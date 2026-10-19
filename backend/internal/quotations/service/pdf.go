@@ -18,8 +18,6 @@ import (
 	"github.com/jung-kurt/gofpdf"
 	xdraw "golang.org/x/image/draw"
 	_ "golang.org/x/image/webp" // registers WebP for image.Decode
-
-	"github.com/PipeM113/bakery-manager/internal/config"
 )
 
 //go:embed assets/fonts/*.ttf assets/logo-color.png
@@ -59,13 +57,20 @@ type QuoteLine struct {
 	LineTotal int64
 }
 
+// Business is what the PDF prints about the business: contact and transfer data.
+type Business struct {
+	Name, Phone, Instagram     string
+	Bank, AccountType, Account string
+	Holder, RUT, Email         string
+}
+
 type QuoteData struct {
 	ClientName   string
 	Date         time.Time
 	Lines        []QuoteLine
 	DeliveryCost int64
 	Total        int64
-	Business     config.Business
+	Business     Business
 }
 
 const (
@@ -76,7 +81,7 @@ const (
 	rowPhotoH    = 16.0
 	rowPlainH    = 10.0
 	// The block after the lines (totals, transfer data, notice) must fit on one page.
-	closingH = 92.0
+	closingH = 100.0
 )
 
 // GenerateQuotePDF builds the A4 quotation: logo and client, one row per line, totals, transfer
@@ -251,13 +256,14 @@ func GenerateQuotePDF(data QuoteData) (*bytes.Buffer, error) {
 	y += 7
 	b := data.Business
 	text(fontLight, 10, negro)
-	for i, s := range []string{b.Bank, "Cuenta: " + b.Account, b.Holder, "RUT: " + b.RUT} {
+	transfer := []string{b.Holder, "RUT: " + b.RUT, b.Bank, b.AccountType, "N° de cuenta: " + b.Account, b.Email}
+	for i, s := range transfer {
 		cell(lm, y+float64(i)*5.5, half, 5, s, "L")
 	}
 	for i, s := range []string{b.Name, b.Phone, b.Instagram} {
 		cell(lm+half+5, y+float64(i)*5.5, half-5, 5, s, "L")
 	}
-	y += 4*5.5 + 6
+	y += float64(len(transfer))*5.5 + 6
 
 	pdf.SetFillColor(lino[0], lino[1], lino[2])
 	pdf.Rect(lm, y, contentW, 12, "F")

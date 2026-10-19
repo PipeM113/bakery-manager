@@ -38,18 +38,16 @@ type Config struct {
 	Business Business
 }
 
-// Business holds the contact and bank data printed in the quotation PDF.
+// Business holds the two secrets of the quotation PDF that stay in the environment. The rest of
+// the business data (name, phone, bank...) is edited in the app and lives in the database.
 type Business struct {
-	Name, Phone, Instagram, Bank, Account, Holder, RUT string
+	Account, RUT string
 }
 
 // Missing names the environment variables that are not set.
 func (b Business) Missing() []string {
 	var missing []string
-	for _, f := range []struct{ env, value string }{
-		{"BIZ_NAME", b.Name}, {"BIZ_PHONE", b.Phone}, {"BIZ_INSTAGRAM", b.Instagram}, {"BIZ_BANK", b.Bank},
-		{"BIZ_ACCOUNT", b.Account}, {"BIZ_HOLDER", b.Holder}, {"BIZ_RUT", b.RUT},
-	} {
+	for _, f := range []struct{ env, value string }{{"BIZ_ACCOUNT", b.Account}, {"BIZ_RUT", b.RUT}} {
 		if strings.TrimSpace(f.value) == "" {
 			missing = append(missing, f.env)
 		}
@@ -69,13 +67,8 @@ func Load(getenv func(string) string) (Config, error) {
 		JWTSecret:   strings.TrimSpace(rawSecret),
 		DBMaxConns:  defaultDBMaxConns,
 		Business: Business{
-			Name:      strings.TrimSpace(getenv("BIZ_NAME")),
-			Phone:     strings.TrimSpace(getenv("BIZ_PHONE")),
-			Instagram: strings.TrimSpace(getenv("BIZ_INSTAGRAM")),
-			Bank:      strings.TrimSpace(getenv("BIZ_BANK")),
-			Account:   strings.TrimSpace(getenv("BIZ_ACCOUNT")),
-			Holder:    strings.TrimSpace(getenv("BIZ_HOLDER")),
-			RUT:       strings.TrimSpace(getenv("BIZ_RUT")),
+			Account: strings.TrimSpace(getenv("BIZ_ACCOUNT")),
+			RUT:     strings.TrimSpace(getenv("BIZ_RUT")),
 		},
 	}
 

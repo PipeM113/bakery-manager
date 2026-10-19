@@ -44,7 +44,7 @@ func fillProfile(t *testing.T, api *client) {
 // newReadyAPI has the environment and the profile filled: its PDFs can be made.
 func newReadyAPI(t *testing.T) (*client, *pgxpool.Pool) {
 	t.Helper()
-	api, admin := newReadyAPI(t)
+	api, admin := newQuotesAPI(t, fullBusiness)
 	fillProfile(t, api)
 	return api, admin
 }
