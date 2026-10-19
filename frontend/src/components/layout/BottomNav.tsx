@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "../../context/useAuth";
 
 // Four sections fit in the bar at 360 px; the rest are one tap away in "Más".
 const main = [
@@ -15,6 +15,7 @@ const more = [
   { to: "/expenses",      icon: "◷", label: "Gastos"       },
   { to: "/profitability", icon: "◈", label: "Rentabilidad" },
   { to: "/business",      icon: "⌂", label: "Datos del negocio" },
+  { to: "/account",       icon: "☺", label: "Mi cuenta" },
 ];
 
 const item = (active: boolean) =>

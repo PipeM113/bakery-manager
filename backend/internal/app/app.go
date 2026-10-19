@@ -81,6 +81,7 @@ func NewWithClock(cfg config.Config, db *pgxpool.Pool, photos PhotoUploader, clk
 			AllowedOrigins:   cfg.CORSOrigins,
 			AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 			AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
+			ExposedHeaders:   []string{"Retry-After"}, // the login page shows how long to wait
 			AllowCredentials: false,
 			MaxAge:           600,
 		}))

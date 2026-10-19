@@ -4,8 +4,8 @@ import type { IIngredient } from "../types/ingredient";
 import type { AdjustmentReason, IStockAdjustment, StockAdjustmentForm } from "../types/stockAdjustment";
 import { todayInSantiago } from "../utils/businessDate";
 import Modal from "./Modal";
+import { formatCLP } from "../utils/money";
 
-const clp = (n: number) => `$${Math.round(n).toLocaleString("es-CL")}`;
 const num = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(3).replace(/0+$/, "").replace(/\.$/, ""));
 
 const REASONS: { value: AdjustmentReason; label: string; help: string }[] = [
@@ -149,7 +149,7 @@ export default function StockAdjustmentModal({ ingredient, onClose, onSaved }: P
                   {" · "}{a.adjusted_on}{" · "}
                   {a.quantity_delta > 0 ? "+" : ""}{num(a.quantity_delta)} {a.unit}
                   {" "}({num(a.stock_before)} → {num(a.stock_after)})
-                  {a.loss_amount > 0 && <span className="text-peligro"> · pérdida {clp(a.loss_amount)}</span>}
+                  {a.loss_amount > 0 && <span className="text-peligro"> · pérdida {formatCLP(a.loss_amount)}</span>}
                   {a.note && <span> · {a.note}</span>}
                 </li>
               ))}

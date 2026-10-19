@@ -3,8 +3,8 @@ import { expenseService } from "../api/expenseService";
 import { expenseCategoryService } from "../api/expenseCategoryService";
 import type { IExpense, IExpenseCategory, ExpenseFormData } from "../types/expense";
 import { todayInSantiago, currentMonthYear } from "../utils/businessDate";
+import { formatCLP } from "../utils/money";
 
-const clp = (n: number) => `$${Math.round(n).toLocaleString("es-CL")}`;
 
 const today = todayInSantiago;
 
@@ -423,7 +423,7 @@ export default function ExpensesPage() {
             {expenses.length > 0 && (
               <span className="text-xs text-negro/70 font-light ml-2">
                 Total:{" "}
-                <span className="text-oro font-medium">{clp(totalMonth)}</span>
+                <span className="text-oro font-medium">{formatCLP(totalMonth)}</span>
               </span>
             )}
           </div>
@@ -456,7 +456,7 @@ export default function ExpensesPage() {
                       {e.category}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-right text-negro font-light">{clp(e.amount)}</td>
+                  <td className="px-6 py-4 text-right text-negro font-light">{formatCLP(e.amount)}</td>
                   <td className="px-6 py-4">
                     <div className="flex gap-3 justify-end">
                       <button

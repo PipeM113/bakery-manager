@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "../../context/useAuth";
 import logo from "../../assets/brand/logo-color.svg";
 
 const links = [
@@ -12,6 +12,7 @@ const links = [
   { to: "/expenses",       icon: "◷", label: "Gastos"        },
   { to: "/profitability",  icon: "◈", label: "Rentabilidad"  },
   { to: "/business",       icon: "⌂", label: "Datos del negocio" },
+  { to: "/account",        icon: "☺", label: "Mi cuenta" },
 ];
 
 export default function Sidebar() {

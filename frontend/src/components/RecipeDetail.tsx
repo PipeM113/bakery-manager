@@ -3,6 +3,7 @@ import type { IRecipe } from "../types/recipe";
 import { recipeService } from "../api/recipeService";
 import RecipePhotoUpload from "./RecipePhotoUpload";
 import QuotationGenerator from "./QuotationGenerator";
+import { apiErrorMessage } from "../utils/apiError";
 
 interface Props {
   recipe: IRecipe;
@@ -44,8 +45,8 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onSaved }: Props
         setShowSaveModal(false);
         onSaved();
       }, 1200);
-    } catch (e: any) {
-      setSaveError(e.response?.data?.error || "Error al guardar");
+    } catch (e) {
+      setSaveError(apiErrorMessage(e, "Error al guardar"));
     } finally {
       setSaving(false);
     }

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import api from "../services/api";
 import { quotationService } from "../api/quotationService";
 import type { IRecipe } from "../types/recipe";
+import { formatCLP } from "../utils/money";
 
 interface Props {
   recipe: IRecipe;
@@ -37,7 +38,6 @@ interface CostBreakdown {
 
 type ToastState = { msg: string; ok: boolean } | null;
 
-const clp = (n: number) => `$${Math.round(n).toLocaleString("es-CL")}`;
 
 export default function QuotationGenerator({ recipe, deferredSave = false, onDeferredSaveDone }: Props) {
   const [indirectPct, setIndirectPct] = useState(String(Math.round(recipe.indirect_cost_pct * 100)));
@@ -385,13 +385,13 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
               <span className="text-negro/70 text-xs tracking-wide font-light">
                 Costo por porción
               </span>
-              <span className="text-negro/70 text-sm font-medium">{clp(breakdown.cost_per_portion)}</span>
+              <span className="text-negro/70 text-sm font-medium">{formatCLP(breakdown.cost_per_portion)}</span>
             </div>
             <div className="flex justify-between items-center bg-white border border-oro border-opacity-30 px-3 py-2">
               <span className="text-oro text-xs tracking-wide font-medium uppercase tracking-widest">
                 Precio final ({portionsNum} porciones)
               </span>
-              <span className="text-oro font-display text-xl">{clp(breakdown.suggested_price)}</span>
+              <span className="text-oro font-display text-xl">{formatCLP(breakdown.suggested_price)}</span>
             </div>
             <p className="text-negro/70 text-xs font-light">
               Este ajuste es temporal. Usa "Guardar escalado" para crear una versión permanente.
@@ -410,10 +410,10 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
               <div>
                 <p className="text-negro text-sm font-light">{ing.name}</p>
                 <p className="text-negro/70 text-xs mt-0.5">
-                  {ing.quantity % 1 === 0 ? ing.quantity : ing.quantity.toFixed(2)} {ing.unit} × {clp(ing.price_per_unit)}
+                  {ing.quantity % 1 === 0 ? ing.quantity : ing.quantity.toFixed(2)} {ing.unit} × {formatCLP(ing.price_per_unit)}
                 </p>
               </div>
-              <span className="text-negro/70 text-sm font-light">{clp(ing.subtotal)}</span>
+              <span className="text-negro/70 text-sm font-light">{formatCLP(ing.subtotal)}</span>
             </div>
           ))}
         </div>
@@ -428,12 +428,12 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
           ].map(({ label, value }) => (
             <div key={label} className="flex justify-between items-center">
               <span className="text-negro/70 text-xs tracking-wide font-light">{label}</span>
-              <span className="text-negro/70 text-sm font-light">{clp(value)}</span>
+              <span className="text-negro/70 text-sm font-light">{formatCLP(value)}</span>
             </div>
           ))}
           <div className="flex justify-between items-center bg-crema border border-linea px-3 py-2 mt-1">
             <span className="text-negro/70 text-xs tracking-wide font-medium">Costo total (sin recargo)</span>
-            <span className="text-negro text-sm font-medium">{clp(breakdown.total_cost)}</span>
+            <span className="text-negro text-sm font-medium">{formatCLP(breakdown.total_cost)}</span>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-negro/70 text-xs tracking-wide font-light">Recargo sobre costo (%)</span>
@@ -443,26 +443,26 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
             <span className="text-negro/70 text-xs tracking-wide font-light">
               Costo por porción (con recargo)
             </span>
-            <span className="text-negro/70 text-sm font-medium">{clp(breakdown.cost_per_portion)}</span>
+            <span className="text-negro/70 text-sm font-medium">{formatCLP(breakdown.cost_per_portion)}</span>
           </div>
 
           {/* Fix 5+6: extras breakdown before final price */}
           <div className="flex justify-between items-center">
             <span className="text-negro/70 text-xs tracking-wide font-light">Base con recargo</span>
-            <span className="text-negro/70 text-sm font-light">{clp(breakdown.base_price)}</span>
+            <span className="text-negro/70 text-sm font-light">{formatCLP(breakdown.base_price)}</span>
           </div>
           {breakdown.extra_charge > 0 && (
             <div className="flex justify-between items-center">
               <span className="text-negro/70 text-xs tracking-wide font-light">
                 + Cobro extra <span className="text-negro/70">(oculto en cotización)</span>
               </span>
-              <span className="text-negro/70 text-sm font-light">{clp(breakdown.extra_charge)}</span>
+              <span className="text-negro/70 text-sm font-light">{formatCLP(breakdown.extra_charge)}</span>
             </div>
           )}
           {breakdown.delivery_cost > 0 && (
             <div className="flex justify-between items-center">
               <span className="text-negro/70 text-xs tracking-wide font-light">+ Envío</span>
-              <span className="text-negro/70 text-sm font-light">{clp(breakdown.delivery_cost)}</span>
+              <span className="text-negro/70 text-sm font-light">{formatCLP(breakdown.delivery_cost)}</span>
             </div>
           )}
 
@@ -470,7 +470,7 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
             <span className="text-oro text-xs tracking-wide font-medium uppercase tracking-widest">
               Precio final torta completa
             </span>
-            <span className="text-oro font-display text-2xl">{clp(breakdown.suggested_price)}</span>
+            <span className="text-oro font-display text-2xl">{formatCLP(breakdown.suggested_price)}</span>
           </div>
         </div>
       </div>

@@ -6,16 +6,10 @@ import {
   type TrendPoint,
 } from "../api/analyticsService";
 import { currentMonthYear } from "../utils/businessDate";
+import { formatCLP } from "../utils/money";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
-function clp(value: number) {
-  return new Intl.NumberFormat("es-CL", {
-    style: "currency",
-    currency: "CLP",
-    maximumFractionDigits: 0,
-  }).format(value);
-}
 
 function pct(value: number) {
   return `${value.toFixed(1)}%`;
@@ -166,7 +160,9 @@ export default function ProfitabilityPage() {
   const [metrics,  setMetrics]  = useState<MonthlyMetrics | null>(null);
   const [recipes,  setRecipes]  = useState<RecipeMetrics[]>([]);
   const [trends,   setTrends]   = useState<TrendPoint[]>([]);
-  const [loading,  setLoading]  = useState(true);
+  const [loadedKey, setLoadedKey] = useState<string | null>(null);
+  const key = `${year}-${month}`;
+  const loading = loadedKey !== key; // loading until the data of the chosen month has arrived
 
   // year options: current year and 2 years back
   const yearOptions = useMemo(() => {
@@ -175,20 +171,18 @@ export default function ProfitabilityPage() {
   }, []);
 
   useEffect(() => {
-    setLoading(true);
     Promise.all([
       analyticsService.getMonthlyMetrics(month, year),
       analyticsService.getRecipeMetrics(month, year),
       analyticsService.getTrends(6),
     ])
       .then(([m, r, t]) => {
-        console.log('Monthly metrics:', m);
         setMetrics(m);
         setRecipes(r ?? []);
         setTrends(t ?? []);
       })
-      .finally(() => setLoading(false));
-  }, [month, year]);
+      .finally(() => setLoadedKey(key));
+  }, [month, year, key]);
 
   return (
     <div className="px-6 py-10 max-w-2xl mx-auto md:max-w-none md:px-10">
@@ -235,12 +229,12 @@ export default function ProfitabilityPage() {
           {/* KPI grid */}
           {metrics && (
             <div className="grid grid-cols-1 gap-4 mb-10 min-[480px]:grid-cols-2 xl:grid-cols-4">
-              <KpiCard label="Ingresos Totales"      value={clp(metrics.total_revenue)}             accent="green" />
-              <KpiCard label="Costo de ingredientes e insumos"       value={clp(metrics.total_ingredients_cost)}    accent="red" />
-              <KpiCard label="Costos Fijos"          value={clp(metrics.total_fixed_costs)}         accent="yellow" />
-              <KpiCard label="Gastos Operacionales"  value={clp(metrics.total_operational_expenses)} accent="red" />
-              <KpiCard label="Mermas del mes"        value={clp(metrics.total_waste_cost)}          accent="red" />
-              <KpiCard label="Ganancia Neta"         value={clp(metrics.net_profit)}                accent="dark-green" large />
+              <KpiCard label="Ingresos Totales"      value={formatCLP(metrics.total_revenue)}             accent="green" />
+              <KpiCard label="Costo de ingredientes e insumos"       value={formatCLP(metrics.total_ingredients_cost)}    accent="red" />
+              <KpiCard label="Costos Fijos"          value={formatCLP(metrics.total_fixed_costs)}         accent="yellow" />
+              <KpiCard label="Gastos Operacionales"  value={formatCLP(metrics.total_operational_expenses)} accent="red" />
+              <KpiCard label="Mermas del mes"        value={formatCLP(metrics.total_waste_cost)}          accent="red" />
+              <KpiCard label="Ganancia Neta"         value={formatCLP(metrics.net_profit)}                accent="dark-green" large />
               <KpiCard label="Margen de Ganancia"    value={pct(metrics.profit_margin)}             accent={metrics.profit_margin >= 0 ? "green" : "red"} />
             </div>
           )}
@@ -306,10 +300,10 @@ export default function ProfitabilityPage() {
                         >
                           <td className="px-5 py-3 text-negro font-light min-w-[9rem]">{r.recipe_name}</td>
                           <td className="px-5 py-3 text-negro/70">{r.units_sold}</td>
-                          <td className="px-5 py-3 text-negro/70">{clp(r.total_revenue)}</td>
-                          <td className="px-5 py-3 text-negro/70">{clp(r.total_cost)}</td>
+                          <td className="px-5 py-3 text-negro/70">{formatCLP(r.total_revenue)}</td>
+                          <td className="px-5 py-3 text-negro/70">{formatCLP(r.total_cost)}</td>
                           <td className={`px-5 py-3 font-light ${profit >= 0 ? "text-negro" : "text-peligro"}`}>
-                            {clp(profit)}
+                            {formatCLP(profit)}
                           </td>
                           <td className={`px-5 py-3 font-light ${positiveMargin ? "text-negro" : "text-peligro"}`}>
                             {pct(r.gross_margin)}
@@ -348,7 +342,7 @@ export default function ProfitabilityPage() {
                       {label}
                     </span>
                     <span className={`text-sm ${color} ${bold ? "font-medium" : "font-light"}`}>
-                      {clp(Math.abs(value))}
+                      {formatCLP(Math.abs(value))}
                     </span>
                   </div>
                 ))}
@@ -362,8 +356,8 @@ export default function ProfitabilityPage() {
                     <div className="mt-4 pt-3 border-t border-linea">
                       <p className="text-xs text-negro/70 font-light mb-1 tracking-wide uppercase">Auditoría</p>
                       <p className="text-xs text-negro/70 font-mono">
-                        Ganancia neta = {clp(metrics.total_revenue)} − ({clp(metrics.total_ingredients_cost)} + {clp(metrics.total_fixed_costs)} + {clp(metrics.total_operational_expenses)} + {clp(metrics.total_waste_cost)}) = {clp(computed)}
-                        {" "}<span className={ok ? "text-negro" : "text-peligro"}>{ok ? "✓" : `⚠ diff ${clp(diff)}`}</span>
+                        Ganancia neta = {formatCLP(metrics.total_revenue)} − ({formatCLP(metrics.total_ingredients_cost)} + {formatCLP(metrics.total_fixed_costs)} + {formatCLP(metrics.total_operational_expenses)} + {formatCLP(metrics.total_waste_cost)}) = {formatCLP(computed)}
+                        {" "}<span className={ok ? "text-negro" : "text-peligro"}>{ok ? "✓" : `⚠ diff ${formatCLP(diff)}`}</span>
                       </p>
                     </div>
                   );

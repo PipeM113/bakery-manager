@@ -1,8 +1,9 @@
 import logo from "../assets/brand/logo-color.svg";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/useAuth";
 import api from "../services/api";
+import { apiErrorMessage } from "../utils/apiError";
 
 export default function LoginPage() {
   const [email, setEmail]       = useState("");
@@ -20,8 +21,18 @@ export default function LoginPage() {
       const { data } = await api.post("/auth/login", { email, password });
       login(data.token);
       navigate("/dashboard");
-    } catch {
-      setError("Correo o contraseña incorrectos");
+    } catch (err) {
+      const res = (err as { response?: { status?: number; headers?: Record<string, string> } }).response;
+      if (res?.status === 429) {
+        // Locked after too many failed attempts: the backend says when to try again (Retry-After, in seconds).
+        const seconds = Number(res.headers?.["retry-after"]);
+        const minutes = Number.isFinite(seconds) && seconds > 0 ? Math.ceil(seconds / 60) : 0;
+        setError(minutes
+          ? `Demasiados intentos fallidos. Vuelve a intentar en ${minutes} ${minutes === 1 ? "minuto" : "minutos"}.`
+          : apiErrorMessage(err, "Demasiados intentos fallidos. Espera unos minutos."));
+      } else {
+        setError("Correo o contraseña incorrectos");
+      }
     } finally {
       setLoading(false);
     }

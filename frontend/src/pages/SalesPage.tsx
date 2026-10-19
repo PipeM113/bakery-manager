@@ -16,8 +16,8 @@ import type { IRecipe } from "../types/recipe";
 import type { IIngredient } from "../types/ingredient";
 import api from "../services/api";
 import { todayInSantiago } from "../utils/businessDate";
+import { formatCLP } from "../utils/money";
 
-const clp = (n: number) => `$${Math.round(n).toLocaleString("es-CL")}`;
 
 const today = todayInSantiago;
 
@@ -550,7 +550,7 @@ export default function SalesPage() {
           <p className="text-negro/70 text-xs mb-3 font-light">
             Total:{" "}
             <span className="text-oro font-medium">
-              {clp((parseInt(quantity) || 0) * (parseFloat(unitPrice) || 0))}
+              {formatCLP((parseInt(quantity) || 0) * (parseFloat(unitPrice) || 0))}
             </span>
           </p>
         )}
@@ -648,7 +648,7 @@ export default function SalesPage() {
                         <p className="text-xs text-negro/70 font-light">{new Date(q.created_at).toLocaleDateString("es-CL")}</p>
                       </div>
                       <div className="text-right shrink-0">
-                        <p className={`font-medium ${q.status === "cancelled" ? "text-negro/70" : "text-negro"}`}>{clp(q.total)}</p>
+                        <p className={`font-medium ${q.status === "cancelled" ? "text-negro/70" : "text-negro"}`}>{formatCLP(q.total)}</p>
                         <span className={`inline-block mt-1 px-2 py-0.5 text-xs font-medium rounded-sm ${STATUS_STYLE[q.status]}`}>
                           {STATUS_LABEL[q.status]}
                         </span>
@@ -699,7 +699,7 @@ export default function SalesPage() {
                         {productsOf(q)}
                       </td>
                       <td className={`px-6 py-4 text-right font-medium ${q.status === "cancelled" ? "text-negro/70" : "text-negro"}`}>
-                        {clp(q.total)}
+                        {formatCLP(q.total)}
                       </td>
                       <td className="px-6 py-4 text-center">
                         <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded-sm ${STATUS_STYLE[q.status]}`}>
@@ -786,7 +786,7 @@ export default function SalesPage() {
 
             {sales.length > 0 && (
               <span className="text-xs text-negro/70 font-light whitespace-nowrap">
-                Total: <span className="text-oro font-medium">{clp(totalRevenue)}</span>
+                Total: <span className="text-oro font-medium">{formatCLP(totalRevenue)}</span>
               </span>
             )}
           </div>
@@ -814,8 +814,8 @@ export default function SalesPage() {
                       <td className="px-6 py-4 text-negro/70 font-light whitespace-nowrap">{s.sale_date}</td>
                       <td className="px-6 py-4 text-negro font-light">{s.recipe_name}</td>
                       <td className="px-6 py-4 text-right text-negro/70 font-light">{s.quantity_sold}</td>
-                      <td className="px-6 py-4 text-right text-negro/70 font-light">{clp(s.unit_price)}</td>
-                      <td className="px-6 py-4 text-right font-medium text-negro">{clp(s.total_price)}</td>
+                      <td className="px-6 py-4 text-right text-negro/70 font-light">{formatCLP(s.unit_price)}</td>
+                      <td className="px-6 py-4 text-right font-medium text-negro">{formatCLP(s.total_price)}</td>
                       <td className="px-6 py-4 text-right">
                         {s.order_id ? (
                           <span className="text-xs text-negro/70 tracking-widest uppercase font-light">En un pedido</span>

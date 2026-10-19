@@ -8,11 +8,11 @@ import type { IIngredient, IngredientFormData } from "../types/ingredient";
 import { emptyIngredientForm } from "../types/ingredient";
 import type { IngredientKind } from "../types/ingredient";
 import { todayInSantiago } from "../utils/businessDate";
+import { formatCLP } from "../utils/money";
+import { apiErrorMessage } from "../utils/apiError";
 
 const UNITS = ["gr", "kg", "ml", "lt", "und"];
 
-const clp = (n: number) =>
-  `$${Math.round(n).toLocaleString("es-CL")}`;
 
 function PriceDisplay({ price, unit }: { price: number; unit: string }) {
   const conversions: Record<string, { label: string; factor: number }[]> = {
@@ -27,7 +27,7 @@ function PriceDisplay({ price, unit }: { price: number; unit: string }) {
     <div className="flex gap-3 flex-wrap mt-1">
       {variants.map(({ label, factor }) => (
         <span key={label} className="text-negro/70 text-xs font-light">
-          {clp(price * factor)} <span className="opacity-60">{label}</span>
+          {formatCLP(price * factor)} <span className="opacity-60">{label}</span>
         </span>
       ))}
     </div>
@@ -111,8 +111,8 @@ export default function IngredientsPage() {
       }
       setShowForm(false);
       load();
-    } catch (e: any) {
-      setError(e.response?.data?.error || "Error al guardar");
+    } catch (e) {
+      setError(apiErrorMessage(e, "Error al guardar"));
     } finally {
       setSaving(false);
     }
@@ -233,7 +233,7 @@ export default function IngredientsPage() {
                     {lowStock && <span className="text-peligro text-xs">◆ Stock bajo</span>}
                     <PriceDisplay price={i.price_per_unit} unit={i.default_unit} />
                     <p className="text-negro/70 text-xs font-light mt-0.5">
-                      Envase: {i.package_size} {i.default_unit} · {clp(i.package_price)}
+                      Envase: {i.package_size} {i.default_unit} · {formatCLP(i.package_price)}
                       {i.brand && <span> · {i.brand}</span>}
                     </p>
                     <p className="text-negro/70 text-xs font-light mt-0.5">
@@ -278,7 +278,7 @@ export default function IngredientsPage() {
                         {lowStock && <span className="ml-2 text-peligro text-xs">◆ Stock bajo</span>}
                       </td>
                       <td className="px-4 py-3 text-negro/70 font-light">{i.brand}</td>
-                      <td className="px-4 py-3 text-negro/70 font-light whitespace-nowrap">{i.package_size} {i.default_unit} · {clp(i.package_price)}</td>
+                      <td className="px-4 py-3 text-negro/70 font-light whitespace-nowrap">{i.package_size} {i.default_unit} · {formatCLP(i.package_price)}</td>
                       <td className="px-4 py-3"><PriceDisplay price={i.price_per_unit} unit={i.default_unit} /></td>
                       <td className={`px-4 py-3 whitespace-nowrap font-light ${lowStock ? "text-peligro" : "text-negro/70"}`}>
                         {Number.isInteger(i.stock_quantity) ? i.stock_quantity : i.stock_quantity.toFixed(3)} {i.default_unit}
@@ -367,7 +367,7 @@ export default function IngredientsPage() {
             {numericFields.map(({ label, key, placeholder }) => (
               <div key={key}>
                 <label className="block text-xs tracking-widest uppercase text-negro/70 mb-1 font-light">{label}</label>
-                <input type="number" value={(form as any)[key]} placeholder={placeholder}
+                <input type="number" value={(form as unknown as Record<string, string | number>)[key]} placeholder={placeholder}
                   onChange={(e) => setForm({ ...form, [key]: e.target.value === "" ? "" : parseFloat(e.target.value) })}
                   className="w-full bg-crema border border-linea text-negro
                              px-3 py-1.5 text-sm font-light focus:outline-none focus:border-oro transition-all" />

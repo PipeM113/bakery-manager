@@ -1,7 +1,7 @@
 import type { IOrder } from "../types/order";
 import { useIsPhone } from "../hooks/useIsPhone";
+import { formatCLP } from "../utils/money";
 
-const clp = (n: number) => `$${Math.round(n).toLocaleString("es-CL")}`;
 const summary = (o: IOrder) =>
   o.lines.map((l) => `${l.quantity_sold} × ${l.recipe_name}${l.sold_as === "portion" ? " (porción)" : ""}`);
 
@@ -28,7 +28,7 @@ export default function OrdersList({ orders, onCancel }: Props) {
                 <p className="text-negro text-sm font-light break-words">{o.customer_name || "Sin cliente"}</p>
                 <p className="text-xs text-negro/70 font-light">{o.order_date}</p>
               </div>
-              <p className="font-medium text-negro shrink-0">{clp(o.total_price)}</p>
+              <p className="font-medium text-negro shrink-0">{formatCLP(o.total_price)}</p>
             </div>
             <ul className="text-xs text-negro/70 font-light space-y-0.5">
               {summary(o).map((s, i) => <li key={i} className="break-words">{s}</li>)}
@@ -62,7 +62,7 @@ export default function OrdersList({ orders, onCancel }: Props) {
               <td className="px-6 py-4 text-negro/70 font-light">
                 <ul className="space-y-0.5">{summary(o).map((s, i) => <li key={i}>{s}</li>)}</ul>
               </td>
-              <td className="px-6 py-4 text-right font-medium text-negro whitespace-nowrap">{clp(o.total_price)}</td>
+              <td className="px-6 py-4 text-right font-medium text-negro whitespace-nowrap">{formatCLP(o.total_price)}</td>
               <td className="px-6 py-4 text-right whitespace-nowrap">
                 <button onClick={() => onCancel(o)}
                   className="text-xs text-negro/70 hover:text-peligro tracking-widest uppercase transition-colors">

@@ -2,6 +2,7 @@ import Modal from "./Modal";
 import { useRef, useState } from "react";
 import * as XLSX from "xlsx";
 import api from "../services/api";
+import { apiErrorMessage } from "../utils/apiError";
 
 interface ImportRowError {
   row: number;
@@ -62,8 +63,8 @@ export default function IngredientImportModal({ onClose, onSuccess }: Props) {
       if (res.data.errors?.length === 0 && (res.data.imported > 0 || res.data.updated > 0)) {
         onSuccess();
       }
-    } catch (e: any) {
-      setError(e.response?.data?.error || "Error al importar");
+    } catch (e) {
+      setError(apiErrorMessage(e, "Error al importar"));
     } finally {
       setImporting(false);
     }
