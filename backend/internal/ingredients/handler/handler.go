@@ -210,8 +210,10 @@ func (h *IngredientHandler) Export(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *IngredientHandler) Import(w http.ResponseWriter, r *http.Request) {
-	if err := r.ParseMultipartForm(10 << 20); err != nil {
-		httputil.JSONError(w, "archivo demasiado grande (máx 10MB)", http.StatusBadRequest)
+	// A Vercel function takes bodies of up to 4.5 MB (docs/fuentes.md): 4 MiB leaves room for the framing.
+	r.Body = http.MaxBytesReader(w, r.Body, 4<<20)
+	if err := r.ParseMultipartForm(4 << 20); err != nil {
+		httputil.JSONError(w, "archivo demasiado grande (máx 4 MB)", http.StatusBadRequest)
 		return
 	}
 

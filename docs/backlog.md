@@ -1,89 +1,65 @@
 # Backlog
 
-Ordenado por sprint. Cada sprint sigue el mismo método: contrato, reglas de aceptación aprobadas, tests congelados, implementación con evidencia, documentación. Última actualización: 2026-10-08.
+Cada sprint sigue el mismo método: contrato, reglas de aceptación aprobadas, tests escritos y vistos en rojo, aprobación, implementación con evidencia y documentación. "Aceptado" significa que el propietario lo probó en la app real. Última actualización: 2026-10-19 (cierre del sprint 13).
 
-## Sprint 0, fundaciones (en curso)
+## Estado de los sprints
 
-- [x] Helper de Postgres local de pruebas que rechaza cualquier host no local (AC1).
-- [x] Tests de caracterización del cálculo de precios y de las unidades (AC2, AC3).
-- [x] Migraciones 1 a 14: aplicar, revertir y aplicar de nuevo (AC4).
-- [x] Higiene del repo y `tmp/build-errors.log` fuera de git (AC5).
-- [x] `docker-compose` de pruebas y CI (AC6).
-- [x] ADR-001 (borrador), fuentes y este backlog (AC7).
+| Sprint | Qué | Código | Aceptado | Documento |
+|---|---|---|---|---|
+| 0 | Fundaciones: tests de caracterización, migraciones reversibles, CI, higiene del repo | Hecho | — | `docs/adr/001-*` |
+| 1, 1b, 1c | En vivo en Vercel y Supabase, esquema `manager`, RLS, fotos en Storage | Hecho; el despliegue y la subida de fotos se verificaron a mano | Sí | `docs/despliegue.md` |
+| 2 | Dinero en pesos enteros y aritmética exacta | Hecho | — | `docs/glosario-dinero.md` |
+| 3 | Tiempo: el día y el mes son los de Santiago | Hecho | — | `docs/tiempo.md` |
+| 4 | Consistencia de ventas | Hecho (se completó con el sprint 7) | — | `docs/ventas-y-stock.md` |
+| 6 | Costos fijos con historial por mes | Hecho | Pendiente | `docs/costos-fijos.md` |
+| 7 | Ventas: stock, unidades y porciones | Hecho | Pendiente | `docs/ventas-y-stock.md` |
+| 8 | Ajustes de stock y merma | Hecho | Pendiente | `docs/ajustes-de-stock.md` |
+| 9 | Diseño responsivo (celular y computador) | Hecho | Pendiente | `docs/diseno.md` |
+| 10 | Pedidos con varios productos | Hecho | Pendiente | `docs/pedidos.md` |
+| 11 | Un solo negocio con cuentas personales | Hecho | Sí | `docs/acceso.md`, `docs/adr/002-*` |
+| 12 | Cotizaciones con varios productos y PDF con la marca; datos del negocio editables | Hecho | Pendiente | `docs/cotizaciones.md` |
+| 13 | Calidad y detalles | Hecho | Pendiente | `docs/acceso.md`, `docs/despliegue.md` |
 
-## Sprint 1, vivo en Vercel
+Los sprints 0 a 4 usan la numeración antigua y son anteriores al registro de aceptación (por eso "—"). El antiguo "sprint 5, acceso y roles" es hoy el sprint 11, y el antiguo "sprint 6, calidad", el 13. La paleta y las tipografías de la marca están en `docs/diseno.md`. Las casillas viejas de este archivo se reemplazaron por esta tabla.
 
-- [x] Handler de Vercel en `backend/api/`, manteniendo `cmd/server` para desarrollo local (S1a). `backend/vercel.json` agregado en S1b.
-- [x] pgx compatible con el pooler de transacciones (modo `Exec`), con límite de conexiones y timeouts (S1a). Falta probarlo contra el pooler real.
-- [x] CORS con lista de orígenes por `CORS_ORIGINS`, sin `AllowCredentials` (S1a).
-- [x] Exigir `JWT_SECRET` de al menos 32 caracteres al arrancar, inyectado en el middleware (S1a).
-- [x] Migraciones dentro del esquema `manager`, con la tabla de control en ese esquema, RLS activado (migración 15) y sin tocar `public`; pgcrypto lo instala el script de setup (S1b). Falta correrlo en Supabase real.
-- [x] Rol `manager_app` con permisos solo sobre `manager` (`backend/db/setup/01_manager_schema.sql`, S1b). Falta aplicarlo en Supabase real.
-- [x] Frontend: el build falla sin `VITE_API_URL` y ya no cae a localhost; job de CI del frontend (S1b).
-- [x] Runbook `docs/despliegue.md`, con el respaldo manual del esquema (S1b).
-- [x] Despliegue real verificado (2026-10-18). Quedan dos casillas en `docs/despliegue.md`: "Exposed schemas" y el respaldo con `pg_dump`.
-- [x] **Primer usuario (`cmd/hashpassword` y paso del runbook, S1b):** no hay registro en la API; sin un usuario en `manager.users` nadie puede iniciar sesión. Herramienta para generar el hash de la contraseña sin que pase por el chat, y paso en el runbook.
+## Sprint 12, cotizaciones (cerrado en código)
 
-## Sprint 1c, fotos en Supabase Storage (reemplaza a Cloudinary), cerrado
+- [x] Cotizaciones de 1 a 30 líneas con un delivery, guardadas con copia de precios y nombres; el PDF sale de lo guardado y se puede volver a descargar (migración 24).
+- [x] PDF con la marca (colores, Playfair Display y DM Sans, logo), fotos JPEG, PNG y WebP.
+- [x] Datos del negocio editables en la app (migración 25); el RUT y el número de cuenta, en `BIZ_RUT` y `BIZ_ACCOUNT` de Vercel.
+- [x] Corrección de S9: en el celular la barra inferior tapaba el botón principal de las ventanas.
 
-Decidido el 2026-10-09 (opción 3 sobre Vercel Blob; se parte sin fotos previas, no hay nada que migrar). Va después de mergear #2 y #3; el despliegue del Sprint 1b no depende de esto (la subida de fotos ya es opcional).
+## Sprint 13, calidad (cerrado en código)
 
-- [x] Spike (2026-10-18): confirmar contra la documentación de Supabase Storage el contrato REST de subida (ruta, cabeceras, respuesta, URL pública). Hoy solo está verificado el modelo de buckets (público/privado, límites por bucket, tipos permitidos) y las claves.
-- [x] Config: `SUPABASE_URL`, `SUPABASE_SECRET_KEY` y `SUPABASE_STORAGE_BUCKET`, las tres o ninguna; ningún error repite la clave.
-- [x] Subida desde el backend con la clave secreta; nombre único por subida (evita caché de la foto vieja); devuelve la URL pública.
-- [x] Validar en el handler: máximo 4 MB (la función de Vercel admite 4,5 MB de cuerpo) y tipo real por contenido (jpeg, png, webp), no por el nombre ni por la cabecera.
-- [x] Quitar Cloudinary: paquete `internal/cloudinary`, dependencia `cloudinary-go`, `CLOUDINARY_URL` en config, `.env.example`, runbook y test de higiene (que pase a vigilar `SUPABASE_SECRET_KEY`).
-- [x] Runbook: crear el bucket, la clave propia del manager y las variables en Vercel.
-- [ ] Limpieza de la foto anterior al reemplazarla (best effort), si se decide que vale la pena.
-- [ ] Verificación real (Felipe): subir una foto, abrir su URL pública, ver la foto en el PDF de la cotización, y comprobar que el bucket rechaza un archivo de más de 4 MB y uno que no es imagen.
-- [x] Verificación real de C6 de punta a punta: Felipe confirmó que la subida de fotos funciona (2026-10-18/19). No se registró por separado el rechazo de más de 4 MB ni de un archivo que no es imagen; lo cubren los tests y las restricciones del bucket.
-- [ ] El PDF de cotizaciones no dibuja WebP (el código lo trata como JPEG y falla en silencio). Ya era así antes; decidir si se restringe a JPEG y PNG o se convierte.
-- [ ] Borrar el objeto del bucket al borrar la receta o al reemplazar su foto (hoy quedan huérfanos).
+- [x] Límite de intentos de login por correo (5 en 15 minutos) y cambio de contraseña desde "Mi cuenta" (migración 26).
+- [x] Cuerpos JSON de más de 1 MiB rechazados con 413; la importación de ingredientes tiene 4 MiB y las fotos 4 MB.
+- [x] Los registros del servidor no llevan texto escrito por personas.
+- [x] `GET /recipes` con consultas fijas; la cotización consulta una vez por receta distinta.
+- [x] Al reemplazar o borrar una receta se borra su foto del bucket (si ninguna otra receta ni cotización la usa).
+- [x] Una sola función de formato de dinero (`-$271.000`); `App.css` eliminado; ESLint sin errores y en el CI.
+- [x] `go mod tidy` limpio; el CI instala `poppler-utils` para los tests de texto del PDF.
+- [x] Dependencias de producción del frontend actualizadas (`axios`, `react-router-dom`).
 
-## Sprint 2, dinero
+## Pendiente
 
-- [ ] **Defecto con evidencia:** insumos $1.000, mano de obra 20%, margen 25%, rinde 9 deben dar $1.500 (hoy $2.000). Cambia el test `TestAC2_KnownDefectFloatDriftRaisesThePriceStep`, con aprobación.
-- [ ] **Margen aplicado dos veces** en `Simulate` cuando el desglose ya incluye el margen (1300 pasa a 1690). Cambia `TestAC2_SimulateAppliesMarginOnTopOfTheBreakdown`, con aprobación.
-- [ ] Montos finales en CLP enteros (ventas, gastos, costos fijos, cotizaciones, precio sugerido), con expand/contract.
-- [ ] Precios unitarios y cantidades con aritmética exacta (probablemente una librería decimal, a justificar antes de agregarla); redondear solo al final.
+- [ ] **`xlsx@0.18.5` (decisión del propietario):** dos avisos de gravedad alta sin versión corregida en npm (ver `docs/fuentes.md`). Opciones: quitar la vista previa del archivo (el servidor ya valida), o cambiar de biblioteca.
+- [ ] Probar S6 a S10, S12 y S13 en la app real, sobre todo desde el celular, y marcarlos como aceptados.
+- [ ] Medir en Vercel el tiempo de una cotización de 30 líneas con fotos (nunca se midió).
+- [ ] Cargar los datos reales con su mamá, escribirle un manual corto de una página y hacer un piloto de 1 a 2 semanas.
+- [ ] Respaldo del esquema con `pg_dump` y verificar "Exposed schemas" en Supabase (`docs/despliegue.md`).
 
-## Sprint 3, tiempo
+## Ideas anotadas, no decididas
 
-- [ ] Una sola función de "hoy" en `America/Santiago` para ventas, gastos y analytics.
-- [ ] `sale_date DATE DEFAULT CURRENT_DATE` usa la zona del servidor.
-- [ ] Gasto con fecha de hoy rechazado como futuro: `Truncate(24h)` corta en UTC, no en Santiago (por lectura del código, falta el test).
-- [ ] `parseMonthYear` de analytics usa `time.Now()` sin zona.
-- [ ] `users.created_at` e `ingredients.created_at/updated_at` son `TIMESTAMP` sin zona; pasarlos a `TIMESTAMPTZ`.
+- [ ] Crear el pedido al confirmar una cotización (hoy solo cambia el estado).
+- [ ] Editar una cotización guardada (hoy se crea otra).
+- [ ] Cerrar las sesiones abiertas al cambiar la contraseña (hoy duran hasta 24 horas).
+- [ ] Bloqueo de login también por IP (hoy solo por correo).
+- [ ] Restringir de qué servidor descarga fotos el PDF (hoy acepta cualquier dirección `http(s)` guardada en la receta; riesgo bajo, la guardan solo las dos cuentas).
+- [ ] Surtidos guardados con nombre y estado de pago en los pedidos.
+- [ ] Token de sesión en `localStorage`: se reemplaza en la etapa 1.
 
-## Sprint 4, consistencia de ventas
-
-- [ ] La venta descuenta stock en la unidad de la receta sin convertirla a la del ingrediente (por lectura; los costos sí usan `ConvertToBase`). Verificar con test.
-- [ ] Chequeo de stock y descuento sin bloqueo de fila: dos ventas simultáneas pueden pasar el chequeo.
-- [ ] Stock insuficiente por la restricción de base responde 500; debe ser 409.
-- [ ] `recipe_id` de una venta sin validar contra la receta.
-- [ ] Cotización que se entrega sin guardarse: el error de `repo.Save` se ignora.
-- [ ] Unidades con mayúscula (`Kg`) no se reconocen (hoy fijado en `TestAC3_ConvertToBaseRejectsIncompatibleUnits`).
-
-## Sprint 5, acceso y roles
-
-- [ ] ADR-002: el negocio es uno solo y ambas personas administran. `user_id` pasa a ser `created_by` (quién lo registró).
-- [ ] Hoy ventas, gastos, costos fijos, cotizaciones y analytics filtran por usuario: cada uno vería solo su mitad del negocio. Quitar ese filtro.
-- [ ] Ingredientes sin `created_by`; recetas se leen todas pero solo el creador las edita. Unificar.
-- [ ] El rol `helper` queda sin uso y documentado.
-- [ ] Aserciones de tipo sin chequeo en el middleware (`claims["sub"].(string)`): un token sin esos campos produce 500 en vez de 401.
-- [ ] Límite de intentos de login (se reemplaza en la etapa 1; evaluar si vale la pena antes).
-
-## Sprint 6, calidad
-
-- [ ] `GetAll` de recetas hace N+1 consultas.
-- [ ] Límites de tamaño del cuerpo en los endpoints JSON (solo hay límite en los de archivos).
-- [ ] Logs de gastos incluyen la descripción: sacar datos personales de los logs.
-- [ ] `xlsx@0.18.5` en el frontend tiene vulnerabilidades conocidas en la versión del registro npm (por verificar).
-- [ ] `go.mod` con todas las dependencias marcadas `// indirect`: correr `go mod tidy` en un commit aparte, con aprobación.
-- [ ] Token en `localStorage` (se reemplaza en la etapa 1).
-
-## Etapas siguientes (después del Sprint 6)
+## Etapas siguientes (integración con el sitio)
 
 - [ ] **Etapa 1:** identidad única con Supabase Auth (Google), verificación JWKS ES256.
 - [ ] **Etapa 2:** `recipe_id` opcional en el producto del sitio; precio sugerido solo de referencia.
-- [ ] **Etapa 3:** pedidos del sitio crean cotizaciones `pending`. Antes, verificar la Ley 21.719.
+- [ ] **Etapa 3:** pedidos del sitio crean cotizaciones `pending`. Antes, verificar la Ley 21.719 (las cotizaciones guardan nombres de clientes).

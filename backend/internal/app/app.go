@@ -68,9 +68,10 @@ func NewWithClock(cfg config.Config, db *pgxpool.Pool, photos PhotoUploader, clk
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
-	// JSON bodies are small; only the photo upload (multipart, with its own limit) may be bigger.
+	// JSON bodies are small; only the multipart uploads (a recipe photo, the ingredient import), each with its own limit, may be bigger.
 	r.Use(mid.MaxBody(maxJSONBody, func(r *http.Request) bool {
-		return r.Method == http.MethodPost && strings.HasPrefix(r.URL.Path, "/recipes/") && strings.HasSuffix(r.URL.Path, "/photo")
+		return r.Method == http.MethodPost &&
+			((strings.HasPrefix(r.URL.Path, "/recipes/") && strings.HasSuffix(r.URL.Path, "/photo")) || r.URL.Path == "/ingredients/import")
 	}))
 
 	// go-chi/cors treats an empty origin list as "allow everything", so the middleware is
