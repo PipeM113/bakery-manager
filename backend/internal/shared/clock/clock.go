@@ -3,7 +3,10 @@
 // own clock says (Vercel runs in UTC).
 package clock
 
-import "time"
+import (
+	"time"
+	_ "time/tzdata" // the zone database travels inside the program: no dependency on the server
+)
 
 // Santiago is the business time zone.
 var Santiago = loadSantiago()
@@ -35,5 +38,14 @@ func (c Clock) Month() (month, year int) {
 }
 
 // LastMonths lists the n months that end with the business month of now, oldest first, as
-// "YYYY-MM". (Sprint 5 red stub: not implemented yet.)
-func LastMonths(now time.Time, n int) []string { return nil }
+// "YYYY-MM". The months are counted from the first of the month, so the day of the month never
+// makes one repeat or disappear.
+func LastMonths(now time.Time, n int) []string {
+	t := now.In(Santiago)
+	first := time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, Santiago)
+	months := make([]string, 0, n)
+	for i := n - 1; i >= 0; i-- {
+		months = append(months, first.AddDate(0, -i, 0).Format("2006-01"))
+	}
+	return months
+}

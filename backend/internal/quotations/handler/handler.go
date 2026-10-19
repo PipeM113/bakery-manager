@@ -7,11 +7,11 @@ import (
 	"math"
 	"net/http"
 	"strings"
-	"time"
 
 	costSvc "github.com/PipeM113/bakery-manager/internal/costs/service"
 	quoteRepo "github.com/PipeM113/bakery-manager/internal/quotations/repository"
 	quoteSvc "github.com/PipeM113/bakery-manager/internal/quotations/service"
+	"github.com/PipeM113/bakery-manager/internal/shared/clock"
 	"github.com/PipeM113/bakery-manager/pkg/httputil"
 	mid "github.com/PipeM113/bakery-manager/pkg/middleware"
 	"github.com/go-chi/chi/v5"
@@ -22,13 +22,15 @@ type QuotationHandler struct {
 	costSvc *costSvc.CostService
 	repo    *quoteRepo.QuotationRepository
 	db      *pgxpool.Pool
+	clk     clock.Clock
 }
 
-func NewQuotationHandler(cs *costSvc.CostService, db *pgxpool.Pool) *QuotationHandler {
+func NewQuotationHandler(cs *costSvc.CostService, db *pgxpool.Pool, clk clock.Clock) *QuotationHandler {
 	return &QuotationHandler{
 		costSvc: cs,
 		repo:    quoteRepo.NewQuotationRepository(db),
 		db:      db,
+		clk:     clk,
 	}
 }
 
@@ -117,7 +119,7 @@ func (h *QuotationHandler) Generate(w http.ResponseWriter, r *http.Request) {
 		BasePrice:    breakdown.BasePrice,
 		DeliveryCost: breakdown.DeliveryCost,
 		FinalPrice:   float64(finalPrice),
-		Date:         time.Now(),
+		Date:         h.clk().In(clock.Santiago),
 	})
 	if err != nil {
 		httputil.JSONError(w, "error generando PDF", http.StatusInternalServerError)
@@ -137,7 +139,7 @@ func (h *QuotationHandler) Generate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	safeName := strings.NewReplacer(" ", "_", "/", "-", "\\", "-").Replace(recipe.Name)
-	date := time.Now().Format("2006-01-02")
+	date := h.clk.Today()
 	filename := fmt.Sprintf("cotizacion_%s_%s.pdf", safeName, date)
 
 	w.Header().Set("Content-Type", "application/pdf")

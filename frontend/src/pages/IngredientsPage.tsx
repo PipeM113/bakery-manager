@@ -4,6 +4,7 @@ import { ingredientService } from "../api/ingredientService";
 import type { IIngredient, IngredientFormData } from "../types/ingredient";
 import { emptyIngredientForm } from "../types/ingredient";
 import type { IngredientKind } from "../types/ingredient";
+import { todayInSantiago } from "../utils/businessDate";
 
 const UNITS = ["gr", "kg", "ml", "lt", "und"];
 
@@ -116,7 +117,7 @@ export default function IngredientsPage() {
     setExporting(true);
     try {
       const blob = await ingredientService.exportExcel();
-      const date = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+      const date = todayInSantiago().replace(/-/g, "");
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;

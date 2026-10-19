@@ -12,30 +12,31 @@ import (
 
 	"github.com/PipeM113/bakery-manager/internal/operational_expenses/repository"
 	"github.com/PipeM113/bakery-manager/internal/operational_expenses/service"
+	"github.com/PipeM113/bakery-manager/internal/shared/clock"
 	"github.com/PipeM113/bakery-manager/pkg/httputil"
 	mid "github.com/PipeM113/bakery-manager/pkg/middleware"
 	"github.com/PipeM113/bakery-manager/pkg/money"
 	"github.com/go-chi/chi/v5"
 )
 
-// santiagoLoc is loaded once at startup; falls back to UTC if unavailable.
-var santiagoLoc *time.Location
-
-func init() {
-	var err error
-	santiagoLoc, err = time.LoadLocation("America/Santiago")
-	if err != nil {
-		log.Printf("[expenses] WARNING: could not load America/Santiago timezone: %v — falling back to UTC", err)
-		santiagoLoc = time.UTC
-	}
-}
-
 type ExpenseHandler struct {
 	svc *service.ExpenseService
+	clk clock.Clock
 }
 
-func NewExpenseHandler(svc *service.ExpenseService) *ExpenseHandler {
-	return &ExpenseHandler{svc: svc}
+func NewExpenseHandler(svc *service.ExpenseService, clk clock.Clock) *ExpenseHandler {
+	return &ExpenseHandler{svc: svc, clk: clk}
+}
+
+// checkExpenseDate accepts a real date that is not later than today in Santiago, whatever the hour.
+func (h *ExpenseHandler) checkExpenseDate(value string) string {
+	if _, err := time.Parse("2006-01-02", value); err != nil {
+		return "fecha inválida, use formato YYYY-MM-DD"
+	}
+	if value > h.clk.Today() { // same-length ISO dates sort like calendar dates
+		return "la fecha no puede ser futura"
+	}
+	return ""
 }
 
 var categoryIDPattern = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
@@ -78,14 +79,8 @@ func (h *ExpenseHandler) Create(w http.ResponseWriter, r *http.Request) {
 		httputil.JSONError(w, "categoría inválida", http.StatusBadRequest)
 		return
 	}
-	date, err := time.ParseInLocation("2006-01-02", body.ExpenseDate, santiagoLoc)
-	if err != nil {
-		httputil.JSONError(w, "fecha inválida, use formato YYYY-MM-DD", http.StatusBadRequest)
-		return
-	}
-	todaySantiago := time.Now().In(santiagoLoc).Truncate(24 * time.Hour)
-	if date.After(todaySantiago) {
-		httputil.JSONError(w, "la fecha no puede ser futura", http.StatusBadRequest)
+	if msg := h.checkExpenseDate(body.ExpenseDate); msg != "" {
+		httputil.JSONError(w, msg, http.StatusBadRequest)
 		return
 	}
 
@@ -103,12 +98,10 @@ func (h *ExpenseHandler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ExpenseHandler) List(w http.ResponseWriter, r *http.Request) {
-	now := time.Now().In(santiagoLoc)
 	monthStr := r.URL.Query().Get("month")
 	yearStr := r.URL.Query().Get("year")
 
-	month := int(now.Month())
-	year := now.Year()
+	month, year := h.clk.Month()
 	if monthStr != "" {
 		if m, err := strconv.Atoi(monthStr); err == nil && m >= 1 && m <= 12 {
 			month = m
@@ -160,14 +153,8 @@ func (h *ExpenseHandler) Update(w http.ResponseWriter, r *http.Request) {
 		httputil.JSONError(w, "categoría inválida", http.StatusBadRequest)
 		return
 	}
-	date, err := time.ParseInLocation("2006-01-02", body.ExpenseDate, santiagoLoc)
-	if err != nil {
-		httputil.JSONError(w, "fecha inválida, use formato YYYY-MM-DD", http.StatusBadRequest)
-		return
-	}
-	todaySantiago := time.Now().In(santiagoLoc).Truncate(24 * time.Hour)
-	if date.After(todaySantiago) {
-		httputil.JSONError(w, "la fecha no puede ser futura", http.StatusBadRequest)
+	if msg := h.checkExpenseDate(body.ExpenseDate); msg != "" {
+		httputil.JSONError(w, msg, http.StatusBadRequest)
 		return
 	}
 

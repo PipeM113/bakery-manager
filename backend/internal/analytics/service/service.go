@@ -155,26 +155,84 @@ func (s *AnalyticsService) GetRecipeMetrics(ctx context.Context, userID string, 
 	return result, nil
 }
 
-// GetTrendData returns monthly aggregates for the last N months (oldest first).
-func (s *AnalyticsService) GetTrendData(ctx context.Context, userID string, months int) ([]domain.TrendPoint, error) {
-	if months <= 0 {
-		months = 6
+// GetTrendData returns the revenue and the net profit of each month of `months` ("YYYY-MM",
+// consecutive, oldest first). It asks the database four questions in all, whatever the number of
+// months, and each figure is calculated as in GetMonthlyMetrics.
+func (s *AnalyticsService) GetTrendData(ctx context.Context, userID string, months []string) ([]domain.TrendPoint, error) {
+	if len(months) == 0 {
+		return []domain.TrendPoint{}, nil
 	}
-	now := time.Now()
-	result := make([]domain.TrendPoint, 0, months)
+	first, err := time.Parse("2006-01", months[0])
+	if err != nil {
+		return nil, fmt.Errorf("trend months: %w", err)
+	}
+	from := first.Format("2006-01-02")
+	until := first.AddDate(0, len(months), 0).Format("2006-01-02")
 
-	for i := months - 1; i >= 0; i-- {
-		t := now.AddDate(0, -i, 0)
-		m, y := int(t.Month()), t.Year()
-
-		metrics, err := s.GetMonthlyMetrics(ctx, userID, m, y)
+	perMonth := func(name, query string) (map[string]int64, error) {
+		rows, err := s.db.Query(ctx, query, userID, from, until)
 		if err != nil {
-			return nil, fmt.Errorf("trend month %d/%d: %w", m, y, err)
+			return nil, fmt.Errorf("trend %s: %w", name, err)
 		}
+		defer rows.Close()
+		out := map[string]int64{}
+		for rows.Next() {
+			var ym string
+			var total int64
+			if err := rows.Scan(&ym, &total); err != nil {
+				return nil, fmt.Errorf("scan trend %s: %w", name, err)
+			}
+			out[ym] = total
+		}
+		if err := rows.Err(); err != nil {
+			return nil, fmt.Errorf("read trend %s: %w", name, err)
+		}
+		return out, nil
+	}
+
+	revenue, err := perMonth("revenue", `
+		SELECT to_char(sale_date, 'YYYY-MM'), SUM(quantity_sold::bigint * unit_price)::bigint
+		FROM sales
+		WHERE user_id = $1 AND sale_date >= $2::date AND sale_date < $3::date
+		GROUP BY 1`)
+	if err != nil {
+		return nil, err
+	}
+	ingredients, err := perMonth("ingredients", `
+		SELECT to_char(s.sale_date, 'YYYY-MM'), ROUND(SUM(si.price_at_time * si.quantity_used))::bigint
+		FROM sale_ingredients si
+		JOIN sales s ON s.id = si.sale_id
+		WHERE s.user_id = $1 AND s.sale_date >= $2::date AND s.sale_date < $3::date
+		GROUP BY 1`)
+	if err != nil {
+		return nil, err
+	}
+	expenses, err := perMonth("expenses", `
+		SELECT to_char(expense_date, 'YYYY-MM'), SUM(amount)::bigint
+		FROM operational_expenses
+		WHERE user_id = $1 AND expense_date >= $2::date AND expense_date < $3::date
+		GROUP BY 1`)
+	if err != nil {
+		return nil, err
+	}
+
+	// Active fixed costs, applied in full to every month (as in GetMonthlyMetrics).
+	var fixed int64
+	err = s.db.QueryRow(ctx, `
+		SELECT COALESCE(SUM(monthly_amount), 0)::bigint
+		FROM fixed_costs
+		WHERE user_id = $1 AND is_active = TRUE`, userID,
+	).Scan(&fixed)
+	if err != nil {
+		return nil, fmt.Errorf("trend fixed costs: %w", err)
+	}
+
+	result := make([]domain.TrendPoint, 0, len(months))
+	for _, ym := range months {
 		result = append(result, domain.TrendPoint{
-			Date:      fmt.Sprintf("%04d-%02d", y, m),
-			Revenue:   metrics.TotalRevenue,
-			NetProfit: metrics.NetProfit,
+			Date:      ym,
+			Revenue:   revenue[ym],
+			NetProfit: revenue[ym] - ingredients[ym] - fixed - expenses[ym],
 		})
 	}
 	return result, nil

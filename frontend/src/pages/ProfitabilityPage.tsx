@@ -5,6 +5,7 @@ import {
   type RecipeMetrics,
   type TrendPoint,
 } from "../api/analyticsService";
+import { currentMonthYear } from "../utils/businessDate";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -158,9 +159,9 @@ function KpiCard({ label, value, accent = "neutral", large = false }: KpiCardPro
 // ── main page ─────────────────────────────────────────────────────────────────
 
 export default function ProfitabilityPage() {
-  const now = new Date();
-  const [month, setMonth] = useState(now.getMonth() + 1);
-  const [year, setYear]   = useState(now.getFullYear());
+  const now = currentMonthYear();
+  const [month, setMonth] = useState(now.month);
+  const [year, setYear]   = useState(now.year);
 
   const [metrics,  setMetrics]  = useState<MonthlyMetrics | null>(null);
   const [recipes,  setRecipes]  = useState<RecipeMetrics[]>([]);
@@ -169,7 +170,7 @@ export default function ProfitabilityPage() {
 
   // year options: current year and 2 years back
   const yearOptions = useMemo(() => {
-    const y = now.getFullYear();
+    const y = now.year;
     return [y - 2, y - 1, y];
   }, []);
 

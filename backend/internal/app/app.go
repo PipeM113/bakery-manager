@@ -56,9 +56,7 @@ func New(cfg config.Config, db *pgxpool.Pool, photos PhotoUploader) http.Handler
 }
 
 // NewWithClock is New with the clock the handlers use for "today" and "this month".
-// (Sprint 5 red stub: the clock is not used yet.)
 func NewWithClock(cfg config.Config, db *pgxpool.Pool, photos PhotoUploader, clk clock.Clock) http.Handler {
-	_ = clk
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
@@ -86,9 +84,9 @@ func NewWithClock(cfg config.Config, db *pgxpool.Pool, photos PhotoUploader, clk
 	authHandler := handler.NewAuthHandler(authSvc)
 	r.Post("/auth/login", authHandler.Login)
 
-	ingredientRepo := ingRepo.NewIngredientRepository(db)
-	ingredientImportSvc := ingSvc.NewIngredientImportService(db)
-	ingredientHandler := ingHand.NewIngredientHandler(ingredientRepo, ingredientImportSvc)
+	ingredientRepo := ingRepo.NewIngredientRepository(db, clk)
+	ingredientImportSvc := ingSvc.NewIngredientImportService(db, clk)
+	ingredientHandler := ingHand.NewIngredientHandler(ingredientRepo, ingredientImportSvc, clk)
 
 	recipeRepo := recRepo.NewRecipeRepository(db)
 	recipeHandler := recHand.NewRecipeHandler(recipeRepo, photos)
@@ -124,7 +122,7 @@ func NewWithClock(cfg config.Config, db *pgxpool.Pool, photos PhotoUploader, clk
 		r.Post("/fixed-costs", fixedCostHandler.Create)
 		r.Put("/fixed-costs/{id}", fixedCostHandler.Update)
 		r.Delete("/fixed-costs/{id}", fixedCostHandler.Delete)
-		quotationHandler := quoteHand.NewQuotationHandler(costSvc, db)
+		quotationHandler := quoteHand.NewQuotationHandler(costSvc, db, clk)
 		r.Post("/quotations/generate", quotationHandler.Generate)
 		r.Get("/quotations", quotationHandler.List)
 		r.Put("/quotations/{id}/confirm", quotationHandler.Confirm)
@@ -132,14 +130,14 @@ func NewWithClock(cfg config.Config, db *pgxpool.Pool, photos PhotoUploader, clk
 
 		saleRepository := saleRepo.NewSaleRepository(db)
 		saleService := saleSvc.NewSaleService(saleRepository)
-		saleHandler := saleHand.NewSaleHandler(saleService)
+		saleHandler := saleHand.NewSaleHandler(saleService, clk)
 		r.Post("/sales", saleHandler.Create)
 		r.Get("/sales", saleHandler.List)
 		r.Delete("/sales/{id}", saleHandler.Delete)
 
 		expenseRepository := expRepo.NewExpenseRepository(db)
 		expenseService := expSvc.NewExpenseService(expenseRepository)
-		expenseHandler := expHand.NewExpenseHandler(expenseService)
+		expenseHandler := expHand.NewExpenseHandler(expenseService, clk)
 		categoryHandler := catHand.NewCategoryHandler(catRepo.NewCategoryRepository(db))
 		r.Get("/expense-categories", categoryHandler.List)
 		r.Post("/expense-categories", categoryHandler.Create)
@@ -151,7 +149,7 @@ func NewWithClock(cfg config.Config, db *pgxpool.Pool, photos PhotoUploader, clk
 		r.Delete("/expenses/{id}", expenseHandler.Delete)
 
 		analyticsService := analyticsSvc.NewAnalyticsService(db)
-		analyticsHandler := analyticsHand.NewAnalyticsHandler(analyticsService)
+		analyticsHandler := analyticsHand.NewAnalyticsHandler(analyticsService, clk)
 		r.Get("/analytics/monthly", analyticsHandler.Monthly)
 		r.Get("/analytics/recipes", analyticsHandler.Recipes)
 		r.Get("/analytics/trends", analyticsHandler.Trends)
