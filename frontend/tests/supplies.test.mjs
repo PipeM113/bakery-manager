@@ -19,8 +19,11 @@ test("I2: the ingredients screen separates ingredients and supplies and sends th
   assert.match(page, /kind/);
 });
 
-test("I3: the recipe screen groups the lines by kind", () => {
-  assert.match(read("src/pages/RecipesPage.tsx"), /Insumos/);
+// Corrected with the owner's approval: the page only loads the data; the grouping lives in
+// the form (picker and lines) and in the detail.
+test("I3: the recipe form and detail group the lines by kind", () => {
+  assert.match(read("src/components/RecipeForm.tsx"), /Insumos/);
+  assert.match(read("src/components/RecipeDetail.tsx"), /Insumos/);
 });
 
 test("I4: the cost breakdown shows the supplies total", () => {
