@@ -7,7 +7,10 @@ import { orderService } from "../api/orderService";
 import OrderForm from "../components/OrderForm";
 import OrdersList from "../components/OrdersList";
 import type { IOrder } from "../types/order";
+import { Link } from "react-router-dom";
 import { quotationService, type IQuotation } from "../api/quotationService";
+import { businessService } from "../api/businessService";
+import NewQuotationModal from "../components/NewQuotationModal";
 import type { ISale, SoldAs } from "../types/sale";
 import type { IRecipe } from "../types/recipe";
 import type { IIngredient } from "../types/ingredient";
@@ -78,6 +81,9 @@ export default function SalesPage() {
   const [quotations, setQuotations]       = useState<IQuotation[]>([]);
   const [orders, setOrders]               = useState<IOrder[]>([]);
   const [showOrderForm, setShowOrderForm]   = useState(false);
+  const [showNewQuote, setShowNewQuote]   = useState(false);
+  const [quoteMessage, setQuoteMessage]   = useState("");
+  const [businessMissing, setBusinessMissing] = useState<string[]>([]);
   const [quotationFilter, setQuotationFilter] = useState<QuotationStatusFilter>("");
   const [quotationTab, setQuotationTab]   = useState<"quotations" | "orders" | "sales">("quotations");
 
@@ -134,6 +140,7 @@ export default function SalesPage() {
     ingredientService.getAll().then(setIngredients).catch(() => {});
     loadSales();
     loadQuotations();
+    businessService.get().then((b) => setBusinessMissing(b.missing)).catch(() => undefined);
     loadOrders();
   }, []);
 
@@ -300,6 +307,18 @@ export default function SalesPage() {
   const totalRevenue = sales.reduce((sum, s) => sum + s.total_price, 0);
   const hasStockIssue = stockIssues.length > 0;
 
+  const handleDownloadQuotation = async (q: IQuotation) => {
+    setQuoteMessage("");
+    try {
+      await quotationService.downloadPDF(q);
+    } catch (e) {
+      setQuoteMessage((e as Error).message);
+    }
+  };
+
+  const productsOf = (q: IQuotation) =>
+    q.lines.length === 0 ? "" : q.lines[0].recipe_name + (q.lines.length > 1 ? ` y ${q.lines.length - 1} más` : "");
+
   const displayedQuotations = quotationFilter
     ? quotations.filter((q) => q.status === quotationFilter)
     : quotations;
@@ -331,9 +350,13 @@ export default function SalesPage() {
         </div>
       )}
 
+      {showNewQuote && (
+        <NewQuotationModal onClose={() => setShowNewQuote(false)} onCreated={() => loadQuotations()} />
+      )}
+
       {/* Confirmation Modal */}
       {confirming && preview && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[60] px-4">
           <div className="bg-white border border-linea p-8 max-w-md w-full">
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-display text-2xl text-negro">Confirmar Venta</h2>
@@ -578,6 +601,12 @@ export default function SalesPage() {
         <div className="bg-white border border-linea">
           <div className="px-6 py-4 border-b border-linea flex flex-col sm:flex-row sm:items-center gap-3">
             <h2 className="font-display text-xl text-negro mr-auto">Cotizaciones</h2>
+            <button
+              onClick={() => setShowNewQuote(true)}
+              className="text-xs tracking-widest uppercase font-medium px-4 py-2 bg-negro text-crema hover:bg-black transition-all"
+            >
+              Nueva cotización
+            </button>
             {/* Status filter */}
             <div className="flex gap-1.5 flex-wrap">
               {(["", "pending", "confirmed", "cancelled"] as QuotationStatusFilter[]).map((s) => (
@@ -595,6 +624,14 @@ export default function SalesPage() {
             </div>
           </div>
 
+          {businessMissing.length > 0 && (
+            <p data-testid="business-missing-notice" className="px-6 py-3 text-sm font-light text-oro bg-rosa/30 border-b border-linea">
+              Para generar el PDF falta completar los datos del negocio.{" "}
+              <Link to="/business" className="underline">Ir a Datos del negocio</Link>
+            </p>
+          )}
+          {quoteMessage && <p role="alert" className="px-6 py-3 text-sm text-peligro border-b border-linea">{quoteMessage}</p>}
+
           {displayedQuotations.length === 0 ? (
             <p className="text-negro/70 text-sm font-light text-center py-10">
               No hay cotizaciones
@@ -607,16 +644,20 @@ export default function SalesPage() {
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className={`text-sm font-light break-words ${q.status === "cancelled" ? "line-through text-negro/70" : "text-negro"}`}>{q.client_name}</p>
-                        <p className="text-xs text-negro/70 font-light break-words">{q.recipe_name}</p>
+                        <p className="text-xs text-negro/70 font-light break-words">{productsOf(q)}</p>
                         <p className="text-xs text-negro/70 font-light">{new Date(q.created_at).toLocaleDateString("es-CL")}</p>
                       </div>
                       <div className="text-right shrink-0">
-                        <p className={`font-medium ${q.status === "cancelled" ? "text-negro/70" : "text-negro"}`}>{clp(q.final_price)}</p>
+                        <p className={`font-medium ${q.status === "cancelled" ? "text-negro/70" : "text-negro"}`}>{clp(q.total)}</p>
                         <span className={`inline-block mt-1 px-2 py-0.5 text-xs font-medium rounded-sm ${STATUS_STYLE[q.status]}`}>
                           {STATUS_LABEL[q.status]}
                         </span>
                       </div>
                     </div>
+                    <button data-testid="quote-download" onClick={() => handleDownloadQuotation(q)}
+                      className="w-full text-xs tracking-widest uppercase font-medium border border-oro text-oro hover:bg-lino transition-all">
+                      Descargar PDF
+                    </button>
                     {q.status === "pending" && (
                       <div className="grid grid-cols-2 gap-2">
                         <button onClick={() => handleConfirmQuotation(q.id)}
@@ -655,10 +696,10 @@ export default function SalesPage() {
                         {q.client_name}
                       </td>
                       <td className={`px-6 py-4 font-light ${q.status === "cancelled" ? "line-through text-negro/70" : "text-negro/70"}`}>
-                        {q.recipe_name}
+                        {productsOf(q)}
                       </td>
                       <td className={`px-6 py-4 text-right font-medium ${q.status === "cancelled" ? "text-negro/70" : "text-negro"}`}>
-                        {clp(q.final_price)}
+                        {clp(q.total)}
                       </td>
                       <td className="px-6 py-4 text-center">
                         <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded-sm ${STATUS_STYLE[q.status]}`}>
@@ -666,8 +707,13 @@ export default function SalesPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right whitespace-nowrap">
+                        <div className="flex gap-2 justify-end">
+                        <button data-testid="quote-download" onClick={() => handleDownloadQuotation(q)}
+                          className="text-xs tracking-widest uppercase font-medium px-3 py-1.5 border border-oro text-oro hover:bg-lino transition-all">
+                          Descargar PDF
+                        </button>
                         {q.status === "pending" && (
-                          <div className="flex gap-2 justify-end">
+                          <>
                             <button
                               onClick={() => handleConfirmQuotation(q.id)}
                               className="text-xs tracking-widest uppercase font-medium px-3 py-1.5
@@ -682,8 +728,9 @@ export default function SalesPage() {
                             >
                               Cancelar
                             </button>
-                          </div>
+                          </>
                         )}
+                        </div>
                       </td>
                     </tr>
                   ))}

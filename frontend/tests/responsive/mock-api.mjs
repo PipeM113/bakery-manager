@@ -61,12 +61,20 @@ export const cost = (r) => ({
 });
 
 const clientNames = ["María González Pérez de la Fuente", "Cumpleaños de Sofía", "Evento corporativo Banco del Sur Ltda."];
-export const quotations = Array.from({ length: 8 }, (_, i) => ({
-  id: `00000000-0000-4000-8000-0000000004${String(i).padStart(2, "0")}`, user_id: "u1",
-  recipe_id: recipes[i % 3].id, recipe_name: recipes[i % 3].name, client_name: clientNames[i % 3],
-  margin_pct: 0.3, final_price: 25000 + i * 12500, status: ["pending", "pending", "confirmed", "cancelled"][i % 4],
-  created_at: iso, updated_at: iso,
-}));
+export const quotations = Array.from({ length: 8 }, (_, i) => {
+  const lines = [0, 1].slice(0, 1 + (i % 2)).map((k) => ({
+    id: `00000000-0000-4000-8000-0000000006${i}${k}`, position: k + 1, recipe_id: recipes[(i + k) % 3].id,
+    recipe_name: recipes[(i + k) % 3].name, sold_as: "recipe", quantity: 1 + k, unit_price: 25000, line_total: 25000 * (1 + k),
+    margin_pct: 0.3, indirect_cost_pct: 0.3, labor_cost_pct: 0.3, extra_charge: 0,
+  }));
+  const delivery = i % 2 ? 2500 : 0;
+  return {
+    id: `00000000-0000-4000-8000-0000000004${String(i).padStart(2, "0")}`, created_by: "u1",
+    client_name: clientNames[i % 3], delivery_cost: delivery, lines,
+    total: lines.reduce((a, l) => a + l.line_total, 0) + delivery,
+    status: ["pending", "pending", "confirmed", "cancelled"][i % 4], created_at: iso, updated_at: iso,
+  };
+});
 
 export const sales = Array.from({ length: 6 }, (_, i) => ({
   id: `00000000-0000-4000-8000-0000000005${String(i).padStart(2, "0")}`, user_id: "u1",
@@ -116,10 +124,16 @@ export const recipeMetrics = recipes.map((r, i) => ({
 // A tiny but valid PDF.
 export const pdfBytes = Buffer.from("%PDF-1.1\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 200 200]>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF");
 
+export const businessProfile = {
+  name: "Panadería de Prueba", phone: "+56 9 1111 2222", instagram: "@prueba", bank: "Banco Prueba", account_type: "Cuenta Corriente", holder: "Titular Prueba", email: "pagos@prueba.test", missing: [],
+};
+
 /** Answers every call the screens make; returns undefined for what it does not know. */
 export function answer(method, pathname) {
   const m = (re) => pathname.match(re);
-  if (method === "POST" && pathname === "/quotations/generate") return { pdf: true };
+  if (method === "POST" && pathname === "/quotations") return { body: quotations[0] };
+  if (method === "PUT" && pathname === "/business") return { body: businessProfile };
+  if (method === "GET" && m(/^\/quotations\/[^/]+\/pdf$/)) return { pdf: true };
   if (method === "POST" && pathname === "/auth/login") return { body: { token: "x" } };
   if (method === "POST" && pathname === "/orders") return { body: orders[0] };
   if (method !== "GET") return { body: {} };
@@ -129,6 +143,7 @@ export function answer(method, pathname) {
   if (m(/^\/recipes\/[^/]+\/cost$/)) return { body: cost(recipes.find((r) => pathname.includes(r.id)) ?? recipes[0]) };
   if (m(/^\/recipes\/[^/]+$/)) return { body: recipes.find((r) => pathname.endsWith(r.id)) ?? recipes[0] };
   if (pathname === "/quotations") return { body: quotations };
+  if (pathname === "/business") return { body: businessProfile };
   if (pathname === "/sales") return { body: sales };
   if (pathname === "/orders") return { body: orders };
   if (pathname === "/fixed-costs") return { body: fixedCosts };

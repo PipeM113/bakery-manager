@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import api from "../services/api";
 import { quotationService } from "../api/quotationService";
 import type { IRecipe } from "../types/recipe";
-import { todayInSantiago } from "../utils/businessDate";
 
 interface Props {
   recipe: IRecipe;
@@ -51,7 +50,6 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
   const [, setLoading]                = useState(false);
   const [clientName, setClientName]   = useState("");
   const [downloading, setDownloading] = useState(false);
-  const [noDescError, setNoDescError] = useState(false);
   const [clientError, setClientError] = useState(false);
   const [toast, setToast]             = useState<ToastState>(null);
 
@@ -202,7 +200,6 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
 
   const handleMarginChange = (val: string) => {
     setMargin(val);
-    setNoDescError(false);
     const n = parseFloat(val || "0") / 100;
     if (n >= 0) {
       if (deferredSave) { deferredCostsRef.current.margin = n; hasChangesRef.current = true; }
@@ -256,34 +253,33 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
     }
   };
 
+  // The quotation of this one recipe, with the numbers on screen: saved first, then its PDF.
   const handleDownload = async () => {
     if (!margin) return;
     const trimmedClient = clientName.trim();
     if (!trimmedClient) { setClientError(true); return; }
     setClientError(false);
-    if (!recipe.description?.trim()) { setNoDescError(true); return; }
-    setNoDescError(false);
     setDownloading(true);
     try {
-      const blob = await quotationService.generatePDF({
-        recipe_id:         recipe.id,
-        client_name:       trimmedClient,
-        margin_pct:        marginNum,
-        indirect_cost_pct: indirectNum,
-        labor_cost_pct:    laborNum,
-        extra_charge:      extraChargeNum,
-        delivery_cost:     deliveryCostNum,
+      const portionsNum = parseFloat(portions || "0");
+      const whole = !portionsNum || portionsNum === recipe.yield;
+      const q = await quotationService.create({
+        client_name:   trimmedClient,
+        delivery_cost: deliveryCostNum,
+        lines: [{
+          recipe_id:         recipe.id,
+          quantity:          whole ? 1 : Math.round(portionsNum),
+          sold_as:           whole ? "recipe" : "portion",
+          margin_pct:        marginNum,
+          indirect_cost_pct: indirectNum,
+          labor_cost_pct:    laborNum,
+          extra_charge:      extraChargeNum,
+        }],
       });
-      const url  = URL.createObjectURL(blob);
-      const a    = document.createElement("a");
-      const date = todayInSantiago();
-      const name = recipe.name.replace(/\s+/g, "_");
-      a.href     = url;
-      a.download = `cotizacion_${name}_${date}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
+      await quotationService.downloadPDF(q);
+    } catch (e) {
+      const msg = (e as { response?: { data?: { error?: string } } })?.response?.data?.error ?? (e as Error).message;
+      showToast(msg, false);
     } finally {
       setDownloading(false);
     }
@@ -586,12 +582,6 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
             </div>
           </div>
         </div>
-
-        {noDescError && (
-          <p className="text-peligro text-xs tracking-wide">
-            La receta no tiene descripción. Agrégala antes de generar la cotización.
-          </p>
-        )}
 
         <button
           onClick={handleDownload}

@@ -47,8 +47,8 @@ Playfair Display para títulos y DM Sans Light para el texto, las mismas de la w
 
 ## Pendiente
 
-- El PDF de las cotizaciones aún no usa estos colores ni las tipografías: requiere incluir las
-  fuentes en el servidor.
+- (Resuelto en el sprint 12) El PDF de las cotizaciones usa `crema`, `oro` y `negro`, Playfair Display
+  y DM Sans (incluidas en el servidor) y el logo en color. Ver `docs/cotizaciones.md`.
 - Sinera, la tipografía de título del manual, se usará cuando haya licencia comercial (como en la
   web).
 
@@ -65,7 +65,7 @@ tarjetas. Desde 768 px hay barra lateral y las listas largas son tablas.
 | Navegación | Barra inferior con Dashboard, Ingredientes, Recetas, Ventas y **Más** (Costos, Costos fijos, Gastos, Rentabilidad) | Barra lateral |
 | Ingredientes y cotizaciones | **Tarjetas** con los datos clave y sus acciones | Tabla |
 | Botones, enlaces y campos | Al menos **44 px** de alto; los campos con texto de **16 px** (así el celular no hace zoom solo) | Los del diseño normal |
-| Ventanas | Componente `Modal`: cabe en la pantalla, el cuerpo se desplaza y el botón principal queda siempre a mano | Igual, centradas |
+| Ventanas | Componente `Modal`: cabe en la pantalla, el cuerpo se desplaza y el botón principal queda siempre a mano, **por encima de la barra inferior** (capa `z-[60]`; la barra es `z-50`) | Igual, centradas |
 | Cifras grandes y gráfico | La grilla pasa a una columna para que ninguna cifra se corte; el gráfico escala al ancho | Más columnas |
 
 **Reglas globales** (en `src/index.css`): bajo 768 px todo `button`, `a[href]` y campo mide 44 px

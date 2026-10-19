@@ -19,6 +19,8 @@ import (
 	analyticsSvc "github.com/PipeM113/bakery-manager/internal/analytics/service"
 	"github.com/PipeM113/bakery-manager/internal/auth/handler"
 	"github.com/PipeM113/bakery-manager/internal/auth/service"
+	bizHand "github.com/PipeM113/bakery-manager/internal/business/handler"
+	bizRepo "github.com/PipeM113/bakery-manager/internal/business/repository"
 	"github.com/PipeM113/bakery-manager/internal/config"
 	costHandler "github.com/PipeM113/bakery-manager/internal/costs/handler"
 	costService "github.com/PipeM113/bakery-manager/internal/costs/service"
@@ -128,9 +130,15 @@ func NewWithClock(cfg config.Config, db *pgxpool.Pool, photos PhotoUploader, clk
 		r.Post("/fixed-costs", fixedCostHandler.Create)
 		r.Put("/fixed-costs/{id}", fixedCostHandler.Update)
 		r.Delete("/fixed-costs/{id}", fixedCostHandler.Delete)
-		quotationHandler := quoteHand.NewQuotationHandler(costSvc, db, clk)
-		r.Post("/quotations/generate", quotationHandler.Generate)
+		businessRepository := bizRepo.New(db)
+		businessHandler := bizHand.NewBusinessHandler(businessRepository, cfg.Business)
+		r.Get("/business", businessHandler.Get)
+		r.Put("/business", businessHandler.Save)
+		quotationHandler := quoteHand.NewQuotationHandler(costSvc, db, clk, businessRepository, cfg.Business)
+		r.Post("/quotations", quotationHandler.Create)
 		r.Get("/quotations", quotationHandler.List)
+		r.Get("/quotations/{id}", quotationHandler.Get)
+		r.Get("/quotations/{id}/pdf", quotationHandler.PDF)
 		r.Put("/quotations/{id}/confirm", quotationHandler.Confirm)
 		r.Put("/quotations/{id}/cancel", quotationHandler.Cancel)
 

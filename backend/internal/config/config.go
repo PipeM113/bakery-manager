@@ -33,6 +33,26 @@ type Config struct {
 	SupabaseURL       string
 	SupabaseSecretKey string
 	SupabaseBucket    string
+	// Business is what the quotation PDF prints about the business. Optional: without it the
+	// PDF is refused (the quotations themselves still work).
+	Business Business
+}
+
+// Business holds the two secrets of the quotation PDF that stay in the environment. The rest of
+// the business data (name, phone, bank...) is edited in the app and lives in the database.
+type Business struct {
+	Account, RUT string
+}
+
+// Missing names the environment variables that are not set.
+func (b Business) Missing() []string {
+	var missing []string
+	for _, f := range []struct{ env, value string }{{"BIZ_ACCOUNT", b.Account}, {"BIZ_RUT", b.RUT}} {
+		if strings.TrimSpace(f.value) == "" {
+			missing = append(missing, f.env)
+		}
+	}
+	return missing
 }
 
 // Load reads the settings through getenv (os.Getenv in production) and reports every
@@ -46,6 +66,10 @@ func Load(getenv func(string) string) (Config, error) {
 		DatabaseURL: strings.TrimSpace(getenv("DATABASE_URL")),
 		JWTSecret:   strings.TrimSpace(rawSecret),
 		DBMaxConns:  defaultDBMaxConns,
+		Business: Business{
+			Account: strings.TrimSpace(getenv("BIZ_ACCOUNT")),
+			RUT:     strings.TrimSpace(getenv("BIZ_RUT")),
+		},
 	}
 
 	if port := strings.TrimSpace(getenv("PORT")); port != "" {

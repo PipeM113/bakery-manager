@@ -15,6 +15,7 @@ import (
 const migrationsDir = "../../db/migrations"
 
 var expectedTables = []string{
+	"business_profile",
 	"expense_categories",
 	"fixed_cost_versions",
 	"fixed_costs",
@@ -22,6 +23,7 @@ var expectedTables = []string{
 	"ingredients",
 	"operational_expenses",
 	"orders",
+	"quotation_lines",
 	"quotations",
 	"recipe_ingredients",
 	"recipes",

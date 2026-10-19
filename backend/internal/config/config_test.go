@@ -1,6 +1,7 @@
 package config_test
 
 import (
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -185,5 +186,46 @@ func TestAC2_CORSOriginsRejectWildcardsAndNonOrigins(t *testing.T) {
 				t.Errorf("the error should name CORS_ORIGINS: %v", err)
 			}
 		})
+	}
+}
+
+// Sprint 12, Q11 (revised): only the RUT and the bank account come from the environment; the
+// rest of the business data is edited in the app and lives in the database.
+func TestQ11_LoadReadsTheBankSecretsFromTheEnvironment(t *testing.T) {
+	e := validEnv()
+	e["BIZ_ACCOUNT"] = "  000-111222-3 "
+	e["BIZ_RUT"] = "11.111.111-1"
+	cfg, err := config.Load(env(e))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.Business.Account != "000-111222-3" || cfg.Business.RUT != "11.111.111-1" {
+		t.Errorf("Business = %+v, want the account and the RUT, trimmed", cfg.Business)
+	}
+	if n := reflect.TypeOf(config.Business{}).NumField(); n != 2 {
+		t.Errorf("config.Business has %d fields, want 2 (the other five are edited in the app)", n)
+	}
+	if m := cfg.Business.Missing(); len(m) != 0 {
+		t.Errorf("Missing() = %v, want none", m)
+	}
+}
+
+func TestQ11_MissingNamesTheVariablesNotTheValues(t *testing.T) {
+	cfg, err := config.Load(env(validEnv()))
+	if err != nil {
+		t.Fatalf("the business data is optional at start-up: %v", err)
+	}
+	if got, want := cfg.Business.Missing(), []string{"BIZ_ACCOUNT", "BIZ_RUT"}; !slices.Equal(got, want) {
+		t.Errorf("Missing() = %v, want %v", got, want)
+	}
+	e := validEnv()
+	e["BIZ_ACCOUNT"] = "000-111222-3"
+	e["BIZ_RUT"] = "   "
+	cfg, err = config.Load(env(e))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := cfg.Business.Missing(); !slices.Equal(got, []string{"BIZ_RUT"}) {
+		t.Errorf("Missing() = %v, want only BIZ_RUT (blank counts as missing)", got)
 	}
 }

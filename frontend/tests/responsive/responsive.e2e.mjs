@@ -14,6 +14,12 @@
 //   [data-kpi]                                  every big figure (KPIs, totals)
 //   data-testid="trend-chart"                   the trend chart
 //   data-testid="orders-list"                   list of orders (tab "Pedidos" of Ventas); data-view="cards" | "table"
+//   button "Nueva cotización" -> window (role=dialog) with [data-testid="quote-line"] (select aria-label "Producto",
+//     input aria-label "Cantidad"), [data-testid="quote-add-line"], [data-testid="quote-delivery"], placeholder
+//     "Nombre del cliente" and the main button "Crear y descargar PDF"
+//   /business "Datos del negocio": [data-testid="business-form"] with the fields "Nombre del negocio", "Teléfono",
+//     "Instagram", "Banco", "Tipo de cuenta", "Titular de la cuenta", "Correo electrónico" and the button "Guardar"; reachable from the navigation
+//   [data-testid="quote-download"]              "Descargar PDF" button of each quotation card / row
 //   button "Nuevo pedido" -> window (role=dialog) with "Agregar producto" and the main button "Registrar pedido"
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
@@ -44,8 +50,9 @@ const PAGES = [
   { name: "sales", path: "/sales" },
   { name: "expenses", path: "/expenses" },
   { name: "profitability", path: "/profitability" },
+  { name: "business", path: "/business" },
 ];
-const SECTIONS = ["/dashboard", "/ingredients", "/recipes", "/costs", "/fixed-costs", "/sales", "/expenses", "/profitability"];
+const SECTIONS = ["/dashboard", "/ingredients", "/recipes", "/costs", "/fixed-costs", "/sales", "/expenses", "/profitability", "/business"];
 
 let server;
 let browser;
@@ -333,3 +340,98 @@ test("R8 every page left its screenshots", () => {
   for (const p of PAGES) for (const w of WIDTHS) if (!existsSync(join(shots, `${p.name}-${w}.png`))) missing.push(`${p.name}-${w}.png`);
   assert.deepEqual(missing, []);
 });
+
+// Q13 (sprint 12): a quotation with several products is made and downloaded from any screen size.
+for (const w of WIDTHS) {
+  test(`Q13 new quotation window at ${w}px`, { timeout: 90000 }, withPage(w, "/sales", {}, async (page) => {
+    await page.getByRole("button", { name: "Nueva cotización" }).click();
+    const dialog = page.getByRole("dialog");
+    await dialog.waitFor({ state: "visible" });
+    await dialog.getByPlaceholder("Nombre del cliente").fill("María González");
+    await dialog.locator('[data-testid="quote-add-line"]').click();
+    const lines = dialog.locator('[data-testid="quote-line"]');
+    assert.ok((await lines.count()) >= 2, "the window should let you add a second product");
+    for (let i = 0; i < 2; i++) {
+      await lines.nth(i).locator('select[aria-label="Producto"]').selectOption(recipes[i].id);
+      await lines.nth(i).locator('input[aria-label="Cantidad"]').fill("2");
+    }
+    await dialog.locator('[data-testid="quote-delivery"]').fill("2500");
+
+    const m = await page.evaluate(() => ({ doc: document.documentElement.scrollWidth, view: window.innerWidth }));
+    assert.ok(m.doc <= m.view, `with the window open the page is ${m.doc}px wide in a ${m.view}px screen`);
+    if (isPhone(w)) {
+      const bad = (await page.evaluate(interactive)).filter((s) => !/^a "/.test(s));
+      assert.deepEqual(bad.slice(0, 8), [], "things in the window are too small");
+    }
+    const create = dialog.locator("[data-primary-action]");
+    await create.scrollIntoViewIfNeeded();
+    assert.match(await create.innerText(), /Crear y descargar PDF/i);
+    assert.ok(inViewport(await create.boundingBox(), w, HEIGHT), "the main button is out of the screen");
+    const [file] = await Promise.all([page.waitForEvent("download", { timeout: 10000 }), create.click()]);
+    assert.match(file.suggestedFilename(), /^cotizacion_.*\.pdf$/);
+  }));
+}
+
+// Q14 (sprint 12): any quotation of the list can be downloaded again.
+for (const w of WIDTHS) {
+  test(`Q14 download again from the list at ${w}px`, { timeout: 60000 }, withPage(w, "/sales", {}, async (page) => {
+    const list = page.locator('[data-testid="quotations-list"]');
+    await list.waitFor({ state: "visible" });
+    const button = list.locator('[data-testid="quote-download"]:visible').first();
+    await button.waitFor({ state: "visible" });
+    if (isPhone(w)) assert.ok((await button.boundingBox()).height >= 43.5, "the download button is too small to tap");
+    const [file] = await Promise.all([page.waitForEvent("download", { timeout: 10000 }), button.click()]);
+    assert.match(file.suggestedFilename(), /^cotizacion_.*\.pdf$/);
+    if (isPhone(w)) {
+      const text = await list.locator("[data-card]").first().innerText();
+      assert.match(text, /\$/, "the card shows the total");
+    }
+  }));
+}
+
+// Q15 (sprint 12): the business data screen works on a phone and on a computer.
+for (const w of WIDTHS) {
+  test(`Q15 business data form at ${w}px`, { timeout: 60000 }, withPage(w, "/business", {}, async (page) => {
+    const form = page.locator('[data-testid="business-form"]');
+    await form.waitFor({ state: "visible" });
+    for (const label of ["Nombre del negocio", "Teléfono", "Instagram", "Banco", "Tipo de cuenta", "Titular de la cuenta", "Correo electrónico"]) {
+      await form.getByLabel(label).waitFor({ state: "visible" });
+    }
+    assert.equal(await form.getByLabel("Teléfono").inputValue(), "+56 9 1111 2222", "the form shows what is saved");
+    const m = await page.evaluate(() => ({ doc: document.documentElement.scrollWidth, view: window.innerWidth }));
+    assert.ok(m.doc <= m.view, `the form makes the page ${m.doc}px wide in a ${m.view}px screen`);
+    if (isPhone(w)) {
+      const bad = (await page.evaluate(interactive)).filter((s) => !/^a "/.test(s));
+      assert.deepEqual(bad.slice(0, 8), [], "things in the form are too small");
+    }
+    const save = form.getByRole("button", { name: "Guardar" });
+    await save.scrollIntoViewIfNeeded();
+    assert.ok(inViewport(await save.boundingBox(), w, HEIGHT), "the save button is out of the screen");
+    await form.getByLabel("Teléfono").fill("+56 9 3333 4444");
+    await save.click();
+    await page.getByText(/guardado/i).first().waitFor({ state: "visible", timeout: 5000 });
+  }));
+}
+
+// Q16 (sprint 12): on a phone the bottom bar never covers the main button of a window (found when a tap
+// on "Crear y descargar PDF" went to the bar instead).
+const coveredPrimary = () => {
+  const btn = document.querySelector('[role="dialog"] [data-primary-action]');
+  if (!btn) return "no main button";
+  btn.scrollIntoView({ block: "nearest" });
+  const r = btn.getBoundingClientRect();
+  const top = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+  return btn.contains(top) ? "" : `covered by ${top?.tagName} ${top?.closest("nav")?.getAttribute("data-testid") ?? ""}`;
+};
+for (const w of PHONES) {
+  test(`Q16 windows are not covered by the bottom bar at ${w}px`, { timeout: 60000 }, withPage(w, "/sales", {}, async (page) => {
+    await page.getByRole("button", { name: "Nueva cotización" }).click();
+    await page.getByRole("dialog").waitFor({ state: "visible" });
+    assert.equal(await page.evaluate(coveredPrimary), "", "the quotation window's main button is covered");
+    await page.getByRole("button", { name: "Cancelar" }).first().click();
+    await page.getByRole("button", { name: "Pedidos", exact: true }).click();
+    await page.getByRole("button", { name: "Nuevo pedido" }).click();
+    await page.getByRole("dialog").waitFor({ state: "visible" });
+    assert.equal(await page.evaluate(coveredPrimary), "", "the order window's main button is covered");
+  }));
+}

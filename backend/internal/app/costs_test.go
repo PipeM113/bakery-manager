@@ -291,7 +291,7 @@ func TestP5_YieldMustBePositive(t *testing.T) {
 		if status != http.StatusUnprocessableEntity {
 			t.Errorf("simulate: status = %d, want 422", status)
 		}
-		status, _ = api.do("POST", "/quotations/generate", map[string]any{"recipe_id": id, "client_name": "Ana", "margin_pct": 0.3})
+		status, _ = api.do("POST", "/quotations", quote("Ana", 0, map[string]any{"recipe_id": id, "quantity": 1, "margin_pct": 0.3}))
 		if status != http.StatusUnprocessableEntity {
 			t.Errorf("quotation: status = %d, want 422", status)
 		}
@@ -339,15 +339,11 @@ func TestP6_QuotationPriceIsTheCostEndpointPrice(t *testing.T) {
 		t.Fatalf("cost endpoint: suggested_price = %v, want 1500", got)
 	}
 
-	status, raw := api.do("POST", "/quotations/generate", map[string]any{
-		"recipe_id": id, "client_name": "Ana", "margin_pct": 0.25,
-		"indirect_cost_pct": 0, "labor_cost_pct": 0.2,
-	})
-	if status != http.StatusOK {
-		t.Fatalf("generate: status = %d: %s", status, raw)
-	}
-	if !strings.HasPrefix(string(raw), "%PDF") {
-		t.Fatalf("the response is not a PDF")
+	status, raw := api.do("POST", "/quotations", quote("Ana", 0, map[string]any{
+		"recipe_id": id, "quantity": 1, "margin_pct": 0.25, "indirect_cost_pct": 0, "labor_cost_pct": 0.2,
+	}))
+	if status != http.StatusCreated {
+		t.Fatalf("create: status = %d: %s", status, raw)
 	}
 
 	status, raw = api.do("GET", "/quotations", nil)
@@ -358,8 +354,8 @@ func TestP6_QuotationPriceIsTheCostEndpointPrice(t *testing.T) {
 	if err := json.Unmarshal(raw, &list); err != nil || len(list) != 1 {
 		t.Fatalf("unexpected list: %v %s", err, raw)
 	}
-	if got := number(t, list[0], "final_price"); got != 1500 {
-		t.Errorf("saved final_price = %v, want 1500", got)
+	if got := number(t, list[0], "total"); got != 1500 {
+		t.Errorf("saved total = %v, want 1500", got)
 	}
 }
 

@@ -55,7 +55,8 @@ go run -tags postgres github.com/golang-migrate/migrate/v4/cmd/migrate@v4.20.1 \
 - La migración 19 pasa el monto de los costos fijos a la tabla `fixed_cost_versions` (un monto por mes) y reemplaza `is_active` por `ended_from` (ver `docs/costos-fijos.md`). Hazla **antes** de desplegar el backend nuevo: el backend anterior lee las columnas que la migración quita.
 - La migración 20 agrega `sales.sold_as` y `sale_ingredients.stock_deducted` (ver `docs/ventas-y-stock.md`). Solo agrega columnas: se puede aplicar antes o después del deploy, pero el backend nuevo las necesita, así que aplícala **antes**.
 - La migración 22 crea `orders` y agrega `sales.order_id` y `sales.line_total` (ver `docs/pedidos.md`). Solo agrega: se aplica **antes** del deploy, porque el backend nuevo las necesita.
-- Verifica: `select version, dirty from manager.schema_migrations;` debe dar `23` y `false` (la 23 renombra `user_id` a `created_by`; la 22 crea `orders`; la 21 crea `stock_adjustments`, ver `docs/ajustes-de-stock.md`; la 19 dejó `fixed_cost_versions`, ver arriba), y `select count(*) from manager.fixed_cost_versions;` debe igualar la cantidad de costos fijos que tenías.
+- La migración 24 da líneas a las cotizaciones (`quotation_lines`, más `quotations.delivery_cost`); las cotizaciones que ya existían pasan a ser de una línea (ver `docs/cotizaciones.md`). La 25 crea `business_profile` (los datos del negocio que se editan en la app). Las dos solo agregan: aplícalas **antes** del deploy, porque el backend nuevo las necesita. El backend anterior ya no entiende `POST /quotations/generate`, que desaparece.
+- Verifica: `select version, dirty from manager.schema_migrations;` debe dar `25` y `false` (la 25 crea `business_profile`; la 24, `quotation_lines`; la 23 renombra `user_id` a `created_by`; la 22 crea `orders`; la 21 crea `stock_adjustments`, ver `docs/ajustes-de-stock.md`; la 19 dejó `fixed_cost_versions`, ver arriba), y `select count(*) from manager.fixed_cost_versions;` debe igualar la cantidad de costos fijos que tenías.
 - Deshacer la última: mismo comando con `down 1`.
 - Cuando termines, `unset MIGRATE_URL`.
 
@@ -111,6 +112,8 @@ En el panel del proyecto del backend (Settings, Environment Variables). Nada de 
 | `JWT_SECRET` | Aleatorio, de al menos 32 caracteres. Genéralo con `openssl rand -base64 48` y pégalo directo en el panel. |
 | `CORS_ORIGINS` | La URL exacta del frontend, sin `/` final y sin `*`, por ejemplo `https://<tu-frontend>.vercel.app`. Varias, separadas por coma. |
 | `DB_MAX_CONNS` | `4` (valor por defecto). Cada instancia abre como máximo ese número de conexiones. |
+| `BIZ_RUT` | El RUT al que se transfiere, tal como debe salir en el PDF de las cotizaciones (por ejemplo `12.345.678-9`). Obligatoria para generar PDF; si falta, el PDF responde 503 y dice cuál falta. Cambiarla exige un nuevo despliegue. |
+| `BIZ_ACCOUNT` | El número de la cuenta bancaria, igual que `BIZ_RUT`. El resto de los datos del negocio (nombre, teléfono, Instagram, banco, tipo de cuenta, titular y correo) se editan en la app, en "Datos del negocio". |
 | `SUPABASE_URL` | Opcional, junto con las dos siguientes. El origen del proyecto: `https://<project_ref>.supabase.co`, sin ruta. |
 | `SUPABASE_SECRET_KEY` | La clave secreta propia del manager (ver "Fotos de las recetas"). Se pega directo en el panel. |
 | `SUPABASE_STORAGE_BUCKET` | `recipe-photos` |

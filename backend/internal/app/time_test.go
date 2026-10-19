@@ -69,7 +69,7 @@ func newAPIAt(t *testing.T, instant string) *timeAPI {
 
 	now := mustParse(t, instant)
 	clk := func() time.Time { return now }
-	api := &client{t: t, h: app.NewWithClock(config.Config{Port: "8080", DatabaseURL: "unused", JWTSecret: goodSecret, DBMaxConns: 4}, pool, nil, clk)}
+	api := &client{t: t, h: app.NewWithClock(config.Config{Port: "8080", DatabaseURL: "unused", JWTSecret: goodSecret, DBMaxConns: 4, Business: fullBusiness}, pool, nil, clk)}
 	status, raw := api.do("POST", "/auth/login", map[string]string{"email": testEmail, "password": testPassword})
 	if status != http.StatusOK {
 		t.Fatalf("login: status = %d: %s", status, raw)
@@ -190,10 +190,10 @@ func TestT2_FileNamesCarryTheSantiagoDate(t *testing.T) {
 		t.Errorf("export Content-Disposition = %q, want the date 20260331", got)
 	}
 
-	body, _ := json.Marshal(map[string]any{"recipe_id": recipe, "client_name": "Ana", "margin_pct": 0.3})
-	req := httptest.NewRequest("POST", "/quotations/generate", strings.NewReader(string(body)))
+	fillProfile(t, api.client)
+	created := createQuote(t, api.client, quote("Ana", 0, map[string]any{"recipe_id": recipe, "quantity": 1, "margin_pct": 0.3}))
+	req := httptest.NewRequest("GET", "/quotations/"+created["id"].(string)+"/pdf", nil)
 	req.Header.Set("Authorization", "Bearer "+api.token)
-	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 	api.h.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {

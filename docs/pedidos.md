@@ -45,7 +45,6 @@ Se registra desde **Ventas → Nuevo pedido** y se ve en la pestaña **Pedidos**
 
 - Surtidos guardados con nombre (hoy el surtido se arma con líneas libres en cada pedido).
 - Estado de pago (por cobrar / pagado).
-- Cotizaciones con varios productos (van con el PDF con la marca).
 - Editar un pedido: se anula y se vuelve a ingresar.
 
 ## Migración 22
