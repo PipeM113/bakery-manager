@@ -140,6 +140,11 @@ func NewWithClock(cfg config.Config, db *pgxpool.Pool, photos PhotoUploader, clk
 		r.Post("/sales", saleHandler.Create)
 		r.Get("/sales", saleHandler.List)
 		r.Delete("/sales/{id}", saleHandler.Delete)
+		orderHandler := saleHand.NewOrderHandler(saleService, clk)
+		r.Post("/orders", orderHandler.Create)
+		r.Get("/orders", orderHandler.List)
+		r.Get("/orders/{id}", orderHandler.Get)
+		r.Delete("/orders/{id}", orderHandler.Delete)
 
 		expenseRepository := expRepo.NewExpenseRepository(db)
 		expenseService := expSvc.NewExpenseService(expenseRepository)

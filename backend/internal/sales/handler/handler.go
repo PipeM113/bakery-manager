@@ -116,6 +116,10 @@ func (h *SaleHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	log.Printf("[sales] DELETE /sales/%s user=%s", id, userID(r))
 	if err := h.svc.DeleteSale(r.Context(), id, userID(r)); err != nil {
+		if errors.Is(err, repository.ErrPartOfOrder) {
+			httputil.JSONError(w, "esta venta es una línea de un pedido: anula el pedido completo", http.StatusConflict)
+			return
+		}
 		if err.Error() == "sale not found" {
 			httputil.JSONError(w, "venta no encontrada", http.StatusNotFound)
 			return
