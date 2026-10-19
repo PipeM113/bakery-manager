@@ -25,7 +25,7 @@ func (s *AnalyticsService) GetMonthlyMetrics(ctx context.Context, userID string,
 
 	// Total revenue
 	err := s.db.QueryRow(ctx, `
-		SELECT COALESCE(SUM(quantity_sold::bigint * unit_price), 0)::bigint
+		SELECT COALESCE(SUM(line_total), 0)::bigint
 		FROM sales
 		WHERE user_id = $1
 		  AND EXTRACT(MONTH FROM sale_date) = $2
@@ -126,7 +126,7 @@ func (s *AnalyticsService) GetRecipeMetrics(ctx context.Context, userID string, 
 				r.id,
 				r.name,
 				SUM(s.quantity_sold)::bigint                        AS units_sold,
-				SUM(s.quantity_sold::bigint * s.unit_price)         AS revenue,
+				SUM(s.line_total)                                   AS revenue,
 				COALESCE(SUM(si_agg.ingredient_cost), 0)            AS cost
 			FROM sales s
 			JOIN recipes r ON r.id = s.recipe_id
@@ -207,7 +207,7 @@ func (s *AnalyticsService) GetTrendData(ctx context.Context, userID string, mont
 	}
 
 	revenue, err := perMonth("revenue", `
-		SELECT to_char(sale_date, 'YYYY-MM'), SUM(quantity_sold::bigint * unit_price)::bigint
+		SELECT to_char(sale_date, 'YYYY-MM'), SUM(line_total)::bigint
 		FROM sales
 		WHERE user_id = $1 AND sale_date >= $2::date AND sale_date < $3::date
 		GROUP BY 1`)

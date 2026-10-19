@@ -3,6 +3,10 @@ import { useEffect, useRef, useState } from "react";
 import { saleService } from "../api/saleService";
 import { recipeService } from "../api/recipeService";
 import { ingredientService } from "../api/ingredientService";
+import { orderService } from "../api/orderService";
+import OrderForm from "../components/OrderForm";
+import OrdersList from "../components/OrdersList";
+import type { IOrder } from "../types/order";
 import { quotationService, type IQuotation } from "../api/quotationService";
 import type { ISale, SoldAs } from "../types/sale";
 import type { IRecipe } from "../types/recipe";
@@ -72,8 +76,10 @@ export default function SalesPage() {
 
   // Quotations
   const [quotations, setQuotations]       = useState<IQuotation[]>([]);
+  const [orders, setOrders]               = useState<IOrder[]>([]);
+  const [showOrderForm, setShowOrderForm]   = useState(false);
   const [quotationFilter, setQuotationFilter] = useState<QuotationStatusFilter>("");
-  const [quotationTab, setQuotationTab]   = useState<"quotations" | "sales">("quotations");
+  const [quotationTab, setQuotationTab]   = useState<"quotations" | "orders" | "sales">("quotations");
 
   const showSuccess = (msg: string) => {
     setSuccessMsg(msg);
@@ -86,6 +92,38 @@ export default function SalesPage() {
       .then(setSales)
       .catch(() => setError("Error cargando ventas"));
 
+  const loadOrders = () =>
+    orderService.getAll()
+      .then(setOrders)
+      .catch(() => setError("Error cargando pedidos"));
+
+  const handleOrderCreated = (order: IOrder) => {
+    setShowOrderForm(false);
+    if (order.stock_shortfalls?.length) {
+      const list = order.stock_shortfalls.map((f) => `${f.missing} ${f.unit} de ${f.ingredient}`).join(", ");
+      showSuccess(`⚠️ Pedido registrado, pero faltaron: ${list}. El stock quedó en 0.`);
+    } else {
+      showSuccess("✅ Pedido registrado");
+    }
+    loadOrders();
+    loadSales();
+    ingredientService.getAll().then(setIngredients).catch(() => {});
+    setQuotationTab("orders");
+  };
+
+  const handleCancelOrder = async (order: IOrder) => {
+    if (!confirm("¿Anular este pedido completo y devolver el stock?")) return;
+    try {
+      await orderService.delete(order.id);
+      showSuccess("Pedido anulado");
+      loadOrders();
+      loadSales();
+      ingredientService.getAll().then(setIngredients).catch(() => {});
+    } catch {
+      setError("Error anulando el pedido");
+    }
+  };
+
   const loadQuotations = (status: QuotationStatusFilter = quotationFilter) =>
     quotationService.getAll(status || undefined)
       .then(setQuotations)
@@ -96,6 +134,7 @@ export default function SalesPage() {
     ingredientService.getAll().then(setIngredients).catch(() => {});
     loadSales();
     loadQuotations();
+    loadOrders();
   }, []);
 
   // Recompute stock issues whenever recipe or quantity changes
@@ -269,12 +308,18 @@ export default function SalesPage() {
     <div className="px-6 py-10 max-w-4xl mx-auto md:max-w-none md:px-10">
 
       {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="h-px w-8 bg-oro/40" />
-          <span className="text-oro text-xs tracking-[0.3em] uppercase font-light">Registro</span>
+      <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+        <div>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="h-px w-8 bg-oro/40" />
+            <span className="text-oro text-xs tracking-[0.3em] uppercase font-light">Registro</span>
+          </div>
+          <h1 className="font-display text-4xl text-negro">Ventas</h1>
         </div>
-        <h1 className="font-display text-4xl text-negro">Ventas</h1>
+        <button onClick={() => setShowOrderForm(true)}
+          className="bg-negro text-crema text-xs tracking-widest uppercase font-medium px-5 py-3 hover:bg-black transition-all">
+          Nuevo pedido
+        </button>
       </div>
 
       {error && <p className="text-peligro text-xs mb-4">{error}</p>}
@@ -509,6 +554,15 @@ export default function SalesPage() {
           Cotizaciones
         </button>
         <button
+          onClick={() => setQuotationTab("orders")}
+          className={`px-5 py-2.5 text-xs tracking-widest uppercase font-medium transition-all
+            ${quotationTab === "orders"
+              ? "border-b-2 border-oro text-oro"
+              : "text-negro/70 hover:text-negro"}`}
+        >
+          Pedidos
+        </button>
+        <button
           onClick={() => setQuotationTab("sales")}
           className={`px-5 py-2.5 text-xs tracking-widest uppercase font-medium transition-all
             ${quotationTab === "sales"
@@ -641,6 +695,16 @@ export default function SalesPage() {
         </div>
       )}
 
+      {/* Orders panel */}
+      {quotationTab === "orders" && (
+        <div className="bg-white border border-linea">
+          <div className="px-6 py-4 border-b border-linea">
+            <h2 className="font-display text-xl text-negro">Pedidos del mes</h2>
+          </div>
+          <OrdersList orders={orders} onCancel={handleCancelOrder} />
+        </div>
+      )}
+
       {/* Sales history panel */}
       {quotationTab === "sales" && (
         <div className="bg-white border border-linea">
@@ -706,12 +770,16 @@ export default function SalesPage() {
                       <td className="px-6 py-4 text-right text-negro/70 font-light">{clp(s.unit_price)}</td>
                       <td className="px-6 py-4 text-right font-medium text-negro">{clp(s.total_price)}</td>
                       <td className="px-6 py-4 text-right">
-                        <button
-                          onClick={() => handleDelete(s.id)}
-                          className="text-xs text-negro/70 hover:text-peligro tracking-widest uppercase transition-colors"
-                        >
-                          Eliminar
-                        </button>
+                        {s.order_id ? (
+                          <span className="text-xs text-negro/70 tracking-widest uppercase font-light">En un pedido</span>
+                        ) : (
+                          <button
+                            onClick={() => handleDelete(s.id)}
+                            className="text-xs text-negro/70 hover:text-peligro tracking-widest uppercase transition-colors"
+                          >
+                            Eliminar
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -720,6 +788,9 @@ export default function SalesPage() {
             </div>
           )}
         </div>
+      )}
+      {showOrderForm && (
+        <OrderForm recipes={recipes} onClose={() => setShowOrderForm(false)} onCreated={handleOrderCreated} />
       )}
     </div>
   );

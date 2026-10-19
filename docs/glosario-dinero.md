@@ -110,3 +110,11 @@ Algo que se perdió o se echó a perder (se cayó, venció). Al registrarla como
 motivo "merma" baja el stock y cuenta como **pérdida**: su valor (cantidad × precio por unidad,
 redondeado una vez a pesos enteros) se resta de la ganancia neta del mes. Las correcciones de
 stock y los ajustes "otro" no son pérdida. Ver `docs/ajustes-de-stock.md`.
+
+## Pedido
+
+La venta de **varios productos juntos** (una torta con 3 postres, un surtido). Cada producto es una
+línea con su receta, cantidad y precio. El pedido puede tener un **precio total propio** (un combo
+con descuento): ese total se reparte entre las líneas en proporción a su precio normal, y la suma
+de las líneas es siempre exactamente el total. Anular un pedido lo anula completo y devuelve el
+stock. Ver `docs/pedidos.md`.

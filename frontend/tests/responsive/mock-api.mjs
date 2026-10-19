@@ -75,6 +75,17 @@ export const sales = Array.from({ length: 6 }, (_, i) => ({
   notes: "Entrega a domicilio", ingredients: [], stock_shortfalls: [], created_at: iso,
 }));
 
+export const orders = Array.from({ length: 5 }, (_, i) => ({
+  id: `00000000-0000-4000-8000-0000000008${String(i).padStart(2, "0")}`, user_id: "u1",
+  customer_name: ["María González Pérez de la Fuente", "Cumpleaños de Sofía", "Evento corporativo Banco del Sur Ltda."][i % 3],
+  notes: "Entrega el sábado en la mañana", order_date: "2026-03-1" + i, total_price: 45000 + i * 5000,
+  lines: [
+    { sale_id: `s-${i}-a`, recipe_id: recipes[0].id, recipe_name: recipes[0].name, quantity_sold: 1, sold_as: "recipe", unit_price: 30000, line_total: 30000 },
+    { sale_id: `s-${i}-b`, recipe_id: recipes[1].id, recipe_name: recipes[1].name, quantity_sold: 6, sold_as: "portion", unit_price: 3000, line_total: 15000 + i * 5000 },
+  ],
+  stock_shortfalls: [], created_at: iso,
+}));
+
 export const fixedCosts = ["Arriendo del local", "Luz", "Gas licuado", "Contador"].map((name, i) => ({
   id: `00000000-0000-4000-8000-0000000006${String(i).padStart(2, "0")}`, user_id: "u1", name,
   monthly_amount: 150000 * (i + 1), is_active: i !== 3, valid_from: "2026-01-01", ended_from: null,
@@ -110,6 +121,7 @@ export function answer(method, pathname) {
   const m = (re) => pathname.match(re);
   if (method === "POST" && pathname === "/quotations/generate") return { pdf: true };
   if (method === "POST" && pathname === "/auth/login") return { body: { token: "x" } };
+  if (method === "POST" && pathname === "/orders") return { body: orders[0] };
   if (method !== "GET") return { body: {} };
   if (pathname === "/ingredients") return { body: ingredients };
   if (m(/^\/ingredients\/[^/]+\/(history|stock-adjustments)$/)) return { body: [] };
@@ -118,6 +130,7 @@ export function answer(method, pathname) {
   if (m(/^\/recipes\/[^/]+$/)) return { body: recipes.find((r) => pathname.endsWith(r.id)) ?? recipes[0] };
   if (pathname === "/quotations") return { body: quotations };
   if (pathname === "/sales") return { body: sales };
+  if (pathname === "/orders") return { body: orders };
   if (pathname === "/fixed-costs") return { body: fixedCosts };
   if (pathname === "/expense-categories") return { body: categories };
   if (pathname === "/expenses") return { body: expenses };

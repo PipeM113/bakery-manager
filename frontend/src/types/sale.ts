@@ -26,6 +26,8 @@ export interface ISale {
   unit_price: number;
   total_price: number;
   sold_as: SoldAs;
+  /** The order this sale is a line of, if any. */
+  order_id: string | null;
   sale_date: string;
   notes: string;
   ingredients: ISaleIngredient[];

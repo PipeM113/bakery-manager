@@ -13,6 +13,8 @@
 //   role="dialog" + [data-primary-action]       every window, and its main button
 //   [data-kpi]                                  every big figure (KPIs, totals)
 //   data-testid="trend-chart"                   the trend chart
+//   data-testid="orders-list"                   list of orders (tab "Pedidos" of Ventas); data-view="cards" | "table"
+//   button "Nuevo pedido" -> window (role=dialog) with "Agregar producto" and the main button "Registrar pedido"
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -278,6 +280,51 @@ for (const name of ["dashboard", "profitability"]) {
       }
     }));
   }
+}
+
+// O10 (sprint 10): orders are born responsive.
+for (const w of WIDTHS) {
+  test(`O10 orders list at ${w}px`, { timeout: 60000 }, withPage(w, "/sales", {}, async (page) => {
+    await page.getByRole("button", { name: "Pedidos", exact: true }).click();
+    const list = page.locator('[data-testid="orders-list"]');
+    await list.waitFor({ state: "visible" });
+    const view = await list.getAttribute("data-view");
+    const m = await page.evaluate(() => ({ doc: document.documentElement.scrollWidth, view: window.innerWidth }));
+    assert.ok(m.doc <= m.view, `the orders make the page ${m.doc}px wide in a ${m.view}px screen`);
+    if (isPhone(w)) {
+      assert.equal(view, "cards", `at ${w}px the orders are shown as ${view}`);
+      assert.equal(await list.locator("table:visible").count(), 0, "a table is still shown on a phone");
+      const cards = list.locator("[data-card]");
+      assert.ok((await cards.count()) >= 5, "each order is a card");
+      const text = await cards.first().innerText();
+      assert.match(text, /María González|Cumpleaños|Evento/, "the card should show the customer");
+      assert.match(text, /\$/, "the card should show the total");
+      assert.match(text, /anular pedido/i, "the card should offer to cancel the order");
+      const bad = await page.evaluate(interactive);
+      assert.deepEqual(bad.slice(0, 8), [], "things in the orders are too small");
+    } else {
+      assert.ok(view === "table" || view === "cards", "the list must say how it is shown (data-view)");
+    }
+  }));
+}
+
+for (const { w, h } of SCREENS) {
+  test(`O10 new order window at ${w}x${h}`, { timeout: 60000 }, withPage(w, "/sales", { height: h }, async (page) => {
+    await page.getByRole("button", { name: "Nuevo pedido" }).click();
+    const dialog = page.locator('[role="dialog"]').first();
+    await dialog.waitFor({ state: "visible", timeout: 5000 });
+    for (let i = 0; i < 3; i++) await dialog.getByRole("button", { name: "Agregar producto" }).click();
+    assert.ok(inViewport(await dialog.boundingBox(), w, h), "the window does not fit the screen");
+    const primary = dialog.getByRole("button", { name: "Registrar pedido" });
+    assert.ok(await primary.isVisible(), "there is no 'Registrar pedido' button");
+    assert.ok(inViewport(await primary.boundingBox(), w, h), "'Registrar pedido' is out of reach without scrolling");
+    const m = await page.evaluate(() => ({ doc: document.documentElement.scrollWidth, view: window.innerWidth }));
+    assert.ok(m.doc <= m.view, "the page scrolls sideways with the order window open");
+    if (isPhone(w)) {
+      const bad = await page.evaluate(interactive);
+      assert.deepEqual(bad.filter((s) => !/^a "/.test(s)).slice(0, 8), [], "things in the order window are too small");
+    }
+  }));
 }
 
 // R8: the run leaves a screenshot of every page in every width.
