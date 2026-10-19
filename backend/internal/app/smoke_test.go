@@ -230,7 +230,7 @@ func TestAC5_CoreFlowsWorkWithoutPreparedStatements(t *testing.T) {
 		// Two days ago: it avoids the known same-day defect listed in docs/backlog.md.
 		day := time.Now().AddDate(0, 0, -2)
 		status, raw := api.do("POST", "/expenses", map[string]any{
-			"description": "Gas del horno", "amount": 15000, "category": "servicios",
+			"description": "Gas del horno", "amount": 15000, "category_id": categoryID(t, api, "gas"),
 			"expense_date": day.Format("2006-01-02"),
 		})
 		if status != http.StatusCreated {
