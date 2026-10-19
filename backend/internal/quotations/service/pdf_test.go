@@ -24,7 +24,8 @@ import (
 
 var business = Business{
 	Name: "Panadería de Prueba", Phone: "+56 9 1111 2222", Instagram: "@prueba",
-	Bank: "Banco Prueba", Account: "000-111222-3", Holder: "Titular Prueba", RUT: "11.111.111-1",
+	Bank: "Banco Prueba", AccountType: "Cuenta Corriente", Account: "000-111222-3", Holder: "Titular Prueba", RUT: "11.111.111-1",
+	Email: "pagos@prueba.test",
 }
 
 func line(name string, qty int, soldAs string, unit, total int64) QuoteLine {
@@ -203,7 +204,7 @@ func TestQ9_DeliveryShowsOnlyWhenThereIsOne(t *testing.T) {
 
 func TestQ9_TransferDataContactAndTheNotice(t *testing.T) {
 	text := pdftotext(t, generate(t, sample(line("Torta", 1, "recipe", 1500, 1500))))
-	for _, want := range []string{business.Name, business.Phone, business.Instagram, business.Bank, business.Account, business.Holder, business.RUT, "48 horas"} {
+	for _, want := range []string{business.Name, business.Phone, business.Instagram, business.Bank, business.AccountType, business.Account, business.Holder, business.RUT, business.Email, "48 horas"} {
 		if !strings.Contains(text, want) {
 			t.Errorf("the PDF does not contain %q", want)
 		}

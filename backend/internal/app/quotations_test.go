@@ -31,7 +31,7 @@ var fullBusiness = config.Business{Account: "000-111222-3", RUT: "11.111.111-1"}
 
 var profile = map[string]any{
 	"name": "Panadería de Prueba", "phone": "+56 9 1111 2222", "instagram": "@prueba",
-	"bank": "Banco Prueba", "holder": "Titular Prueba",
+	"bank": "Banco Prueba", "account_type": "Cuenta Corriente", "holder": "Titular Prueba", "email": "pagos@prueba.test",
 }
 
 func fillProfile(t *testing.T, api *client) {

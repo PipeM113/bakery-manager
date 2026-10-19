@@ -18,7 +18,7 @@
 //     input aria-label "Cantidad"), [data-testid="quote-add-line"], [data-testid="quote-delivery"], placeholder
 //     "Nombre del cliente" and the main button "Crear y descargar PDF"
 //   /business "Datos del negocio": [data-testid="business-form"] with the fields "Nombre del negocio", "Teléfono",
-//     "Instagram", "Banco", "Titular de la cuenta" and the button "Guardar"; reachable from the navigation
+//     "Instagram", "Banco", "Tipo de cuenta", "Titular de la cuenta", "Correo electrónico" and the button "Guardar"; reachable from the navigation
 //   [data-testid="quote-download"]              "Descargar PDF" button of each quotation card / row
 //   button "Nuevo pedido" -> window (role=dialog) with "Agregar producto" and the main button "Registrar pedido"
 import { test, before, after } from "node:test";
@@ -394,7 +394,7 @@ for (const w of WIDTHS) {
   test(`Q15 business data form at ${w}px`, { timeout: 60000 }, withPage(w, "/business", {}, async (page) => {
     const form = page.locator('[data-testid="business-form"]');
     await form.waitFor({ state: "visible" });
-    for (const label of ["Nombre del negocio", "Teléfono", "Instagram", "Banco", "Titular de la cuenta"]) {
+    for (const label of ["Nombre del negocio", "Teléfono", "Instagram", "Banco", "Tipo de cuenta", "Titular de la cuenta", "Correo electrónico"]) {
       await form.getByLabel(label).waitFor({ state: "visible" });
     }
     assert.equal(await form.getByLabel("Teléfono").inputValue(), "+56 9 1111 2222", "the form shows what is saved");

@@ -22,7 +22,7 @@ test("the screen has the five fields and a save button", () => {
   assert.ok(existsSync(path), "pages/BusinessPage.tsx does not exist");
   const s = readFileSync(path, "utf8");
   assert.match(s, /data-testid="business-form"/);
-  for (const label of ["Nombre del negocio", "Teléfono", "Instagram", "Banco", "Titular de la cuenta"]) {
+  for (const label of ["Nombre del negocio", "Teléfono", "Instagram", "Banco", "Tipo de cuenta", "Titular de la cuenta", "Correo electrónico"]) {
     assert.ok(s.includes(label), `no field "${label}"`);
   }
   assert.match(s, /Guardar/);

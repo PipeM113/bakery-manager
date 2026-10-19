@@ -28,18 +28,18 @@ func missingOf(t *testing.T, body map[string]any) []string {
 func TestQ11_TheProfileStartsEmptyAndSaysWhatIsMissing(t *testing.T) {
 	api, _ := newQuotesAPI(t, fullBusiness)
 	body := getJSON(t, api, "/business")
-	for _, f := range []string{"name", "phone", "instagram", "bank", "holder"} {
+	for _, f := range []string{"name", "phone", "instagram", "bank", "account_type", "holder", "email"} {
 		if v, ok := body[f].(string); !ok || v != "" {
 			t.Errorf("%s = %v, want an empty text", f, body[f])
 		}
 	}
-	want := []string{"bank", "holder", "instagram", "name", "phone"}
+	want := []string{"account_type", "bank", "email", "holder", "instagram", "name", "phone"}
 	if got := missingOf(t, body); !slices.Equal(got, want) {
 		t.Errorf("missing = %v, want %v", got, want)
 	}
 
 	bare, _ := newQuotesAPI(t, config.Business{})
-	want = []string{"BIZ_ACCOUNT", "BIZ_RUT", "bank", "holder", "instagram", "name", "phone"}
+	want = []string{"BIZ_ACCOUNT", "BIZ_RUT", "account_type", "bank", "email", "holder", "instagram", "name", "phone"}
 	if got := missingOf(t, getJSON(t, bare, "/business")); !slices.Equal(got, want) {
 		t.Errorf("missing without the environment = %v, want %v", got, want)
 	}
@@ -49,16 +49,16 @@ func TestQ11_SaveAndReadTheProfile(t *testing.T) {
 	api, _ := newQuotesAPI(t, fullBusiness)
 	status, raw := api.do("PUT", "/business", map[string]any{
 		"name": "  Panadería de Prueba ", "phone": "+56 9 1111 2222", "instagram": "prueba",
-		"bank": "Banco Prueba", "holder": " Titular Prueba",
+		"bank": "Banco Prueba", "account_type": "Cuenta Corriente", "holder": " Titular Prueba", "email": " Pagos@Prueba.test ",
 	})
 	if status != http.StatusOK {
 		t.Fatalf("PUT: status = %d: %s", status, raw)
 	}
 	saved := decode(t, raw)
-	want := map[string]string{"name": "Panadería de Prueba", "phone": "+56 9 1111 2222", "instagram": "@prueba", "bank": "Banco Prueba", "holder": "Titular Prueba"}
+	want := map[string]string{"name": "Panadería de Prueba", "phone": "+56 9 1111 2222", "instagram": "@prueba", "bank": "Banco Prueba", "account_type": "Cuenta Corriente", "holder": "Titular Prueba", "email": "pagos@prueba.test"}
 	for k, v := range want {
 		if saved[k] != v {
-			t.Errorf("saved %s = %q, want %q (trimmed, with the @ of Instagram)", k, saved[k], v)
+			t.Errorf("saved %s = %q, want %q (trimmed, with the @ of Instagram, the e-mail in lower case)", k, saved[k], v)
 		}
 	}
 	read := getJSON(t, api, "/business")
@@ -200,12 +200,13 @@ func TestQ11_ThePDFUsesTheCurrentProfile(t *testing.T) {
 	}
 	changed["holder"] = "Titular Nuevo"
 	changed["bank"] = "Banco Nuevo"
+	changed["email"] = "nuevo@prueba.test"
 	if status, raw := api.do("PUT", "/business", changed); status != http.StatusOK {
 		t.Fatalf("PUT: %d %s", status, raw)
 	}
 	_, after := api.do("GET", "/quotations/"+id+"/pdf", nil)
 	text := pdfTextOf(t, after)
-	if !strings.Contains(text, "Titular Nuevo") || !strings.Contains(text, "Banco Nuevo") || strings.Contains(text, "Titular Prueba") {
+	if !strings.Contains(text, "Titular Nuevo") || !strings.Contains(text, "Banco Nuevo") || !strings.Contains(text, "nuevo@prueba.test") || strings.Contains(text, "Titular Prueba") {
 		t.Errorf("the old PDF did not pick up the new data:\n%s", text)
 	}
 }
