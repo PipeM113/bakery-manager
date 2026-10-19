@@ -26,6 +26,7 @@ var expectedTables = []string{
 	"recipes",
 	"sale_ingredients",
 	"sales",
+	"stock_adjustments",
 	"users",
 }
 

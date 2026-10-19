@@ -17,12 +17,15 @@ test("there is an API client for stock adjustments", () => {
   assert.match(svc, /quantity_delta/);
 });
 
-test("the ingredients screen offers 'Ajustar stock' with the three reasons", () => {
+test("the ingredients screen offers 'Ajustar stock', and the window has the three reasons", () => {
   const page = read("pages/IngredientsPage.tsx");
   assert.match(page, /Ajustar stock/);
-  assert.match(page, /merma/i);
-  assert.match(page, /correcci[óo]n/i);
-  assert.match(page, /stockAdjustmentService/);
+  assert.match(page, /StockAdjustmentModal/);
+  const modal = read("components/StockAdjustmentModal.tsx");
+  assert.match(modal, /merma/i);
+  assert.match(modal, /correcci[óo]n/i);
+  assert.match(modal, /otro/i);
+  assert.match(modal, /stockAdjustmentService/);
 });
 
 test("the profitability screen shows the waste of the month", () => {
