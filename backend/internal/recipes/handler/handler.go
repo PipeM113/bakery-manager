@@ -22,6 +22,26 @@ type PhotoUploader interface {
 	UploadRecipePhoto(ctx context.Context, recipeID, contentType string, data []byte) (string, error)
 }
 
+// PhotoRemover is the optional capability of a photo store to delete an object by its public URL.
+type PhotoRemover interface {
+	DeleteRecipePhoto(ctx context.Context, url string) error
+}
+
+// removePhoto deletes a photo that no recipe and no saved quotation uses any more. It is best
+// effort: a failure is logged and never fails the request that asked for it.
+func (h *RecipeHandler) removePhoto(ctx context.Context, url, recipeID string) {
+	remover, ok := h.photos.(PhotoRemover)
+	if !ok || url == "" {
+		return
+	}
+	if used, err := h.repo.PhotoInUse(ctx, url, recipeID); err != nil || used {
+		return
+	}
+	if err := remover.DeleteRecipePhoto(ctx, url); err != nil {
+		log.Printf("[recipes] remove old photo recipe=%s: %v", recipeID, err)
+	}
+}
+
 // recipeBody is a recipe as the client sends it. The three percentages are pointers so that
 // "not sent" can be told apart from a real 0%.
 type recipeBody struct {
@@ -261,11 +281,13 @@ func (h *RecipeHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Printf("[recipes] DELETE /recipes/%s user=%s", id, claims.ID)
+	photo, _ := h.repo.PhotoURLOf(r.Context(), id)
 	if err := h.repo.Delete(r.Context(), id); err != nil {
 		log.Printf("[recipes] Delete error id=%s user=%s: %v", id, claims.ID, err)
 		httputil.JSONError(w, "error eliminando receta", http.StatusInternalServerError)
 		return
 	}
+	h.removePhoto(r.Context(), photo, id)
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -378,9 +400,13 @@ func (h *RecipeHandler) UploadPhoto(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	previous, _ := h.repo.PhotoURLOf(r.Context(), id)
 	if err := h.repo.UpdatePhotoURL(r.Context(), id, photoURL); err != nil {
 		httputil.JSONError(w, "error guardando URL de foto", http.StatusInternalServerError)
 		return
+	}
+	if previous != photoURL {
+		h.removePhoto(r.Context(), previous, id)
 	}
 
 	w.Header().Set("Content-Type", "application/json")

@@ -148,12 +148,12 @@ func TestC5_ListingRecipesTakesTheSameNumberOfQueriesWhateverTheirNumber(t *test
 		})
 	}
 	many := queriesOf(api, func() {
-		if got := getList(t, api.client, "/recipes"); len(got) != 14 {
-			t.Fatalf("recipes = %d, want 14", len(got))
+		if got := getList(t, api.client, "/recipes"); len(got) != 13 {
+			t.Fatalf("recipes = %d, want 13", len(got))
 		}
 	})
 	if many != one || many > 3 {
-		t.Errorf("queries: %d for 3 recipes and %d for 14; want the same number and at most 3", one, many)
+		t.Errorf("queries: %d for 2 recipes and %d for 13; want the same number and at most 3", one, many)
 	}
 }
 

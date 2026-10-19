@@ -2,9 +2,11 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -88,6 +90,7 @@ func (r *RecipeRepository) Create(ctx context.Context, recipe Recipe) (Recipe, e
 	return r.GetByID(ctx, recipe.ID)
 }
 
+// GetAll lists every recipe with its ingredients, in two queries however many recipes there are.
 func (r *RecipeRepository) GetAll(ctx context.Context) ([]Recipe, error) {
 	rows, err := r.db.Query(ctx, `
 		SELECT id, created_by, parent_id, name, description, yield, yield_unit,
@@ -100,6 +103,7 @@ func (r *RecipeRepository) GetAll(ctx context.Context) ([]Recipe, error) {
 	defer rows.Close()
 
 	var recipes []Recipe
+	index := map[string]int{}
 	for rows.Next() {
 		var rec Recipe
 		err := rows.Scan(
@@ -111,28 +115,41 @@ func (r *RecipeRepository) GetAll(ctx context.Context) ([]Recipe, error) {
 		if err != nil {
 			return nil, fmt.Errorf("scan recipe: %w", err)
 		}
-		// Cargar ingredientes de cada receta
-		ingRows, err := r.db.Query(ctx, `
-			SELECT ri.id, ri.recipe_id, ri.ingredient_id, i.name, i.kind, ri.quantity, ri.unit
-			FROM recipe_ingredients ri
-			JOIN ingredients i ON i.id = ri.ingredient_id
-			WHERE ri.recipe_id = $1`, rec.ID)
-		if err != nil {
-			return nil, fmt.Errorf("get ingredients: %w", err)
-		}
-		for ingRows.Next() {
-			var ing RecipeIngredient
-			if err := ingRows.Scan(&ing.ID, &ing.RecipeID, &ing.IngredientID, &ing.Name, &ing.Kind, &ing.Quantity, &ing.Unit); err != nil {
-				ingRows.Close()
-				return nil, fmt.Errorf("scan ingredient: %w", err)
-			}
-			rec.Ingredients = append(rec.Ingredients, ing)
-		}
-		ingRows.Close()
-		if rec.Ingredients == nil {
-			rec.Ingredients = []RecipeIngredient{}
-		}
+		rec.Ingredients = []RecipeIngredient{}
+		index[rec.ID] = len(recipes)
 		recipes = append(recipes, rec)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("read recipes: %w", err)
+	}
+	rows.Close()
+	if len(recipes) == 0 {
+		return recipes, nil
+	}
+
+	ids := make([]string, 0, len(recipes))
+	for _, rec := range recipes {
+		ids = append(ids, rec.ID)
+	}
+	ingRows, err := r.db.Query(ctx, `
+		SELECT ri.id, ri.recipe_id, ri.ingredient_id, i.name, i.kind, ri.quantity, ri.unit
+		FROM recipe_ingredients ri
+		JOIN ingredients i ON i.id = ri.ingredient_id
+		WHERE ri.recipe_id = ANY($1::uuid[])`, ids)
+	if err != nil {
+		return nil, fmt.Errorf("get ingredients: %w", err)
+	}
+	defer ingRows.Close()
+	for ingRows.Next() {
+		var ing RecipeIngredient
+		if err := ingRows.Scan(&ing.ID, &ing.RecipeID, &ing.IngredientID, &ing.Name, &ing.Kind, &ing.Quantity, &ing.Unit); err != nil {
+			return nil, fmt.Errorf("scan ingredient: %w", err)
+		}
+		i := index[ing.RecipeID]
+		recipes[i].Ingredients = append(recipes[i].Ingredients, ing)
+	}
+	if err := ingRows.Err(); err != nil {
+		return nil, fmt.Errorf("read ingredients: %w", err)
 	}
 	return recipes, nil
 }
@@ -286,4 +303,33 @@ func (r *RecipeRepository) SaveScaled(ctx context.Context, recipeID string, scal
 		})
 	}
 	return r.Create(ctx, scaled)
+}
+
+// PhotoURLOf is the photo address a recipe has now ("" when it has none or does not exist).
+func (r *RecipeRepository) PhotoURLOf(ctx context.Context, id string) (string, error) {
+	var url *string
+	err := r.db.QueryRow(ctx, `SELECT photo_url FROM recipes WHERE id = $1`, id).Scan(&url)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", nil
+		}
+		return "", fmt.Errorf("read photo url: %w", err)
+	}
+	if url == nil {
+		return "", nil
+	}
+	return *url, nil
+}
+
+// PhotoInUse says whether a photo is still shown by another recipe or by a saved quotation: a
+// quotation keeps the address of the photo it had, so its PDF still shows it.
+func (r *RecipeRepository) PhotoInUse(ctx context.Context, url, exceptRecipeID string) (bool, error) {
+	var used bool
+	err := r.db.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM recipes WHERE photo_url = $1 AND id::text <> $2)
+		    OR EXISTS (SELECT 1 FROM quotation_lines WHERE photo_url = $1)`, url, exceptRecipeID).Scan(&used)
+	if err != nil {
+		return true, fmt.Errorf("check photo use: %w", err) // when in doubt, keep it
+	}
+	return used, nil
 }

@@ -8,6 +8,7 @@ import (
 
 	"github.com/PipeM113/bakery-manager/internal/costs/domain"
 	"github.com/PipeM113/bakery-manager/internal/shared/kernel"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -23,6 +24,9 @@ const DefaultPct = 0.30
 
 // ErrInvalidYield means the recipe cannot be priced because its yield is not positive.
 var ErrInvalidYield = errors.New("el rendimiento de la receta debe ser mayor a 0")
+
+// ErrRecipeNotFound means the recipe does not exist.
+var ErrRecipeNotFound = errors.New("la receta no existe")
 
 // ParamError is a cost parameter that is out of range or not a number.
 type ParamError struct{ Message string }
@@ -83,28 +87,37 @@ func (p CostParams) Validate() error {
 	return nil
 }
 
-func (s *CostService) GetCostBreakdown(ctx context.Context, recipeID string, params CostParams) (domain.CostBreakdown, error) {
-	var recipe struct {
-		Name            string
-		Yield           float64
-		YieldUnit       string
-		IndirectCostPct float64
-		LaborCostPct    float64
-		MarginPct       float64
-	}
+// Recipe is a recipe with what is needed to price it, read once. Compute can price it many times
+// (with different percentages, portions...) without going back to the database.
+type Recipe struct {
+	ID              string
+	Name            string
+	PhotoURL        *string
+	Yield           float64
+	YieldUnit       string
+	IndirectCostPct float64
+	LaborCostPct    float64
+	MarginPct       float64
+	ingredients     []domain.IngredientCost
+}
 
+// LoadRecipe reads a recipe and its ingredients (2 queries). A recipe that does not exist gives
+// ErrRecipeNotFound; one whose yield is not positive gives ErrInvalidYield.
+func (s *CostService) LoadRecipe(ctx context.Context, recipeID string) (Recipe, error) {
+	recipe := Recipe{ID: recipeID}
 	err := s.db.QueryRow(ctx, `
-		SELECT name, yield, yield_unit, indirect_cost_pct, labor_cost_pct, margin_pct
+		SELECT name, photo_url, yield, yield_unit, indirect_cost_pct, labor_cost_pct, margin_pct
 		FROM recipes WHERE id = $1`, recipeID,
-	).Scan(
-		&recipe.Name, &recipe.Yield, &recipe.YieldUnit,
-		&recipe.IndirectCostPct, &recipe.LaborCostPct, &recipe.MarginPct,
-	)
+	).Scan(&recipe.Name, &recipe.PhotoURL, &recipe.Yield, &recipe.YieldUnit,
+		&recipe.IndirectCostPct, &recipe.LaborCostPct, &recipe.MarginPct)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Recipe{}, fmt.Errorf("recipe not found: %w", ErrRecipeNotFound)
+	}
 	if err != nil {
-		return domain.CostBreakdown{}, fmt.Errorf("recipe not found: %w", err)
+		return Recipe{}, fmt.Errorf("recipe not found: %w", err)
 	}
 	if recipe.Yield <= 0 {
-		return domain.CostBreakdown{}, ErrInvalidYield
+		return Recipe{}, ErrInvalidYield
 	}
 
 	rows, err := s.db.Query(ctx, `
@@ -114,11 +127,10 @@ func (s *CostService) GetCostBreakdown(ctx context.Context, recipeID string, par
 		JOIN ingredients i ON i.id = ri.ingredient_id
 		WHERE ri.recipe_id = $1`, recipeID)
 	if err != nil {
-		return domain.CostBreakdown{}, fmt.Errorf("get ingredients: %w", err)
+		return Recipe{}, fmt.Errorf("get ingredients: %w", err)
 	}
 	defer rows.Close()
 
-	var ingredients []domain.IngredientCost
 	for rows.Next() {
 		var ing domain.IngredientCost
 		var recipeUnit, baseUnit string
@@ -128,22 +140,28 @@ func (s *CostService) GetCostBreakdown(ctx context.Context, recipeID string, par
 			&ing.PricePerUnit, &baseUnit,
 			&ing.PackagePrice, &ing.PackageSize,
 		); err != nil {
-			return domain.CostBreakdown{}, fmt.Errorf("scan ingredient: %w", err)
+			return Recipe{}, fmt.Errorf("scan ingredient: %w", err)
 		}
 
 		converted, err := kernel.ConvertToBase(ing.Quantity, recipeUnit, baseUnit)
 		if err != nil {
-			return domain.CostBreakdown{}, fmt.Errorf("ingrediente %q: %w", ing.Name, err)
+			return Recipe{}, fmt.Errorf("ingrediente %q: %w", ing.Name, err)
 		}
 		ing.Quantity = converted
 		ing.Unit = baseUnit
-		ingredients = append(ingredients, ing)
+		recipe.ingredients = append(recipe.ingredients, ing)
 	}
 	if err := rows.Err(); err != nil {
-		return domain.CostBreakdown{}, fmt.Errorf("read ingredients: %w", err)
+		return Recipe{}, fmt.Errorf("read ingredients: %w", err)
 	}
+	return recipe, nil
+}
 
-	indirectPct, laborPct, markupPct := recipe.IndirectCostPct, recipe.LaborCostPct, recipe.MarginPct
+// Compute prices the recipe with the given parameters; the recipe itself is not changed.
+func (r Recipe) Compute(params CostParams) domain.CostBreakdown {
+	ingredients := append([]domain.IngredientCost(nil), r.ingredients...) // the calculation writes into them
+
+	indirectPct, laborPct, markupPct := r.IndirectCostPct, r.LaborCostPct, r.MarginPct
 	if params.IndirectCostPct != nil {
 		indirectPct = *params.IndirectCostPct
 	}
@@ -156,18 +174,26 @@ func (s *CostService) GetCostBreakdown(ctx context.Context, recipeID string, par
 
 	if params.Portions != nil {
 		return domain.CalculateScaled(
-			recipeID, recipe.Name,
-			recipe.Yield, *params.Portions, recipe.YieldUnit,
+			r.ID, r.Name,
+			r.Yield, *params.Portions, r.YieldUnit,
 			indirectPct, laborPct, markupPct,
 			params.ExtraCharge, params.DeliveryCost,
 			ingredients,
-		), nil
+		)
 	}
 	return domain.Calculate(
-		recipeID, recipe.Name,
-		recipe.Yield, recipe.YieldUnit,
+		r.ID, r.Name,
+		r.Yield, r.YieldUnit,
 		indirectPct, laborPct, markupPct,
 		params.ExtraCharge, params.DeliveryCost,
 		ingredients,
-	), nil
+	)
+}
+
+func (s *CostService) GetCostBreakdown(ctx context.Context, recipeID string, params CostParams) (domain.CostBreakdown, error) {
+	recipe, err := s.LoadRecipe(ctx, recipeID)
+	if err != nil {
+		return domain.CostBreakdown{}, err
+	}
+	return recipe.Compute(params), nil
 }

@@ -9,6 +9,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -93,4 +94,46 @@ func (c *Client) UploadRecipePhoto(ctx context.Context, recipeID, contentType st
 		return "", fmt.Errorf("el almacenamiento respondió %d", resp.StatusCode)
 	}
 	return c.base + "/storage/v1/object/public/" + c.bucket + "/" + path, nil
+}
+
+// objectPath matches what UploadRecipePhoto creates: recipes/<recipe id>/<random name><extension>.
+var objectPath = regexp.MustCompile(`^recipes/[A-Za-z0-9-]{1,64}/[A-Za-z0-9_-]+\.(jpg|png|webp)$`)
+
+// DeleteRecipePhoto removes the object that a public URL of this bucket points to. A URL that is
+// not one of ours (another host, another bucket, another kind of path) is ignored: nothing is
+// sent and it is not an error. The contract is the one of the official storage-js client:
+// DELETE /storage/v1/object/<bucket> with {"prefixes": [<path>]} (docs/fuentes.md).
+func (c *Client) DeleteRecipePhoto(ctx context.Context, publicURL string) error {
+	prefix := c.base + "/storage/v1/object/public/" + c.bucket + "/"
+	if !strings.HasPrefix(publicURL, prefix) {
+		return nil
+	}
+	path := strings.TrimPrefix(publicURL, prefix)
+	if !objectPath.MatchString(path) {
+		return nil
+	}
+	body, err := json.Marshal(struct {
+		Prefixes []string `json:"prefixes"`
+	}{[]string{path}})
+	if err != nil {
+		return fmt.Errorf("no se pudo armar la solicitud de borrado")
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, c.base+"/storage/v1/object/"+c.bucket, bytes.NewReader(body))
+	if err != nil {
+		return fmt.Errorf("no se pudo armar la solicitud de borrado")
+	}
+	req.Header.Set("apikey", c.key)
+	req.Header.Set("Authorization", "Bearer "+c.key)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return fmt.Errorf("borrar la foto: %w", err)
+	}
+	defer resp.Body.Close()
+	_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 1<<16))
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		return fmt.Errorf("el almacenamiento respondió %d", resp.StatusCode)
+	}
+	return nil
 }
