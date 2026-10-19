@@ -39,6 +39,7 @@ import (
 	saleHand "github.com/PipeM113/bakery-manager/internal/sales/handler"
 	saleRepo "github.com/PipeM113/bakery-manager/internal/sales/repository"
 	saleSvc "github.com/PipeM113/bakery-manager/internal/sales/service"
+	"github.com/PipeM113/bakery-manager/internal/shared/clock"
 	"github.com/PipeM113/bakery-manager/internal/shared/kernel"
 	"github.com/PipeM113/bakery-manager/internal/storage"
 	"github.com/PipeM113/bakery-manager/pkg/httputil"
@@ -51,6 +52,13 @@ type PhotoUploader = recHand.PhotoUploader
 // New wires every route. db may be nil in tests that only exercise middleware: the
 // constructors below just keep the pool, they do not use it.
 func New(cfg config.Config, db *pgxpool.Pool, photos PhotoUploader) http.Handler {
+	return NewWithClock(cfg, db, photos, clock.System)
+}
+
+// NewWithClock is New with the clock the handlers use for "today" and "this month".
+// (Sprint 5 red stub: the clock is not used yet.)
+func NewWithClock(cfg config.Config, db *pgxpool.Pool, photos PhotoUploader, clk clock.Clock) http.Handler {
+	_ = clk
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
