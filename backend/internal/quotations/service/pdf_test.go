@@ -90,12 +90,13 @@ func images(raw string) int { return strings.Count(raw, "/Subtype /Image") }
 
 func TestQ8_UsesTheBrandColorsAndNotTheOldOnes(t *testing.T) {
 	out := raw(t, sample(line("Torta", 1, "recipe", 1500, 1500)))
+	// A grey (equal red, green and blue) is written by the PDF library as a single value: "0.110 g".
 	for name, c := range map[string]string{
-		"crema (#FAF6F1)": "0.980 0.965 0.945",
-		"oro (#735523)":   "0.451 0.333 0.137",
-		"negro (#1C1C1C)": "0.110 0.110 0.110",
+		"crema (#FAF6F1)": `0\.980 0\.965 0\.945 (rg|RG)`,
+		"oro (#735523)":   `0\.451 0\.333 0\.137 (rg|RG)`,
+		"negro (#1C1C1C)": `0\.110 (g|G)\b`,
 	} {
-		if !regexp.MustCompile(regexp.QuoteMeta(c) + ` (rg|RG)`).MatchString(out) {
+		if !regexp.MustCompile(c).MatchString(out) {
 			t.Errorf("the PDF does not use %s", name)
 		}
 	}

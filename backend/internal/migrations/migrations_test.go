@@ -22,6 +22,7 @@ var expectedTables = []string{
 	"ingredients",
 	"operational_expenses",
 	"orders",
+	"quotation_lines",
 	"quotations",
 	"recipe_ingredients",
 	"recipes",

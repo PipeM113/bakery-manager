@@ -207,7 +207,7 @@ func TestB1_MigrationsLandInTheManagerSchemaOnly(t *testing.T) {
 
 	got := names(t, r.admin, `select table_name from information_schema.tables
 		where table_schema = 'manager' and table_type = 'BASE TABLE' order by 1`)
-	want := []string{"expense_categories", "fixed_cost_versions", "fixed_costs", "ingredient_price_history", "ingredients", "operational_expenses", "orders",
+	want := []string{"expense_categories", "fixed_cost_versions", "fixed_costs", "ingredient_price_history", "ingredients", "operational_expenses", "orders", "quotation_lines",
 		"quotations", "recipe_ingredients", "recipes", "sale_ingredients", "sales", "schema_migrations", "stock_adjustments", "users"}
 	if !slices.Equal(got, want) {
 		t.Errorf("tables in manager = %v, want %v", got, want)

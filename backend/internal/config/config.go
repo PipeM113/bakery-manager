@@ -44,7 +44,18 @@ type Business struct {
 }
 
 // Missing names the environment variables that are not set.
-func (b Business) Missing() []string { return nil }
+func (b Business) Missing() []string {
+	var missing []string
+	for _, f := range []struct{ env, value string }{
+		{"BIZ_NAME", b.Name}, {"BIZ_PHONE", b.Phone}, {"BIZ_INSTAGRAM", b.Instagram}, {"BIZ_BANK", b.Bank},
+		{"BIZ_ACCOUNT", b.Account}, {"BIZ_HOLDER", b.Holder}, {"BIZ_RUT", b.RUT},
+	} {
+		if strings.TrimSpace(f.value) == "" {
+			missing = append(missing, f.env)
+		}
+	}
+	return missing
+}
 
 // Load reads the settings through getenv (os.Getenv in production) and reports every
 // problem it finds at once.
@@ -57,6 +68,15 @@ func Load(getenv func(string) string) (Config, error) {
 		DatabaseURL: strings.TrimSpace(getenv("DATABASE_URL")),
 		JWTSecret:   strings.TrimSpace(rawSecret),
 		DBMaxConns:  defaultDBMaxConns,
+		Business: Business{
+			Name:      strings.TrimSpace(getenv("BIZ_NAME")),
+			Phone:     strings.TrimSpace(getenv("BIZ_PHONE")),
+			Instagram: strings.TrimSpace(getenv("BIZ_INSTAGRAM")),
+			Bank:      strings.TrimSpace(getenv("BIZ_BANK")),
+			Account:   strings.TrimSpace(getenv("BIZ_ACCOUNT")),
+			Holder:    strings.TrimSpace(getenv("BIZ_HOLDER")),
+			RUT:       strings.TrimSpace(getenv("BIZ_RUT")),
+		},
 	}
 
 	if port := strings.TrimSpace(getenv("PORT")); port != "" {
