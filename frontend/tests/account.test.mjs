@@ -47,3 +47,9 @@ test("the login explains a lock (429) and when to retry", () => {
   assert.match(s, /Retry-After|retry-after/i);
   assert.match(s, /intentos/);
 });
+
+test("the login says 'incorrect' only for a 401; a server failure is not blamed on the password", () => {
+  const s = readFileSync(join(root, "src/pages/LoginPage.tsx"), "utf8");
+  assert.match(s, /status === 401/);
+  assert.match(s, /servidor/i, "it should tell the person that the server failed");
+});
