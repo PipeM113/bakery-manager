@@ -51,3 +51,36 @@ Playfair Display para títulos y DM Sans Light para el texto, las mismas de la w
   fuentes en el servidor.
 - Sinera, la tipografía de título del manual, se usará cuando haya licencia comercial (como en la
   web).
+
+## Diseño responsivo
+
+La app se usa sobre todo en **celular y en computador**. Las pantallas se adaptan, no se rediseñan.
+
+**Anchos de referencia** (los que mide la suite): 360 y 390 px (celulares), 768 px (tablet) y 1280 px
+(computador). Bajo 768 px es "celular" (el punto `md` de Tailwind): barra inferior, listas como
+tarjetas. Desde 768 px hay barra lateral y las listas largas son tablas.
+
+| Qué | Celular (menos de 768 px) | Desde 768 px |
+|---|---|---|
+| Navegación | Barra inferior con Dashboard, Ingredientes, Recetas, Ventas y **Más** (Costos, Costos fijos, Gastos, Rentabilidad) | Barra lateral |
+| Ingredientes y cotizaciones | **Tarjetas** con los datos clave y sus acciones | Tabla |
+| Botones, enlaces y campos | Al menos **44 px** de alto; los campos con texto de **16 px** (así el celular no hace zoom solo) | Los del diseño normal |
+| Ventanas | Componente `Modal`: cabe en la pantalla, el cuerpo se desplaza y el botón principal queda siempre a mano | Igual, centradas |
+| Cifras grandes y gráfico | La grilla pasa a una columna para que ninguna cifra se corte; el gráfico escala al ancho | Más columnas |
+
+**Reglas globales** (en `src/index.css`): bajo 768 px todo `button`, `a[href]` y campo mide 44 px
+como mínimo y los campos usan 16 px. Las ventanas nuevas deben usar `components/Modal.tsx` y marcar
+su botón principal con `data-primary-action`.
+
+**Marcas que las pantallas deben tener** (la suite las usa para medir): `data-testid="bottom-nav"` y
+`"sidebar"`, `"nav-more"` y `"nav-more-menu"`, `"ingredients-list"` y `"quotations-list"` con
+`data-view="cards" | "table"`, `data-card` en cada tarjeta, `role="dialog"`, `data-kpi` en las
+cifras grandes y `data-testid="trend-chart"` en el gráfico.
+
+**Cómo se prueba:** `npm run test:responsive` (en `frontend/`) abre un navegador real (Playwright)
+con una API simulada, recorre las 9 pantallas en los cuatro anchos y revisa que no haya scroll
+horizontal, que lo que se toca mida 44 px, que las ventanas quepan y que las cifras no se corten.
+Deja una captura de cada pantalla y ancho en `frontend/test-results/responsive/`. Tarda varios
+minutos; por eso `npm test` no la incluye.
+
+**Lo que no hace:** instalar la app en el celular (PWA), modo oscuro, ni rediseñar pantallas.

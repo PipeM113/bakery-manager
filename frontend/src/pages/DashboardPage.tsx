@@ -61,7 +61,7 @@ export default function DashboardPage() {
           { label: "Alertas",       value: alerts.length      },
         ].map(({ label, value }) => (
           <div key={label} className="bg-white border border-linea p-5 hover:border-oro transition-all">
-            <p className="font-display text-3xl text-oro mb-1">{value}</p>
+            <p data-kpi className="font-display text-3xl text-oro mb-1">{value}</p>
             <p className="text-xs tracking-widest uppercase text-negro/70 font-light">{label}</p>
           </div>
         ))}

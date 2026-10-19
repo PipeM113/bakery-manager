@@ -18,6 +18,7 @@ export default function Sidebar() {
 
   return (
     <aside
+      data-testid="sidebar"
       className="hidden md:flex flex-col bg-white border-r border-linea"
       style={{
         position: "fixed",

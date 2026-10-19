@@ -1,3 +1,4 @@
+import { useIsPhone } from "../hooks/useIsPhone";
 import { useEffect, useRef, useState } from "react";
 import { saleService } from "../api/saleService";
 import { recipeService } from "../api/recipeService";
@@ -36,6 +37,7 @@ interface IngredientPreview {
 type QuotationStatusFilter = IQuotation["status"] | "";
 
 export default function SalesPage() {
+  const phone = useIsPhone();
   const [sales, setSales]           = useState<ISale[]>([]);
   const [recipes, setRecipes]       = useState<IRecipe[]>([]);
   const [ingredients, setIngredients] = useState<IIngredient[]>([]);
@@ -544,7 +546,40 @@ export default function SalesPage() {
               No hay cotizaciones
             </p>
           ) : (
-            <div className="overflow-x-auto">
+            phone ? (
+              <div data-testid="quotations-list" data-view="cards" className="p-3 space-y-3">
+                {displayedQuotations.map((q) => (
+                  <div key={q.id} data-card className="border border-linea p-4 space-y-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className={`text-sm font-light break-words ${q.status === "cancelled" ? "line-through text-negro/70" : "text-negro"}`}>{q.client_name}</p>
+                        <p className="text-xs text-negro/70 font-light break-words">{q.recipe_name}</p>
+                        <p className="text-xs text-negro/70 font-light">{new Date(q.created_at).toLocaleDateString("es-CL")}</p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className={`font-medium ${q.status === "cancelled" ? "text-negro/70" : "text-negro"}`}>{clp(q.final_price)}</p>
+                        <span className={`inline-block mt-1 px-2 py-0.5 text-xs font-medium rounded-sm ${STATUS_STYLE[q.status]}`}>
+                          {STATUS_LABEL[q.status]}
+                        </span>
+                      </div>
+                    </div>
+                    {q.status === "pending" && (
+                      <div className="grid grid-cols-2 gap-2">
+                        <button onClick={() => handleConfirmQuotation(q.id)}
+                          className="text-xs tracking-widest uppercase font-medium bg-negro text-crema hover:bg-black transition-all">
+                          Confirmar venta
+                        </button>
+                        <button onClick={() => handleCancelQuotation(q.id)}
+                          className="text-xs tracking-widest uppercase font-medium border border-linea text-negro/70 hover:border-peligro hover:text-peligro transition-all">
+                          Cancelar
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+            <div data-testid="quotations-list" data-view="table" className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-linea">
@@ -601,6 +636,7 @@ export default function SalesPage() {
                 </tbody>
               </table>
             </div>
+            )
           )}
         </div>
       )}

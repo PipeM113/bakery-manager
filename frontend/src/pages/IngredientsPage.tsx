@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import IngredientImportModal from "../components/IngredientImportModal";
 import StockAdjustmentModal from "../components/StockAdjustmentModal";
+import Modal from "../components/Modal";
+import { useIsPhone } from "../hooks/useIsPhone";
 import { ingredientService } from "../api/ingredientService";
 import type { IIngredient, IngredientFormData } from "../types/ingredient";
 import { emptyIngredientForm } from "../types/ingredient";
@@ -44,6 +46,7 @@ export default function IngredientsPage() {
   const [error, setError]             = useState("");
   const [showImport, setShowImport]   = useState(false);
   const [adjusting, setAdjusting]     = useState<IIngredient | null>(null);
+  const phone = useIsPhone();
   const [exporting, setExporting]     = useState(false);
   const [successMsg, setSuccessMsg]   = useState("");
   const successTimer                  = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -163,7 +166,7 @@ export default function IngredientsPage() {
       )}
 
       {/* Header */}
-      <div className="flex items-end justify-between mb-8">
+      <div className="flex flex-col gap-4 mb-8 md:flex-row md:items-end md:justify-between">
         <div>
           <div className="flex items-center gap-3 mb-2">
             <div className="h-px w-8 bg-oro/40" />
@@ -171,7 +174,7 @@ export default function IngredientsPage() {
           </div>
           <h1 className="font-display text-4xl text-negro">Ingredientes e insumos</h1>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button onClick={handleExport} disabled={exporting}
             className="border border-linea text-negro/70 text-xs tracking-widest uppercase font-medium px-4 py-3
                        hover:border-oro hover:text-oro transition-all duration-200 disabled:opacity-50">
@@ -191,7 +194,7 @@ export default function IngredientsPage() {
       </div>
 
       {/* Tipo: ingredientes o insumos (cajas, cartones) */}
-      <div className="flex gap-2 mb-4">
+      <div className="flex flex-wrap gap-2 mb-4">
         {([["ingredient", "Ingredientes"], ["supply", "Insumos (cajas, cartones)"]] as const).map(([k, label]) => (
           <button key={k} onClick={() => setTab(k)}
             className={`text-xs tracking-widest uppercase font-medium px-4 py-2 border transition-all duration-200
@@ -218,45 +221,85 @@ export default function IngredientsPage() {
           {`No hay ${tab === "supply" ? "insumos" : "ingredientes"} registrados`}
         </p>
       ) : (
-        <div className="space-y-2">
-          {filtered.map((i) => {
-            const lowStock = i.alert_threshold > 0 && i.stock_quantity < i.alert_threshold;
-            return (
-              <div key={i.id}
-                className={`flex items-center justify-between p-4 bg-white border transition-all duration-200
-                  ${lowStock
-                    ? "border-peligro"
-                    : "border-linea hover:border-oro"}`}
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="text-negro text-sm font-light truncate">{i.name}</p>
-                    {lowStock && <span className="text-peligro text-xs shrink-0">◆ Stock bajo</span>}
+        phone ? (
+          <div data-testid="ingredients-list" data-view="cards" className="space-y-3">
+            {filtered.map((i) => {
+              const lowStock = i.alert_threshold > 0 && i.stock_quantity < i.alert_threshold;
+              return (
+                <div key={i.id} data-card
+                  className={`p-4 bg-white border space-y-3 ${lowStock ? "border-peligro" : "border-linea"}`}>
+                  <div className="min-w-0">
+                    <p className="text-negro text-sm font-light break-words">{i.name}</p>
+                    {lowStock && <span className="text-peligro text-xs">◆ Stock bajo</span>}
+                    <PriceDisplay price={i.price_per_unit} unit={i.default_unit} />
+                    <p className="text-negro/70 text-xs font-light mt-0.5">
+                      Envase: {i.package_size} {i.default_unit} · {clp(i.package_price)}
+                      {i.brand && <span> · {i.brand}</span>}
+                    </p>
+                    <p className="text-negro/70 text-xs font-light mt-0.5">
+                      Stock: {Number.isInteger(i.stock_quantity) ? i.stock_quantity : i.stock_quantity.toFixed(3)} {i.default_unit}
+                    </p>
                   </div>
-                  <PriceDisplay price={i.price_per_unit} unit={i.default_unit} />
-                  <p className="text-negro/70 text-xs font-light mt-0.5">
-                    Envase: {i.package_size} {i.default_unit} · {clp(i.package_price)}
-                    {i.brand && <span className="ml-2">· {i.brand}</span>}
-                  </p>
+                  <div className="grid grid-cols-3 gap-2">
+                    <button onClick={() => setAdjusting(i)}
+                      className="border border-linea text-xs text-negro/70 hover:text-oro tracking-wider transition-colors">
+                      Ajustar stock
+                    </button>
+                    <button onClick={() => openEdit(i)}
+                      className="border border-linea text-xs text-negro/70 hover:text-oro tracking-wider transition-colors">
+                      Editar
+                    </button>
+                    <button onClick={() => handleDelete(i.id)}
+                      className="border border-linea text-xs text-negro/70 hover:text-peligro tracking-wider transition-colors">
+                      Eliminar
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-3 ml-4">
-                  <button onClick={() => setAdjusting(i)}
-                    className="text-xs text-negro/70 hover:text-oro tracking-wider transition-colors">
-                    Ajustar stock
-                  </button>
-                  <button onClick={() => openEdit(i)}
-                    className="text-xs text-negro/70 hover:text-oro tracking-wider transition-colors">
-                    Editar
-                  </button>
-                  <button onClick={() => handleDelete(i.id)}
-                    className="text-xs text-negro/70 hover:text-peligro tracking-wider transition-colors">
-                    Eliminar
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div data-testid="ingredients-list" data-view="table" className="bg-white border border-linea overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-linea text-left">
+                  {["Nombre", "Marca", "Envase", "Precio por unidad", "Stock", ""].map((h) => (
+                    <th key={h} className="px-4 py-3 text-xs tracking-widest uppercase text-negro/70 font-light">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((i) => {
+                  const lowStock = i.alert_threshold > 0 && i.stock_quantity < i.alert_threshold;
+                  return (
+                    <tr key={i.id} className="border-b border-linea last:border-0 hover:bg-lino transition-colors">
+                      <td className="px-4 py-3 text-negro font-light">
+                        {i.name}
+                        {lowStock && <span className="ml-2 text-peligro text-xs">◆ Stock bajo</span>}
+                      </td>
+                      <td className="px-4 py-3 text-negro/70 font-light">{i.brand}</td>
+                      <td className="px-4 py-3 text-negro/70 font-light whitespace-nowrap">{i.package_size} {i.default_unit} · {clp(i.package_price)}</td>
+                      <td className="px-4 py-3"><PriceDisplay price={i.price_per_unit} unit={i.default_unit} /></td>
+                      <td className={`px-4 py-3 whitespace-nowrap font-light ${lowStock ? "text-peligro" : "text-negro/70"}`}>
+                        {Number.isInteger(i.stock_quantity) ? i.stock_quantity : i.stock_quantity.toFixed(3)} {i.default_unit}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3 justify-end whitespace-nowrap">
+                          <button onClick={() => setAdjusting(i)}
+                            className="text-xs text-negro/70 hover:text-oro tracking-wider transition-colors">Ajustar stock</button>
+                          <button onClick={() => openEdit(i)}
+                            className="text-xs text-negro/70 hover:text-oro tracking-wider transition-colors">Editar</button>
+                          <button onClick={() => handleDelete(i.id)}
+                            className="text-xs text-negro/70 hover:text-peligro tracking-wider transition-colors">Eliminar</button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )
       )}
 
       {/* Stock adjustment (merma, corrección, otro) */}
@@ -278,18 +321,20 @@ export default function IngredientsPage() {
 
       {/* Modal */}
       {showForm && (
-        <div
-          className="fixed inset-0 z-50 bg-negro bg-opacity-40 flex items-end md:items-center justify-center p-4"
-        >
-          <div className="bg-white border border-linea w-full max-w-xs p-4 space-y-3 shadow-lg">
-            <div className="flex items-center justify-between">
-              <h2 className="font-display text-lg text-negro">
-                {editing ? `Editar ${singular}` : `Nuevo ${singular}`}
-              </h2>
-              <button onClick={() => setShowForm(false)}
-                className="text-negro/70 hover:text-negro text-lg leading-none">×</button>
+        <Modal
+          title={editing ? `Editar ${singular}` : `Nuevo ${singular}`}
+          onClose={() => setShowForm(false)}
+          footer={
+            <div className="space-y-2">
+              {error && <p className="text-peligro text-xs tracking-wide">{error}</p>}
+              <button onClick={handleSave} disabled={saving} data-primary-action
+                className="w-full bg-negro text-crema text-xs tracking-widest uppercase font-medium
+                           py-2 hover:bg-black transition-all disabled:opacity-50">
+                {saving ? "Guardando..." : "Guardar"}
+              </button>
             </div>
-
+          }
+        >
             <div>
               <label className="block text-xs tracking-widest uppercase text-negro/70 mb-1 font-light">Tipo</label>
               <select value={form.kind}
@@ -337,15 +382,7 @@ export default function IngredientsPage() {
                            px-3 py-1.5 text-sm font-light focus:outline-none focus:border-oro transition-all" />
             </div>
 
-            {error && <p className="text-peligro text-xs tracking-wide">{error}</p>}
-
-            <button onClick={handleSave} disabled={saving}
-              className="w-full bg-negro text-crema text-xs tracking-widest uppercase font-medium
-                         py-2 hover:bg-black transition-all disabled:opacity-50">
-              {saving ? "Guardando..." : "Guardar"}
-            </button>
-          </div>
-        </div>
+        </Modal>
       )}
     </div>
   );
