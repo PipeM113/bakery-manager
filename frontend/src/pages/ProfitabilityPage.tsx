@@ -147,7 +147,7 @@ function KpiCard({ label, value, accent = "neutral", large = false }: KpiCardPro
   };
   return (
     <div className={`bg-white border border-linea p-5 hover:border-oro transition-all ${large ? "col-span-2 md:col-span-1" : ""}`}>
-      <p className={`font-display ${large ? "text-4xl" : "text-2xl"} ${colorMap[accent]} mb-1 leading-tight truncate`}>
+      <p className={`font-display text-2xl ${colorMap[accent]} mb-1 leading-tight whitespace-nowrap tabular-nums`}>
         {value}
       </p>
       <p className="text-xs tracking-widest uppercase text-negro/70 font-light">{label}</p>
