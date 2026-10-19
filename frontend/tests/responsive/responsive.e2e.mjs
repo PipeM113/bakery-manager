@@ -17,6 +17,8 @@
 //   button "Nueva cotización" -> window (role=dialog) with [data-testid="quote-line"] (select aria-label "Producto",
 //     input aria-label "Cantidad"), [data-testid="quote-add-line"], [data-testid="quote-delivery"], placeholder
 //     "Nombre del cliente" and the main button "Crear y descargar PDF"
+//   /business "Datos del negocio": [data-testid="business-form"] with the fields "Nombre del negocio", "Teléfono",
+//     "Instagram", "Banco", "Titular de la cuenta" and the button "Guardar"; reachable from the navigation
 //   [data-testid="quote-download"]              "Descargar PDF" button of each quotation card / row
 //   button "Nuevo pedido" -> window (role=dialog) with "Agregar producto" and the main button "Registrar pedido"
 import { test, before, after } from "node:test";
@@ -48,8 +50,9 @@ const PAGES = [
   { name: "sales", path: "/sales" },
   { name: "expenses", path: "/expenses" },
   { name: "profitability", path: "/profitability" },
+  { name: "business", path: "/business" },
 ];
-const SECTIONS = ["/dashboard", "/ingredients", "/recipes", "/costs", "/fixed-costs", "/sales", "/expenses", "/profitability"];
+const SECTIONS = ["/dashboard", "/ingredients", "/recipes", "/costs", "/fixed-costs", "/sales", "/expenses", "/profitability", "/business"];
 
 let server;
 let browser;
@@ -383,5 +386,29 @@ for (const w of WIDTHS) {
       const text = await list.locator("[data-card]").first().innerText();
       assert.match(text, /\$/, "the card shows the total");
     }
+  }));
+}
+
+// Q15 (sprint 12): the business data screen works on a phone and on a computer.
+for (const w of WIDTHS) {
+  test(`Q15 business data form at ${w}px`, { timeout: 60000 }, withPage(w, "/business", {}, async (page) => {
+    const form = page.locator('[data-testid="business-form"]');
+    await form.waitFor({ state: "visible" });
+    for (const label of ["Nombre del negocio", "Teléfono", "Instagram", "Banco", "Titular de la cuenta"]) {
+      await form.getByLabel(label).waitFor({ state: "visible" });
+    }
+    assert.equal(await form.getByLabel("Teléfono").inputValue(), "+56 9 1111 2222", "the form shows what is saved");
+    const m = await page.evaluate(() => ({ doc: document.documentElement.scrollWidth, view: window.innerWidth }));
+    assert.ok(m.doc <= m.view, `the form makes the page ${m.doc}px wide in a ${m.view}px screen`);
+    if (isPhone(w)) {
+      const bad = (await page.evaluate(interactive)).filter((s) => !/^a "/.test(s));
+      assert.deepEqual(bad.slice(0, 8), [], "things in the form are too small");
+    }
+    const save = form.getByRole("button", { name: "Guardar" });
+    await save.scrollIntoViewIfNeeded();
+    assert.ok(inViewport(await save.boundingBox(), w, HEIGHT), "the save button is out of the screen");
+    await form.getByLabel("Teléfono").fill("+56 9 3333 4444");
+    await save.click();
+    await page.getByText(/guardado/i).first().waitFor({ state: "visible", timeout: 5000 });
   }));
 }

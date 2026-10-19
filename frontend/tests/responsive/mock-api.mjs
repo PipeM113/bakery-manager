@@ -124,10 +124,15 @@ export const recipeMetrics = recipes.map((r, i) => ({
 // A tiny but valid PDF.
 export const pdfBytes = Buffer.from("%PDF-1.1\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 200 200]>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF");
 
+export const businessProfile = {
+  name: "Panadería de Prueba", phone: "+56 9 1111 2222", instagram: "@prueba", bank: "Banco Prueba", holder: "Titular Prueba", missing: [],
+};
+
 /** Answers every call the screens make; returns undefined for what it does not know. */
 export function answer(method, pathname) {
   const m = (re) => pathname.match(re);
   if (method === "POST" && pathname === "/quotations") return { body: quotations[0] };
+  if (method === "PUT" && pathname === "/business") return { body: businessProfile };
   if (method === "GET" && m(/^\/quotations\/[^/]+\/pdf$/)) return { pdf: true };
   if (method === "POST" && pathname === "/auth/login") return { body: { token: "x" } };
   if (method === "POST" && pathname === "/orders") return { body: orders[0] };
@@ -138,6 +143,7 @@ export function answer(method, pathname) {
   if (m(/^\/recipes\/[^/]+\/cost$/)) return { body: cost(recipes.find((r) => pathname.includes(r.id)) ?? recipes[0]) };
   if (m(/^\/recipes\/[^/]+$/)) return { body: recipes.find((r) => pathname.endsWith(r.id)) ?? recipes[0] };
   if (pathname === "/quotations") return { body: quotations };
+  if (pathname === "/business") return { body: businessProfile };
   if (pathname === "/sales") return { body: sales };
   if (pathname === "/orders") return { body: orders };
   if (pathname === "/fixed-costs") return { body: fixedCosts };

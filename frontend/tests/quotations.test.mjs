@@ -62,11 +62,14 @@ test("the generator of the costs screen quotes through the saved quotation", () 
   assert.doesNotMatch(s, /generatePDF/);
 });
 
-test("the docs explain the quotation and the business data to configure", () => {
+test("the docs explain the quotation and where the business data lives", () => {
   const q = docs("cotizaciones.md");
-  for (const word of ["BIZ_NAME", "BIZ_PHONE", "BIZ_INSTAGRAM", "BIZ_BANK", "BIZ_ACCOUNT", "BIZ_HOLDER", "BIZ_RUT"]) {
+  for (const word of ["BIZ_ACCOUNT", "BIZ_RUT", "Datos del negocio"]) {
     assert.ok(q.includes(word), `docs/cotizaciones.md does not mention ${word}`);
+  }
+  for (const word of ["BIZ_ACCOUNT", "BIZ_RUT"]) {
     assert.ok(docs("despliegue.md").includes(word), `docs/despliegue.md does not mention ${word}`);
   }
+  assert.doesNotMatch(docs("despliegue.md"), /BIZ_(NAME|PHONE|INSTAGRAM|BANK|HOLDER)/, "those are edited in the app now");
   assert.doesNotMatch(docs("pedidos.md"), /Cotizaciones con varios productos \(van con el PDF/);
 });

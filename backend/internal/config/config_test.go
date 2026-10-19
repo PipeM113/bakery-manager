@@ -1,6 +1,7 @@
 package config_test
 
 import (
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -188,28 +189,21 @@ func TestAC2_CORSOriginsRejectWildcardsAndNonOrigins(t *testing.T) {
 	}
 }
 
-// Sprint 12, Q11: the business data of the quotation PDF comes from the environment.
-func businessEnv() map[string]string {
+// Sprint 12, Q11 (revised): only the RUT and the bank account come from the environment; the
+// rest of the business data is edited in the app and lives in the database.
+func TestQ11_LoadReadsTheBankSecretsFromTheEnvironment(t *testing.T) {
 	e := validEnv()
-	e["BIZ_NAME"] = "  Panadería de Prueba "
-	e["BIZ_PHONE"] = "+56 9 1111 2222"
-	e["BIZ_INSTAGRAM"] = "@prueba"
-	e["BIZ_BANK"] = "Banco Prueba"
-	e["BIZ_ACCOUNT"] = "000-111222-3"
-	e["BIZ_HOLDER"] = "Titular Prueba"
+	e["BIZ_ACCOUNT"] = "  000-111222-3 "
 	e["BIZ_RUT"] = "11.111.111-1"
-	return e
-}
-
-func TestQ11_LoadReadsTheBusinessData(t *testing.T) {
-	cfg, err := config.Load(env(businessEnv()))
+	cfg, err := config.Load(env(e))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	want := config.Business{Name: "Panadería de Prueba", Phone: "+56 9 1111 2222", Instagram: "@prueba",
-		Bank: "Banco Prueba", Account: "000-111222-3", Holder: "Titular Prueba", RUT: "11.111.111-1"}
-	if cfg.Business != want {
-		t.Errorf("Business = %+v, want %+v (trimmed)", cfg.Business, want)
+	if cfg.Business.Account != "000-111222-3" || cfg.Business.RUT != "11.111.111-1" {
+		t.Errorf("Business = %+v, want the account and the RUT, trimmed", cfg.Business)
+	}
+	if n := reflect.TypeOf(config.Business{}).NumField(); n != 2 {
+		t.Errorf("config.Business has %d fields, want 2 (the other five are edited in the app)", n)
 	}
 	if m := cfg.Business.Missing(); len(m) != 0 {
 		t.Errorf("Missing() = %v, want none", m)
@@ -221,12 +215,11 @@ func TestQ11_MissingNamesTheVariablesNotTheValues(t *testing.T) {
 	if err != nil {
 		t.Fatalf("the business data is optional at start-up: %v", err)
 	}
-	want := []string{"BIZ_NAME", "BIZ_PHONE", "BIZ_INSTAGRAM", "BIZ_BANK", "BIZ_ACCOUNT", "BIZ_HOLDER", "BIZ_RUT"}
-	if got := cfg.Business.Missing(); !slices.Equal(got, want) {
+	if got, want := cfg.Business.Missing(), []string{"BIZ_ACCOUNT", "BIZ_RUT"}; !slices.Equal(got, want) {
 		t.Errorf("Missing() = %v, want %v", got, want)
 	}
-
-	e := businessEnv()
+	e := validEnv()
+	e["BIZ_ACCOUNT"] = "000-111222-3"
 	e["BIZ_RUT"] = "   "
 	cfg, err = config.Load(env(e))
 	if err != nil {

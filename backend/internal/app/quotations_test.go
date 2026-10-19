@@ -26,9 +26,27 @@ import (
 // (cost 1000) and "Pie" yields 1 from 500 gr (cost 500). With indirect 0, labor 20% and markup 25%
 // a Torta costs 1500 and a Pie 1000 (rounded up to 500).
 
-var fullBusiness = config.Business{
-	Name: "Panadería de Prueba", Phone: "+56 9 1111 2222", Instagram: "@prueba",
-	Bank: "Banco Prueba", Account: "000-111222-3", Holder: "Titular Prueba", RUT: "11.111.111-1",
+// The RUT and the account come from the environment; the rest is edited in the app (see business_test.go).
+var fullBusiness = config.Business{Account: "000-111222-3", RUT: "11.111.111-1"}
+
+var profile = map[string]any{
+	"name": "Panadería de Prueba", "phone": "+56 9 1111 2222", "instagram": "@prueba",
+	"bank": "Banco Prueba", "holder": "Titular Prueba",
+}
+
+func fillProfile(t *testing.T, api *client) {
+	t.Helper()
+	if status, raw := api.do("PUT", "/business", profile); status != http.StatusOK {
+		t.Fatalf("PUT /business: status = %d: %s", status, raw)
+	}
+}
+
+// newReadyAPI has the environment and the profile filled: its PDFs can be made.
+func newReadyAPI(t *testing.T) (*client, *pgxpool.Pool) {
+	t.Helper()
+	api, admin := newReadyAPI(t)
+	fillProfile(t, api)
+	return api, admin
 }
 
 func newQuotesAPI(t *testing.T, biz config.Business) (*client, *pgxpool.Pool) {
@@ -150,7 +168,7 @@ func pdfTextOf(t *testing.T, pdf []byte) string {
 
 // Q1: several lines, from 1 to 30.
 func TestQ1_AQuotationWithSeveralLines(t *testing.T) {
-	api, _ := newQuotesAPI(t, fullBusiness)
+	api, _ := newReadyAPI(t)
 	_, cake, pie := bakery(t, api)
 
 	q := createQuote(t, api, quote("Ana Pérez", 500, ql(cake, 2, ""), ql(pie, 3, "")))
@@ -176,7 +194,7 @@ func TestQ1_AQuotationWithSeveralLines(t *testing.T) {
 }
 
 func TestQ1_BetweenOneAndThirtyLines(t *testing.T) {
-	api, admin := newQuotesAPI(t, fullBusiness)
+	api, admin := newReadyAPI(t)
 	_, _, pie := bakery(t, api)
 
 	many := func(n int) []map[string]any {
@@ -202,7 +220,7 @@ func TestQ1_BetweenOneAndThirtyLines(t *testing.T) {
 }
 
 func TestQ1_BadQuotationsAreRefusedWholeAndSaveNothing(t *testing.T) {
-	api, admin := newQuotesAPI(t, fullBusiness)
+	api, admin := newReadyAPI(t)
 	_, cake, pie := bakery(t, api)
 	good := ql(pie, 1, "")
 	withQty := func(q any) map[string]any { l := ql(cake, 1, ""); l["quantity"] = q; return l }
@@ -234,7 +252,7 @@ func TestQ1_BadQuotationsAreRefusedWholeAndSaveNothing(t *testing.T) {
 
 // Q2: the price of each line.
 func TestQ2_PriceOfALine(t *testing.T) {
-	api, _ := newQuotesAPI(t, fullBusiness)
+	api, _ := newReadyAPI(t)
 	_, cake, _ := bakery(t, api)
 
 	check := func(label string, l map[string]any, wantUnit, wantTotal float64) {
@@ -269,7 +287,7 @@ func TestQ2_PriceOfALine(t *testing.T) {
 }
 
 func TestQ2_WithoutPercentagesTheRecipeOnesAreUsedAndTheRecipeIsNotChanged(t *testing.T) {
-	api, _ := newQuotesAPI(t, fullBusiness)
+	api, _ := newReadyAPI(t)
 	_, cake, _ := bakery(t, api)
 	setCosts(t, api, cake, 0, 0.2, 0.25)
 
@@ -292,7 +310,7 @@ func TestQ2_WithoutPercentagesTheRecipeOnesAreUsedAndTheRecipeIsNotChanged(t *te
 
 // Q3: one delivery per quotation.
 func TestQ3_DeliveryIsAddedOnce(t *testing.T) {
-	api, _ := newQuotesAPI(t, fullBusiness)
+	api, _ := newReadyAPI(t)
 	_, cake, pie := bakery(t, api)
 
 	q := createQuote(t, api, quote("Ana", 1000, ql(cake, 2, ""), ql(pie, 3, "")))
@@ -336,7 +354,7 @@ func TestQ4_CreatingSavesAndAnswersJSONNotAPDF(t *testing.T) {
 
 // Q5: the saved quotation keeps its prices and names.
 func TestQ5_TheSavedQuotationDoesNotChangeWhenCostsDo(t *testing.T) {
-	api, admin := newQuotesAPI(t, fullBusiness)
+	api, admin := newReadyAPI(t)
 	_, cake, _ := bakery(t, api)
 	q := createQuote(t, api, quote("Ana", 500, ql(cake, 2, "")))
 	id := q["id"].(string)
@@ -359,7 +377,7 @@ func TestQ5_TheSavedQuotationDoesNotChangeWhenCostsDo(t *testing.T) {
 }
 
 func TestQ5_ThePDFKeepsTheSnapshotToo(t *testing.T) {
-	api, admin := newQuotesAPI(t, fullBusiness)
+	api, admin := newReadyAPI(t)
 	_, cake, _ := bakery(t, api)
 	id := createQuote(t, api, quote("Ana", 0, ql(cake, 1, "")))["id"].(string)
 	if _, err := admin.Exec(context.Background(), `update recipes set name = 'Otra cosa'`); err != nil {
@@ -377,7 +395,7 @@ func TestQ5_ThePDFKeepsTheSnapshotToo(t *testing.T) {
 
 // Q6: the PDF can be downloaded again, always the same.
 func TestQ6_DownloadThePDFOfAnyQuotationAgain(t *testing.T) {
-	api, _ := newQuotesAPI(t, fullBusiness)
+	api, _ := newReadyAPI(t)
 	_, cake, pie := bakery(t, api)
 	q := createQuote(t, api, quote("Ana Pérez", 500, ql(cake, 2, ""), ql(pie, 1, "")))
 	id := q["id"].(string)
@@ -407,7 +425,7 @@ func TestQ6_DownloadThePDFOfAnyQuotationAgain(t *testing.T) {
 }
 
 func TestQ6_FileNameAndHeaders(t *testing.T) {
-	api, _ := newQuotesAPI(t, fullBusiness)
+	api, _ := newReadyAPI(t)
 	_, cake, _ := bakery(t, api)
 	santiago, _ := time.LoadLocation("America/Santiago")
 
@@ -434,7 +452,7 @@ func TestQ6_FileNameAndHeaders(t *testing.T) {
 }
 
 func TestQ6_UnknownOrMalformedIdsAre404(t *testing.T) {
-	api, _ := newQuotesAPI(t, fullBusiness)
+	api, _ := newReadyAPI(t)
 	for _, path := range []string{"/quotations/not-an-id", "/quotations/not-an-id/pdf", "/quotations/00000000-0000-0000-0000-000000000000"} {
 		if status, raw := api.do("GET", path, nil); status != http.StatusNotFound {
 			t.Errorf("GET %s: status = %d, want 404: %s", path, status, raw)
@@ -444,7 +462,7 @@ func TestQ6_UnknownOrMalformedIdsAre404(t *testing.T) {
 
 // Q7 (API side): the list carries the lines.
 func TestQ7_TheListCarriesTheLinesAndFilters(t *testing.T) {
-	api, _ := newQuotesAPI(t, fullBusiness)
+	api, _ := newReadyAPI(t)
 	_, cake, pie := bakery(t, api)
 	a := createQuote(t, api, quote("Ana", 0, ql(cake, 1, ""), ql(pie, 1, "")))
 	createQuote(t, api, quote("Bea", 500, ql(pie, 2, "")))
@@ -476,36 +494,10 @@ func TestQ7_TheListCarriesTheLinesAndFilters(t *testing.T) {
 	}
 }
 
-// Q11: the business data comes from the configuration.
-func TestQ11_WithoutBusinessDataThePDFIsRefusedAndNamesWhatIsMissing(t *testing.T) {
-	api, _ := newQuotesAPI(t, config.Business{Name: "Solo el nombre"})
-	_, cake, _ := bakery(t, api)
-	id := createQuote(t, api, quote("Ana", 0, ql(cake, 1, "")))["id"].(string)
-
-	status, raw := api.do("GET", "/quotations/"+id+"/pdf", nil)
-	if status != http.StatusServiceUnavailable {
-		t.Fatalf("status = %d, want 503: %.200s", status, raw)
-	}
-	for _, name := range []string{"BIZ_PHONE", "BIZ_INSTAGRAM", "BIZ_BANK", "BIZ_ACCOUNT", "BIZ_HOLDER", "BIZ_RUT"} {
-		if !strings.Contains(string(raw), name) {
-			t.Errorf("the answer does not name %s: %s", name, raw)
-		}
-	}
-	if strings.Contains(string(raw), "BIZ_NAME") {
-		t.Errorf("BIZ_NAME is set and should not be reported: %s", raw)
-	}
-
-	complete, _ := newQuotesAPI(t, fullBusiness)
-	_, cake2, _ := bakery(t, complete)
-	id2 := createQuote(t, complete, quote("Ana", 0, ql(cake2, 1, "")))["id"].(string)
-	if status, raw := complete.do("GET", "/quotations/"+id2+"/pdf", nil); status != http.StatusOK {
-		t.Errorf("with the data configured: status = %d: %.200s", status, raw)
-	}
-}
-
+// Q11f: no placeholder data in the PDF.
 func TestQ11_TheOldPlaceholdersAreGone(t *testing.T) {
 	// The PDF used to print made-up bank data when nothing was configured.
-	api, _ := newQuotesAPI(t, fullBusiness)
+	api, _ := newReadyAPI(t)
 	_, cake, _ := bakery(t, api)
 	id := createQuote(t, api, quote("Ana", 0, ql(cake, 1, "")))["id"].(string)
 	_, pdf := api.do("GET", "/quotations/"+id+"/pdf", nil)
@@ -515,7 +507,7 @@ func TestQ11_TheOldPlaceholdersAreGone(t *testing.T) {
 			t.Errorf("the PDF still prints the placeholder %q", fake)
 		}
 	}
-	for _, real := range []string{fullBusiness.Account, fullBusiness.RUT, fullBusiness.Holder} {
+	for _, real := range []string{fullBusiness.Account, fullBusiness.RUT, profile["holder"].(string)} {
 		if !strings.Contains(text, real) {
 			t.Errorf("the PDF does not print %q", real)
 		}
@@ -524,7 +516,7 @@ func TestQ11_TheOldPlaceholdersAreGone(t *testing.T) {
 
 // Q12: both accounts do everything.
 func TestQ12_BothAccountsCreateConfirmCancelAndDownload(t *testing.T) {
-	a, admin := newQuotesAPI(t, fullBusiness)
+	a, admin := newReadyAPI(t)
 	_, cake, _ := bakery(t, a)
 	hash, _ := bcrypt.GenerateFromPassword([]byte(testPassword), bcrypt.MinCost)
 	if _, err := admin.Exec(context.Background(),

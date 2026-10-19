@@ -17,14 +17,12 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/PipeM113/bakery-manager/internal/config"
 )
 
 // Sprint 12 (Q8, Q9, Q10): the quotation PDF carries the brand, one row per line, and a photo that
 // cannot be read never stops it.
 
-var business = config.Business{
+var business = Business{
 	Name: "Panadería de Prueba", Phone: "+56 9 1111 2222", Instagram: "@prueba",
 	Bank: "Banco Prueba", Account: "000-111222-3", Holder: "Titular Prueba", RUT: "11.111.111-1",
 }
