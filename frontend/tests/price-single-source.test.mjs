@@ -46,3 +46,10 @@ test("P9: the recipe markup is called 'Recargo sobre costo' where prices are set
 test("P9: 'Margen' stays for the dashboard figure (profit over sales)", () => {
   assert.match(read("src/pages/ProfitabilityPage.tsx"), /Margen de Ganancia/);
 });
+
+test("E4: the price for another number of portions is asked of the backend", () => {
+  const quotation = read("src/components/QuotationGenerator.tsx");
+  assert.match(quotation, /portions:\s*String\(/, "the cost request should carry the portions");
+  assert.match(quotation, /Precio final \(\{portionsNum\} porciones\)/);
+  assert.match(quotation, /breakdown\.suggested_price/);
+});
