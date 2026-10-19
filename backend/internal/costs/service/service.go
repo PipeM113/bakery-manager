@@ -108,7 +108,7 @@ func (s *CostService) GetCostBreakdown(ctx context.Context, recipeID string, par
 	}
 
 	rows, err := s.db.Query(ctx, `
-		SELECT ri.ingredient_id, i.name, ri.quantity, ri.unit,
+		SELECT ri.ingredient_id, i.name, i.kind, ri.quantity, ri.unit,
 		       i.price_per_unit, i.default_unit, i.package_price, i.package_size
 		FROM recipe_ingredients ri
 		JOIN ingredients i ON i.id = ri.ingredient_id
@@ -123,7 +123,7 @@ func (s *CostService) GetCostBreakdown(ctx context.Context, recipeID string, par
 		var ing domain.IngredientCost
 		var recipeUnit, baseUnit string
 		if err := rows.Scan(
-			&ing.IngredientID, &ing.Name,
+			&ing.IngredientID, &ing.Name, &ing.Kind,
 			&ing.Quantity, &recipeUnit,
 			&ing.PricePerUnit, &baseUnit,
 			&ing.PackagePrice, &ing.PackageSize,

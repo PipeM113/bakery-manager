@@ -89,9 +89,10 @@ export default function RecipeForm({ editing, ingredients, onSave, onSaveAs, onC
     setShowIngPicker(false);
   };
 
-  const filteredForPicker = ingredients.filter((i) =>
-    i.name.toLowerCase().includes(ingSearch.toLowerCase())
-  );
+  // Ingredients first, then supplies (boxes, cardboard); each group stays in name order.
+  const filteredForPicker = ingredients
+    .filter((i) => i.name.toLowerCase().includes(ingSearch.toLowerCase()))
+    .sort((a, b) => Number((a.kind ?? "ingredient") === "supply") - Number((b.kind ?? "ingredient") === "supply"));
 
   const updateIngredient = (idx: number, field: string, value: string | number) => {
     setForm((f) => {
@@ -256,10 +257,14 @@ export default function RecipeForm({ editing, ingredients, onSave, onSaveAs, onC
                   onChange={(e) => updateIngredient(idx, "ingredient_id", e.target.value)}
                   className="flex-1 bg-vanilla-100 border border-stone-200 text-stone-800 px-3 py-2 text-xs font-light focus:outline-none focus:border-gold transition-all min-w-0"
                 >
-                  {ingredients.map((i) => (
-                    <option key={i.id} value={i.id}>
-                      {i.name}
-                    </option>
+                  {([["ingredient", "Ingredientes"], ["supply", "Insumos (cajas, cartones)"]] as const).map(([kind, label]) => (
+                    <optgroup key={kind} label={label}>
+                      {ingredients.filter((i) => (i.kind ?? "ingredient") === kind).map((i) => (
+                        <option key={i.id} value={i.id}>
+                          {i.name}
+                        </option>
+                      ))}
+                    </optgroup>
                   ))}
                 </select>
                 <input
@@ -368,7 +373,13 @@ export default function RecipeForm({ editing, ingredients, onSave, onSaveAs, onC
                 </p>
               ) : (
                 <div className="space-y-0.5">
-                  {filteredForPicker.map((i) => (
+                  {filteredForPicker.map((i, idx, all) => (
+                    <div key={i.id}>
+                    {(idx === 0 || (all[idx - 1].kind ?? "ingredient") !== (i.kind ?? "ingredient")) && (
+                      <p className="px-3 pt-2 pb-1 text-xs tracking-widest uppercase text-stone-400 font-light">
+                        {(i.kind ?? "ingredient") === "supply" ? "Insumos (cajas, cartones)" : "Ingredientes"}
+                      </p>
+                    )}
                     <label
                       key={i.id}
                       className="flex items-center gap-3 px-3 py-2 hover:bg-vanilla-100 cursor-pointer transition-colors"
@@ -381,6 +392,7 @@ export default function RecipeForm({ editing, ingredients, onSave, onSaveAs, onC
                       />
                       <span className="text-stone-700 text-sm font-light">{i.name}</span>
                     </label>
+                    </div>
                   ))}
                 </div>
               )}

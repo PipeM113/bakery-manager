@@ -50,7 +50,8 @@ go run -tags postgres github.com/golang-migrate/migrate/v4/cmd/migrate@v4.20.1 \
 - El rol ya cae en el esquema `manager`, por eso no hace falta `search_path` en la URL; la tabla de control `schema_migrations` también queda ahí.
 - La migración 15 activa RLS en todas las tablas, sin políticas.
 - La migración 16 pasa el dinero a pesos enteros (los montos con decimales se redondean al peso más cercano) y crea las categorías de gasto (`expense_categories`, con RLS). Los gastos que ya existían conservan su categoría. Haz una copia de seguridad antes de correrla en producción (sección de respaldo).
-- Verifica: `select version, dirty from manager.schema_migrations;` debe dar `16` y `false`.
+- La migración 17 agrega `ingredients.kind` (`ingredient` o `supply`, para cajas y cartones); lo que ya existe queda como `ingredient`.
+- Verifica: `select version, dirty from manager.schema_migrations;` debe dar `17` y `false`.
 - Deshacer la última: mismo comando con `down 1`.
 - Cuando termines, `unset MIGRATE_URL`.
 

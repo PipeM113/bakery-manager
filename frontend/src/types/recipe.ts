@@ -3,6 +3,7 @@ export interface IRecipeIngredient {
   recipe_id: string;
   ingredient_id: string;
   name: string;
+  kind: "ingredient" | "supply";
   quantity: number;
   unit: string;
 }
@@ -30,6 +31,7 @@ export interface IRecipe {
 
 export interface IIngredientOption {
   id: string;
+  kind?: "ingredient" | "supply";
   name: string;
   default_unit: string;
 }

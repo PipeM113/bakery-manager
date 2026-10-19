@@ -47,3 +47,23 @@ func TestD6_GlossaryExplainsCategoriesAndWholePesos(t *testing.T) {
 		}
 	}
 }
+
+// Sprint 3: supplies of a recipe are written down too.
+func TestI7_GlossaryExplainsSupplies(t *testing.T) {
+	root := repoRoot(t)
+	raw, err := os.ReadFile(filepath.Join(root, "docs", "glosario-dinero.md"))
+	if err != nil {
+		t.Fatalf("docs/glosario-dinero.md is missing: %v", err)
+	}
+	text := string(raw)
+	for _, want := range []string{
+		"Insumos de receta", // what they are
+		"supplies_total",    // the field of the breakdown
+		"caja",              // the example
+		"sin porcentajes",   // indirect and labor do not apply to them
+	} {
+		if !strings.Contains(text, want) {
+			t.Errorf("the glossary should mention %q", want)
+		}
+	}
+}

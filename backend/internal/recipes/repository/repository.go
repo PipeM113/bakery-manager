@@ -13,6 +13,7 @@ type RecipeIngredient struct {
 	RecipeID     string  `json:"recipe_id"`
 	IngredientID string  `json:"ingredient_id"`
 	Name         string  `json:"name"`
+	Kind         string  `json:"kind"` // "ingredient" or "supply"
 	Quantity     float64 `json:"quantity"`
 	Unit         string  `json:"unit"`
 }
@@ -112,7 +113,7 @@ func (r *RecipeRepository) GetAll(ctx context.Context) ([]Recipe, error) {
 		}
 		// Cargar ingredientes de cada receta
 		ingRows, err := r.db.Query(ctx, `
-			SELECT ri.id, ri.recipe_id, ri.ingredient_id, i.name, ri.quantity, ri.unit
+			SELECT ri.id, ri.recipe_id, ri.ingredient_id, i.name, i.kind, ri.quantity, ri.unit
 			FROM recipe_ingredients ri
 			JOIN ingredients i ON i.id = ri.ingredient_id
 			WHERE ri.recipe_id = $1`, rec.ID)
@@ -121,7 +122,7 @@ func (r *RecipeRepository) GetAll(ctx context.Context) ([]Recipe, error) {
 		}
 		for ingRows.Next() {
 			var ing RecipeIngredient
-			if err := ingRows.Scan(&ing.ID, &ing.RecipeID, &ing.IngredientID, &ing.Name, &ing.Quantity, &ing.Unit); err != nil {
+			if err := ingRows.Scan(&ing.ID, &ing.RecipeID, &ing.IngredientID, &ing.Name, &ing.Kind, &ing.Quantity, &ing.Unit); err != nil {
 				ingRows.Close()
 				return nil, fmt.Errorf("scan ingredient: %w", err)
 			}
@@ -154,7 +155,7 @@ func (r *RecipeRepository) GetByID(ctx context.Context, id string) (Recipe, erro
 	}
 
 	rows, err := r.db.Query(ctx, `
-		SELECT ri.id, ri.recipe_id, ri.ingredient_id, i.name, ri.quantity, ri.unit
+		SELECT ri.id, ri.recipe_id, ri.ingredient_id, i.name, i.kind, ri.quantity, ri.unit
 		FROM recipe_ingredients ri
 		JOIN ingredients i ON i.id = ri.ingredient_id
 		WHERE ri.recipe_id = $1`, id)
@@ -165,7 +166,7 @@ func (r *RecipeRepository) GetByID(ctx context.Context, id string) (Recipe, erro
 
 	for rows.Next() {
 		var ing RecipeIngredient
-		if err := rows.Scan(&ing.ID, &ing.RecipeID, &ing.IngredientID, &ing.Name, &ing.Quantity, &ing.Unit); err != nil {
+		if err := rows.Scan(&ing.ID, &ing.RecipeID, &ing.IngredientID, &ing.Name, &ing.Kind, &ing.Quantity, &ing.Unit); err != nil {
 			return Recipe{}, fmt.Errorf("scan ingredient: %w", err)
 		}
 		rec.Ingredients = append(rec.Ingredients, ing)

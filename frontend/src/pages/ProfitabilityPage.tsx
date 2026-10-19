@@ -235,7 +235,7 @@ export default function ProfitabilityPage() {
           {metrics && (
             <div className="grid grid-cols-2 gap-4 mb-10 md:grid-cols-3 lg:grid-cols-6">
               <KpiCard label="Ingresos Totales"      value={clp(metrics.total_revenue)}             accent="green" />
-              <KpiCard label="Costo Insumos"         value={clp(metrics.total_ingredients_cost)}    accent="red" />
+              <KpiCard label="Costo de ingredientes e insumos"       value={clp(metrics.total_ingredients_cost)}    accent="red" />
               <KpiCard label="Costos Fijos"          value={clp(metrics.total_fixed_costs)}         accent="yellow" />
               <KpiCard label="Gastos Operacionales"  value={clp(metrics.total_operational_expenses)} accent="red" />
               <KpiCard label="Ganancia Neta"         value={clp(metrics.net_profit)}                accent="dark-green" large />
@@ -331,7 +331,7 @@ export default function ProfitabilityPage() {
               <div className="space-y-3">
                 {[
                   { label: "Ingresos totales",       value: metrics.total_revenue,             color: "text-emerald-600" },
-                  { label: "− Costo de insumos",     value: -metrics.total_ingredients_cost,   color: "text-red-500" },
+                  { label: "− Costo de ingredientes e insumos",     value: -metrics.total_ingredients_cost,   color: "text-red-500" },
                   { label: "= Ganancia bruta",        value: metrics.gross_profit,              color: metrics.gross_profit >= 0 ? "text-stone-800" : "text-red-500", bold: true },
                   { label: "− Costos fijos",          value: -metrics.total_fixed_costs,        color: "text-amber-500" },
                   { label: "− Gastos operacionales",  value: -metrics.total_operational_expenses, color: "text-red-400" },

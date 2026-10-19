@@ -174,7 +174,7 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onSaved }: Props
               <p className="text-stone-400 text-xs font-light">Sin ingredientes registrados</p>
             ) : (
               <div className="space-y-1">
-                {recipe.ingredients.map((ing) => {
+                {recipe.ingredients.filter((ing) => (ing.kind ?? "ingredient") === "ingredient").map((ing) => {
                   const qty = ing.quantity * factor;
                   return (
                     <div
@@ -191,6 +191,30 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onSaved }: Props
               </div>
             )}
           </div>
+
+          {recipe.ingredients.some((ing) => ing.kind === "supply") && (
+            <div>
+              <p className="text-xs tracking-widest uppercase text-stone-400 font-light mb-3">
+                Insumos (cajas, cartones)
+              </p>
+              <div className="space-y-1">
+                {recipe.ingredients.filter((ing) => ing.kind === "supply").map((ing) => {
+                  const qty = ing.quantity * factor;
+                  return (
+                    <div
+                      key={ing.ingredient_id}
+                      className="flex justify-between items-center py-2 border-b border-stone-100 last:border-0"
+                    >
+                      <span className="text-stone-800 text-sm font-light">{ing.name}</span>
+                      <span className={`text-sm tabular-nums ${isScaled ? "text-gold" : "text-stone-600"}`}>
+                        {qty.toFixed(2)} {ing.unit}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Cotización */}
           <div className="bg-white border border-stone-200 p-5 space-y-1">
