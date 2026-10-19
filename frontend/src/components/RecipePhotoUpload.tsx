@@ -80,7 +80,7 @@ export default function RecipePhotoUpload({ recipeId, currentPhotoUrl, onUploade
 
   return (
     <div className="space-y-3">
-      <label className="block text-xs tracking-widest uppercase text-stone-400 font-light">
+      <label className="block text-xs tracking-widest uppercase text-negro/70 font-light">
         Foto
       </label>
 
@@ -89,10 +89,10 @@ export default function RecipePhotoUpload({ recipeId, currentPhotoUrl, onUploade
           <img
             src={displayPhoto}
             alt="Foto de receta"
-            className="w-full h-44 object-cover border border-stone-200"
+            className="w-full h-44 object-cover border border-linea"
           />
           {preview && (
-            <span className="absolute top-2 left-2 bg-gold text-white text-xs px-2 py-0.5 tracking-wide">
+            <span className="absolute top-2 left-2 bg-negro text-crema text-xs px-2 py-0.5 tracking-wide">
               Vista previa
             </span>
           )}
@@ -106,14 +106,14 @@ export default function RecipePhotoUpload({ recipeId, currentPhotoUrl, onUploade
         onClick={() => !uploading && fileInputRef.current?.click()}
         className={`border-2 border-dashed cursor-pointer py-6 text-center transition-colors ${
           dragOver
-            ? "border-gold bg-vanilla-100"
-            : "border-stone-200 hover:border-stone-400"
+            ? "border-oro bg-crema"
+            : "border-linea hover:border-oro"
         } ${uploading ? "opacity-50 cursor-not-allowed" : ""}`}
       >
-        <p className="text-stone-400 text-xs font-light tracking-wide">
+        <p className="text-negro/70 text-xs font-light tracking-wide">
           {displayPhoto ? "Arrastra o haz clic para reemplazar" : "Arrastra o haz clic para subir foto"}
         </p>
-        <p className="text-stone-300 text-xs mt-1">JPEG · PNG · WebP · máx 4 MB</p>
+        <p className="text-negro/70 text-xs mt-1">JPEG · PNG · WebP · máx 4 MB</p>
         <input
           ref={fileInputRef}
           type="file"
@@ -125,20 +125,20 @@ export default function RecipePhotoUpload({ recipeId, currentPhotoUrl, onUploade
       </div>
 
       {error && (
-        <p className="text-red-500 text-xs tracking-wide">{error}</p>
+        <p className="text-peligro text-xs tracking-wide">{error}</p>
       )}
 
       {pendingFile && !uploading && (
         <div className="flex gap-2">
           <button
             onClick={handleUpload}
-            className="flex-1 bg-gold text-white text-xs tracking-widest uppercase font-medium py-2.5 hover:bg-gold-light transition-all"
+            className="flex-1 bg-negro text-crema text-xs tracking-widest uppercase font-medium py-2.5 hover:bg-black transition-all"
           >
             Subir foto
           </button>
           <button
             onClick={handleCancel}
-            className="px-4 border border-stone-200 text-stone-500 text-xs tracking-widest uppercase font-medium py-2.5 hover:border-stone-400 transition-all"
+            className="px-4 border border-linea text-negro/70 text-xs tracking-widest uppercase font-medium py-2.5 hover:border-oro transition-all"
           >
             Cancelar
           </button>
@@ -146,12 +146,12 @@ export default function RecipePhotoUpload({ recipeId, currentPhotoUrl, onUploade
       )}
 
       {uploading && (
-        <div className="flex items-center justify-center gap-2 py-2.5 bg-vanilla-100">
-          <svg className="animate-spin h-4 w-4 text-gold" viewBox="0 0 24 24" fill="none">
+        <div className="flex items-center justify-center gap-2 py-2.5 bg-crema">
+          <svg className="animate-spin h-4 w-4 text-oro" viewBox="0 0 24 24" fill="none">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
           </svg>
-          <span className="text-xs text-stone-500 font-light tracking-wide">Subiendo foto...</span>
+          <span className="text-xs text-negro/70 font-light tracking-wide">Subiendo foto...</span>
         </div>
       )}
     </div>

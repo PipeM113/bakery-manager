@@ -72,7 +72,7 @@ function TrendChart({ data }: TrendChartProps) {
         <line
           x1={PAD.left} y1={zeroY}
           x2={W - PAD.right} y2={zeroY}
-          stroke="#e7e5e4" strokeWidth={1} strokeDasharray="4 3"
+          stroke="#E8DDD3" strokeWidth={1} strokeDasharray="4 3"
         />
       )}
 
@@ -80,7 +80,7 @@ function TrendChart({ data }: TrendChartProps) {
       <polyline
         points={polyline("revenue")}
         fill="none"
-        stroke="#b5954a"
+        stroke="#735523"
         strokeWidth={2}
         strokeLinejoin="round"
         strokeLinecap="round"
@@ -90,7 +90,7 @@ function TrendChart({ data }: TrendChartProps) {
       <polyline
         points={polyline("net_profit")}
         fill="none"
-        stroke="#4a7c59"
+        stroke="#1C1C1C"
         strokeWidth={2}
         strokeLinejoin="round"
         strokeLinecap="round"
@@ -98,12 +98,12 @@ function TrendChart({ data }: TrendChartProps) {
 
       {/* dots — revenue */}
       {data.map((d, i) => (
-        <circle key={`rv-${i}`} cx={x(i)} cy={y(d.revenue)} r={3} fill="#b5954a" />
+        <circle key={`rv-${i}`} cx={x(i)} cy={y(d.revenue)} r={3} fill="#735523" />
       ))}
 
       {/* dots — net profit */}
       {data.map((d, i) => (
-        <circle key={`np-${i}`} cx={x(i)} cy={y(d.net_profit)} r={3} fill="#4a7c59" />
+        <circle key={`np-${i}`} cx={x(i)} cy={y(d.net_profit)} r={3} fill="#1C1C1C" />
       ))}
 
       {/* x-axis labels */}
@@ -118,7 +118,7 @@ function TrendChart({ data }: TrendChartProps) {
             y={H - 4}
             textAnchor="middle"
             fontSize={10}
-            fill="#a8a29e"
+            fill="#1C1C1C" fillOpacity={0.7}
           >
             {short}
           </text>
@@ -139,18 +139,18 @@ interface KpiCardProps {
 
 function KpiCard({ label, value, accent = "neutral", large = false }: KpiCardProps) {
   const colorMap: Record<string, string> = {
-    green:      "text-emerald-600",
-    "dark-green": "text-emerald-800",
-    red:        "text-red-500",
-    yellow:     "text-amber-500",
-    neutral:    "text-gold",
+    green:      "text-negro",
+    "dark-green": "text-negro",
+    red:        "text-peligro",
+    yellow:     "text-oro",
+    neutral:    "text-oro",
   };
   return (
-    <div className={`bg-white border border-stone-200 p-5 hover:border-gold transition-all ${large ? "col-span-2 md:col-span-1" : ""}`}>
+    <div className={`bg-white border border-linea p-5 hover:border-oro transition-all ${large ? "col-span-2 md:col-span-1" : ""}`}>
       <p className={`font-display ${large ? "text-4xl" : "text-2xl"} ${colorMap[accent]} mb-1 leading-tight truncate`}>
         {value}
       </p>
-      <p className="text-xs tracking-widest uppercase text-stone-400 font-light">{label}</p>
+      <p className="text-xs tracking-widest uppercase text-negro/70 font-light">{label}</p>
     </div>
   );
 }
@@ -196,10 +196,10 @@ export default function ProfitabilityPage() {
       <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <div className="flex items-center gap-3 mb-3">
-            <div className="h-px w-8 bg-gold opacity-40" />
-            <span className="text-gold text-xs tracking-[0.3em] uppercase font-light">Rentabilidad</span>
+            <div className="h-px w-8 bg-oro/40" />
+            <span className="text-oro text-xs tracking-[0.3em] uppercase font-light">Rentabilidad</span>
           </div>
-          <h1 className="font-display text-4xl text-stone-800">Dashboard de ganancias</h1>
+          <h1 className="font-display text-4xl text-negro">Dashboard de ganancias</h1>
         </div>
 
         {/* month / year selector */}
@@ -207,7 +207,7 @@ export default function ProfitabilityPage() {
           <select
             value={month}
             onChange={(e) => setMonth(Number(e.target.value))}
-            className="border border-stone-200 bg-white text-stone-700 text-sm px-3 py-2 focus:outline-none focus:border-gold"
+            className="border border-linea bg-white text-negro/70 text-sm px-3 py-2 focus:outline-none focus:border-oro"
           >
             {MONTH_NAMES.map((name, i) => (
               <option key={i + 1} value={i + 1}>{name}</option>
@@ -216,7 +216,7 @@ export default function ProfitabilityPage() {
           <select
             value={year}
             onChange={(e) => setYear(Number(e.target.value))}
-            className="border border-stone-200 bg-white text-stone-700 text-sm px-3 py-2 focus:outline-none focus:border-gold"
+            className="border border-linea bg-white text-negro/70 text-sm px-3 py-2 focus:outline-none focus:border-oro"
           >
             {yearOptions.map((y) => (
               <option key={y} value={y}>{y}</option>
@@ -227,7 +227,7 @@ export default function ProfitabilityPage() {
 
       {loading ? (
         <div className="min-h-64 flex items-center justify-center">
-          <span className="text-gold text-sm tracking-widest uppercase font-light animate-pulse">Calculando...</span>
+          <span className="text-oro text-sm tracking-widest uppercase font-light animate-pulse">Calculando...</span>
         </div>
       ) : (
         <>
@@ -244,49 +244,49 @@ export default function ProfitabilityPage() {
           )}
 
           {/* Trend chart */}
-          <div className="bg-white border border-stone-200 p-6 mb-10">
+          <div className="bg-white border border-linea p-6 mb-10">
             <div className="flex items-center gap-4 mb-5">
-              <h2 className="font-display text-xl text-stone-800">Tendencia últimos 6 meses</h2>
-              <div className="flex-1 h-px bg-stone-200" />
-              <div className="flex items-center gap-4 text-xs text-stone-400 font-light">
+              <h2 className="font-display text-xl text-negro">Tendencia últimos 6 meses</h2>
+              <div className="flex-1 h-px bg-lino" />
+              <div className="flex items-center gap-4 text-xs text-negro/70 font-light">
                 <span className="flex items-center gap-1.5">
-                  <span className="inline-block w-4 h-0.5 bg-gold" /> Ingresos
+                  <span className="inline-block w-4 border-t-2 border-oro" /> Ingresos
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <span className="inline-block w-4 h-0.5 bg-emerald-700" /> Ganancia Neta
+                  <span className="inline-block w-4 border-t-2 border-negro" /> Ganancia Neta
                 </span>
               </div>
             </div>
             {trends.length === 0 ? (
-              <p className="text-stone-400 text-sm font-light text-center py-8">Sin datos de tendencia</p>
+              <p className="text-negro/70 text-sm font-light text-center py-8">Sin datos de tendencia</p>
             ) : (
               <TrendChart data={trends} />
             )}
           </div>
 
           {/* Recipe ranking table */}
-          <div className="bg-white border border-stone-200 mb-10">
-            <div className="flex items-center gap-4 px-6 py-5 border-b border-stone-100">
-              <h2 className="font-display text-xl text-stone-800">Rendimiento por receta</h2>
-              <div className="flex-1 h-px bg-stone-200" />
-              <span className="text-xs text-stone-400 font-light tracking-widest uppercase">
+          <div className="bg-white border border-linea mb-10">
+            <div className="flex items-center gap-4 px-6 py-5 border-b border-linea">
+              <h2 className="font-display text-xl text-negro">Rendimiento por receta</h2>
+              <div className="flex-1 h-px bg-lino" />
+              <span className="text-xs text-negro/70 font-light tracking-widest uppercase">
                 {MONTH_NAMES[month - 1]} {year}
               </span>
             </div>
 
             {recipes.length === 0 ? (
-              <p className="text-stone-400 text-sm font-light text-center py-10">
+              <p className="text-negro/70 text-sm font-light text-center py-10">
                 Sin ventas registradas para este período
               </p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-stone-100">
+                    <tr className="border-b border-linea">
                       {["Receta", "Unidades", "Ingreso", "Costo", "Ganancia", "Margen"].map((h) => (
                         <th
                           key={h}
-                          className="px-5 py-3 text-left text-xs tracking-widest uppercase text-stone-400 font-light whitespace-nowrap"
+                          className="px-5 py-3 text-left text-xs tracking-widest uppercase text-negro/70 font-light whitespace-nowrap"
                         >
                           {h}
                         </th>
@@ -300,16 +300,16 @@ export default function ProfitabilityPage() {
                       return (
                         <tr
                           key={r.recipe_id}
-                          className="border-b border-stone-50 hover:bg-vanilla-50 transition-colors"
+                          className="border-b border-linea hover:bg-lino transition-colors"
                         >
-                          <td className="px-5 py-3 text-stone-800 font-light">{r.recipe_name}</td>
-                          <td className="px-5 py-3 text-stone-600">{r.units_sold}</td>
-                          <td className="px-5 py-3 text-stone-600">{clp(r.total_revenue)}</td>
-                          <td className="px-5 py-3 text-stone-600">{clp(r.total_cost)}</td>
-                          <td className={`px-5 py-3 font-light ${profit >= 0 ? "text-emerald-600" : "text-red-500"}`}>
+                          <td className="px-5 py-3 text-negro font-light">{r.recipe_name}</td>
+                          <td className="px-5 py-3 text-negro/70">{r.units_sold}</td>
+                          <td className="px-5 py-3 text-negro/70">{clp(r.total_revenue)}</td>
+                          <td className="px-5 py-3 text-negro/70">{clp(r.total_cost)}</td>
+                          <td className={`px-5 py-3 font-light ${profit >= 0 ? "text-negro" : "text-peligro"}`}>
                             {clp(profit)}
                           </td>
-                          <td className={`px-5 py-3 font-light ${positiveMargin ? "text-emerald-600" : "text-red-500"}`}>
+                          <td className={`px-5 py-3 font-light ${positiveMargin ? "text-negro" : "text-peligro"}`}>
                             {pct(r.gross_margin)}
                           </td>
                         </tr>
@@ -323,25 +323,25 @@ export default function ProfitabilityPage() {
 
           {/* Cost breakdown summary */}
           {metrics && (
-            <div className="bg-white border border-stone-200 p-6">
+            <div className="bg-white border border-linea p-6">
               <div className="flex items-center gap-4 mb-5">
-                <h2 className="font-display text-xl text-stone-800">Desglose mensual</h2>
-                <div className="flex-1 h-px bg-stone-200" />
+                <h2 className="font-display text-xl text-negro">Desglose mensual</h2>
+                <div className="flex-1 h-px bg-lino" />
               </div>
               <div className="space-y-3">
                 {[
-                  { label: "Ingresos totales",       value: metrics.total_revenue,             color: "text-emerald-600" },
-                  { label: "− Costo de ingredientes e insumos",     value: -metrics.total_ingredients_cost,   color: "text-red-500" },
-                  { label: "= Ganancia bruta",        value: metrics.gross_profit,              color: metrics.gross_profit >= 0 ? "text-stone-800" : "text-red-500", bold: true },
-                  { label: "− Costos fijos",          value: -metrics.total_fixed_costs,        color: "text-amber-500" },
-                  { label: "− Gastos operacionales",  value: -metrics.total_operational_expenses, color: "text-red-400" },
-                  { label: "= Ganancia neta",         value: metrics.net_profit,                color: metrics.net_profit >= 0 ? "text-emerald-700" : "text-red-600", bold: true },
+                  { label: "Ingresos totales",       value: metrics.total_revenue,             color: "text-negro" },
+                  { label: "− Costo de ingredientes e insumos",     value: -metrics.total_ingredients_cost,   color: "text-peligro" },
+                  { label: "= Ganancia bruta",        value: metrics.gross_profit,              color: metrics.gross_profit >= 0 ? "text-negro" : "text-peligro", bold: true },
+                  { label: "− Costos fijos",          value: -metrics.total_fixed_costs,        color: "text-oro" },
+                  { label: "− Gastos operacionales",  value: -metrics.total_operational_expenses, color: "text-peligro" },
+                  { label: "= Ganancia neta",         value: metrics.net_profit,                color: metrics.net_profit >= 0 ? "text-negro" : "text-peligro", bold: true },
                 ].map(({ label, value, color, bold }) => (
                   <div
                     key={label}
-                    className={`flex justify-between items-center py-2 border-b border-stone-50 ${bold ? "border-stone-200 pt-3" : ""}`}
+                    className={`flex justify-between items-center py-2 border-b border-linea ${bold ? "border-linea pt-3" : ""}`}
                   >
-                    <span className={`text-sm font-light ${bold ? "text-stone-700 font-normal" : "text-stone-500"}`}>
+                    <span className={`text-sm font-light ${bold ? "text-negro/70 font-normal" : "text-negro/70"}`}>
                       {label}
                     </span>
                     <span className={`text-sm ${color} ${bold ? "font-medium" : "font-light"}`}>
@@ -356,11 +356,11 @@ export default function ProfitabilityPage() {
                   const diff = Math.abs(computed - metrics.net_profit);
                   const ok = diff < 0.01;
                   return (
-                    <div className="mt-4 pt-3 border-t border-stone-100">
-                      <p className="text-xs text-stone-400 font-light mb-1 tracking-wide uppercase">Auditoría</p>
-                      <p className="text-xs text-stone-400 font-mono">
+                    <div className="mt-4 pt-3 border-t border-linea">
+                      <p className="text-xs text-negro/70 font-light mb-1 tracking-wide uppercase">Auditoría</p>
+                      <p className="text-xs text-negro/70 font-mono">
                         Ganancia neta = {clp(metrics.total_revenue)} − ({clp(metrics.total_ingredients_cost)} + {clp(metrics.total_fixed_costs)} + {clp(metrics.total_operational_expenses)}) = {clp(computed)}
-                        {" "}<span className={ok ? "text-emerald-500" : "text-red-500"}>{ok ? "✓" : `⚠ diff ${clp(diff)}`}</span>
+                        {" "}<span className={ok ? "text-negro" : "text-peligro"}>{ok ? "✓" : `⚠ diff ${clp(diff)}`}</span>
                       </p>
                     </div>
                   );

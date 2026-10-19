@@ -1,3 +1,6 @@
+// Brand palette and fonts of the manual (angeles_bakery_web/docs/diseno.md); see docs/diseno.md.
+// Salvia and rosa are backgrounds only; gold text on light grounds is always "oro";
+// "oro-claro" is for dark grounds only.
 export default {
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
   theme: {
@@ -10,15 +13,19 @@ export default {
         xl:   ["21px", "1.8"],
       },
       colors: {
-        vanilla: { DEFAULT: "#FDFAF4", 100: "#F7F0E4", 200: "#EDE0C8" },
-        terracota: { 400: "#C4714A", 500: "#B05A35", 600: "#8E4528" },
-        olive:   { 500: "#5C6B3A", 600: "#47542C" },
-        stone:   { 100: "#F5F0E8", 200: "#E8DFD0", 400: "#5C5248", 600: "#4A3D35", 800: "#1E1410" },
-        gold:    { DEFAULT: "#B8860B", light: "#D4A017", dark: "#8B6508" },
+        crema: "#FAF6F1",
+        lino: "#E8DDD3",
+        salvia: "#C4C9B8",
+        rosa: "#D9B8AE",
+        negro: "#1C1C1C",
+        oro: "#735523",
+        "oro-claro": "#EECC6A",
+        peligro: "#8A1C1C",
+        linea: "rgba(115, 85, 35, 0.35)",
       },
       fontFamily: {
-        display: ["Cormorant Garamond", "serif"],
-        sans:    ["Jost", "sans-serif"],
+        display: ["Playfair Display", "Iowan Old Style", "Georgia", "serif"],
+        sans:    ["DM Sans", "system-ui", "-apple-system", "Segoe UI", "sans-serif"],
       },
     },
   },

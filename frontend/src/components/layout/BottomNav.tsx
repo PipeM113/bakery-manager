@@ -13,7 +13,7 @@ const links = [
 
 export default function BottomNav() {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-stone-200 md:hidden shadow-sm">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-linea md:hidden shadow-sm">
       <div className="flex justify-around items-center h-16">
         {links.map(({ to, icon, label }) => (
           <NavLink
@@ -21,7 +21,7 @@ export default function BottomNav() {
             to={to}
             className={({ isActive }) =>
               `flex flex-col items-center gap-0.5 px-4 py-2 transition-all duration-200 ${
-                isActive ? "text-gold" : "text-stone-400"
+                isActive ? "text-oro" : "text-negro/70"
               }`
             }
           >

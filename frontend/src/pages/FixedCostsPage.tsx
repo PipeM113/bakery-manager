@@ -96,24 +96,24 @@ export default function FixedCostsPage() {
 
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
-          <div className="h-px w-8 bg-gold opacity-40" />
-          <span className="text-gold text-xs tracking-[0.3em] uppercase font-light">Gestión</span>
+          <div className="h-px w-8 bg-oro/40" />
+          <span className="text-oro text-xs tracking-[0.3em] uppercase font-light">Gestión</span>
         </div>
-        <h1 className="font-display text-4xl text-stone-800">Costos Fijos</h1>
+        <h1 className="font-display text-4xl text-negro">Costos Fijos</h1>
       </div>
 
       {/* Formulario */}
-      <form onSubmit={handleSubmit} className="bg-white border border-stone-200 p-6 mb-8">
+      <form onSubmit={handleSubmit} className="bg-white border border-linea p-6 mb-8">
         <div className="flex items-center gap-4 mb-5">
-          <h2 className="font-display text-xl text-stone-800">
+          <h2 className="font-display text-xl text-negro">
             {editingId ? "Editar costo fijo" : "Nuevo costo fijo"}
           </h2>
-          <div className="flex-1 h-px bg-stone-200" />
+          <div className="flex-1 h-px bg-lino" />
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3 mb-4">
           <div className="flex-1">
-            <label className="block text-xs tracking-widest uppercase text-stone-400 mb-1.5 font-light">
+            <label className="block text-xs tracking-widest uppercase text-negro/70 mb-1.5 font-light">
               Nombre
             </label>
             <input
@@ -121,12 +121,12 @@ export default function FixedCostsPage() {
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
               placeholder="ej. Arriendo"
-              className="w-full bg-vanilla-100 border border-stone-200 text-stone-800
-                         px-4 py-2.5 text-sm font-light focus:outline-none focus:border-gold transition-all"
+              className="w-full bg-crema border border-linea text-negro
+                         px-4 py-2.5 text-sm font-light focus:outline-none focus:border-oro transition-all"
             />
           </div>
           <div className="sm:w-48">
-            <label className="block text-xs tracking-widest uppercase text-stone-400 mb-1.5 font-light">
+            <label className="block text-xs tracking-widest uppercase text-negro/70 mb-1.5 font-light">
               Monto mensual
             </label>
             <input
@@ -134,22 +134,22 @@ export default function FixedCostsPage() {
               value={form.monthly_amount}
               onChange={(e) => setForm((f) => ({ ...f, monthly_amount: e.target.value }))}
               placeholder="ej. 100000"
-              className="w-full bg-vanilla-100 border border-stone-200 text-stone-800
-                         px-4 py-2.5 text-sm font-light focus:outline-none focus:border-gold transition-all"
+              className="w-full bg-crema border border-linea text-negro
+                         px-4 py-2.5 text-sm font-light focus:outline-none focus:border-oro transition-all"
             />
           </div>
         </div>
 
         {error && (
-          <p className="text-red-500 text-xs mb-3">{error}</p>
+          <p className="text-peligro text-xs mb-3">{error}</p>
         )}
 
         <div className="flex gap-2">
           <button
             type="submit"
             disabled={loading}
-            className="bg-gold text-white text-xs tracking-widest uppercase font-medium
-                       px-6 py-2.5 hover:bg-gold-light transition-all disabled:opacity-50"
+            className="bg-negro text-crema text-xs tracking-widest uppercase font-medium
+                       px-6 py-2.5 hover:bg-black transition-all disabled:opacity-50"
           >
             {loading ? "Guardando..." : editingId ? "Actualizar" : "Agregar"}
           </button>
@@ -158,7 +158,7 @@ export default function FixedCostsPage() {
               type="button"
               onClick={cancelEdit}
               className="text-xs tracking-widest uppercase font-medium px-6 py-2.5
-                         border border-stone-200 text-stone-400 hover:border-stone-400 transition-all"
+                         border border-linea text-negro/70 hover:border-oro transition-all"
             >
               Cancelar
             </button>
@@ -167,43 +167,43 @@ export default function FixedCostsPage() {
       </form>
 
       {/* Tabla */}
-      <div className="bg-white border border-stone-200">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-stone-100">
-          <h2 className="font-display text-xl text-stone-800">Lista</h2>
+      <div className="bg-white border border-linea">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-linea">
+          <h2 className="font-display text-xl text-negro">Lista</h2>
           {costs.length > 0 && (
-            <span className="text-xs text-stone-400 font-light">
+            <span className="text-xs text-negro/70 font-light">
               Total activo:{" "}
-              <span className="text-gold font-medium">{clp(totalActive)}/mes</span>
+              <span className="text-oro font-medium">{clp(totalActive)}/mes</span>
             </span>
           )}
         </div>
 
         {costs.length === 0 ? (
-          <p className="text-stone-400 text-sm font-light text-center py-10">
+          <p className="text-negro/70 text-sm font-light text-center py-10">
             No hay costos fijos registrados
           </p>
         ) : (
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-stone-100">
-                <th className="text-left px-6 py-3 text-xs tracking-widest uppercase text-stone-400 font-light">Nombre</th>
-                <th className="text-right px-6 py-3 text-xs tracking-widest uppercase text-stone-400 font-light">Monto/mes</th>
-                <th className="text-center px-6 py-3 text-xs tracking-widest uppercase text-stone-400 font-light">Estado</th>
+              <tr className="border-b border-linea">
+                <th className="text-left px-6 py-3 text-xs tracking-widest uppercase text-negro/70 font-light">Nombre</th>
+                <th className="text-right px-6 py-3 text-xs tracking-widest uppercase text-negro/70 font-light">Monto/mes</th>
+                <th className="text-center px-6 py-3 text-xs tracking-widest uppercase text-negro/70 font-light">Estado</th>
                 <th className="px-6 py-3" />
               </tr>
             </thead>
             <tbody>
               {costs.map((fc) => (
-                <tr key={fc.id} className="border-b border-stone-100 last:border-0 hover:bg-vanilla-100 transition-colors">
-                  <td className="px-6 py-4 text-stone-800 font-light">{fc.name}</td>
-                  <td className="px-6 py-4 text-right text-stone-800 font-light">{clp(fc.monthly_amount)}</td>
+                <tr key={fc.id} className="border-b border-linea last:border-0 hover:bg-lino transition-colors">
+                  <td className="px-6 py-4 text-negro font-light">{fc.name}</td>
+                  <td className="px-6 py-4 text-right text-negro font-light">{clp(fc.monthly_amount)}</td>
                   <td className="px-6 py-4 text-center">
                     <button
                       onClick={() => handleToggle(fc)}
                       className={`text-xs tracking-widest uppercase font-medium px-3 py-1 border transition-all
                         ${fc.is_active
-                          ? "border-gold text-gold bg-vanilla-100"
-                          : "border-stone-200 text-stone-400 hover:border-stone-400"}`}
+                          ? "border-oro text-oro bg-crema"
+                          : "border-linea text-negro/70 hover:border-oro"}`}
                     >
                       {fc.is_active ? "Activo" : "Inactivo"}
                     </button>
@@ -212,13 +212,13 @@ export default function FixedCostsPage() {
                     <div className="flex gap-3 justify-end">
                       <button
                         onClick={() => startEdit(fc)}
-                        className="text-xs text-stone-400 hover:text-gold tracking-widest uppercase transition-colors"
+                        className="text-xs text-negro/70 hover:text-oro tracking-widest uppercase transition-colors"
                       >
                         Editar
                       </button>
                       <button
                         onClick={() => handleDelete(fc.id)}
-                        className="text-xs text-stone-400 hover:text-red-500 tracking-widest uppercase transition-colors"
+                        className="text-xs text-negro/70 hover:text-peligro tracking-widest uppercase transition-colors"
                       >
                         Eliminar
                       </button>
