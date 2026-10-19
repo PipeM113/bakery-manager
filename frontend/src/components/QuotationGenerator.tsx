@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import api from "../services/api";
 import { quotationService } from "../api/quotationService";
 import type { IRecipe } from "../types/recipe";
+import { todayInSantiago } from "../utils/businessDate";
 
 interface Props {
   recipe: IRecipe;
@@ -275,7 +276,7 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
       });
       const url  = URL.createObjectURL(blob);
       const a    = document.createElement("a");
-      const date = new Date().toISOString().slice(0, 10);
+      const date = todayInSantiago();
       const name = recipe.name.replace(/\s+/g, "_");
       a.href     = url;
       a.download = `cotizacion_${name}_${date}.pdf`;

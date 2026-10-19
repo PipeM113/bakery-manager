@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/PipeM113/bakery-manager/internal/shared/clock"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/xuri/excelize/v2"
@@ -40,11 +41,12 @@ type ImportResult struct {
 }
 
 type IngredientImportService struct {
-	db *pgxpool.Pool
+	db  *pgxpool.Pool
+	clk clock.Clock
 }
 
-func NewIngredientImportService(db *pgxpool.Pool) *IngredientImportService {
-	return &IngredientImportService{db: db}
+func NewIngredientImportService(db *pgxpool.Pool, clk clock.Clock) *IngredientImportService {
+	return &IngredientImportService{db: db, clk: clk}
 }
 
 // ParseIngredientsFromExcel reads an .xlsx file and returns parsed rows.
@@ -199,9 +201,9 @@ func (s *IngredientImportService) Import(ctx context.Context, rows []IngredientI
 			// Record price history only if price changed
 			if oldPricePerUnit != pricePerUnit {
 				_, err = tx.Exec(ctx,
-					`INSERT INTO ingredient_price_history (ingredient_id, price_per_unit, unit)
-					 VALUES ($1, $2, $3)`,
-					existingID, pricePerUnit, row.DefaultUnit,
+					`INSERT INTO ingredient_price_history (ingredient_id, price_per_unit, unit, effective_date)
+					 VALUES ($1, $2, $3, $4::date)`,
+					existingID, pricePerUnit, row.DefaultUnit, s.clk.Today(),
 				)
 				if err != nil {
 					return result, fmt.Errorf("historial de precio fila %d: %w", row.RowNum, err)
@@ -226,9 +228,9 @@ func (s *IngredientImportService) Import(ctx context.Context, rows []IngredientI
 			}
 
 			_, err = tx.Exec(ctx,
-				`INSERT INTO ingredient_price_history (ingredient_id, price_per_unit, unit)
-				 VALUES ($1, $2, $3)`,
-				newID, pricePerUnit, row.DefaultUnit,
+				`INSERT INTO ingredient_price_history (ingredient_id, price_per_unit, unit, effective_date)
+				 VALUES ($1, $2, $3, $4::date)`,
+				newID, pricePerUnit, row.DefaultUnit, s.clk.Today(),
 			)
 			if err != nil {
 				return result, fmt.Errorf("creando historial fila %d: %w", row.RowNum, err)

@@ -119,7 +119,7 @@ func (r *SaleRepository) RegisterSale(ctx context.Context, input RegisterSaleInp
 	// Insert sale row
 	saleDate := input.SaleDate
 	if saleDate == "" {
-		saleDate = time.Now().Format("2006-01-02")
+		return Sale{}, fmt.Errorf("a sale needs a date")
 	}
 	var sale Sale
 	err = tx.QueryRow(ctx, `

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/PipeM113/bakery-manager/internal/shared/clock"
+
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -41,11 +43,12 @@ type PriceHistory struct {
 }
 
 type IngredientRepository struct {
-	db *pgxpool.Pool
+	db  *pgxpool.Pool
+	clk clock.Clock
 }
 
-func NewIngredientRepository(db *pgxpool.Pool) *IngredientRepository {
-	return &IngredientRepository{db: db}
+func NewIngredientRepository(db *pgxpool.Pool, clk clock.Clock) *IngredientRepository {
+	return &IngredientRepository{db: db, clk: clk}
 }
 
 func calcPricePerUnit(packagePrice, packageSize float64) float64 {
@@ -80,9 +83,9 @@ func (r *IngredientRepository) Create(ctx context.Context, i Ingredient) (Ingred
 	}
 
 	_, err = r.db.Exec(ctx,
-		`INSERT INTO ingredient_price_history (ingredient_id, price_per_unit, unit)
-		 VALUES ($1, $2, $3)`,
-		i.ID, i.PricePerUnit, i.DefaultUnit,
+		`INSERT INTO ingredient_price_history (ingredient_id, price_per_unit, unit, effective_date)
+		 VALUES ($1, $2, $3, $4::date)`,
+		i.ID, i.PricePerUnit, i.DefaultUnit, r.clk.Today(),
 	)
 	if err != nil {
 		return Ingredient{}, fmt.Errorf("create price history: %w", err)
@@ -172,9 +175,9 @@ func (r *IngredientRepository) Update(ctx context.Context, i Ingredient) (Ingred
 
 	if oldPrice != i.PricePerUnit {
 		_, err = r.db.Exec(ctx,
-			`INSERT INTO ingredient_price_history (ingredient_id, price_per_unit, unit)
-			 VALUES ($1, $2, $3)`,
-			i.ID, i.PricePerUnit, i.DefaultUnit,
+			`INSERT INTO ingredient_price_history (ingredient_id, price_per_unit, unit, effective_date)
+			 VALUES ($1, $2, $3, $4::date)`,
+			i.ID, i.PricePerUnit, i.DefaultUnit, r.clk.Today(),
 		)
 		if err != nil {
 			return Ingredient{}, fmt.Errorf("create price history: %w", err)

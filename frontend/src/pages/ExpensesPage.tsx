@@ -2,10 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { expenseService } from "../api/expenseService";
 import { expenseCategoryService } from "../api/expenseCategoryService";
 import type { IExpense, IExpenseCategory, ExpenseFormData } from "../types/expense";
+import { todayInSantiago, currentMonthYear } from "../utils/businessDate";
 
 const clp = (n: number) => `$${Math.round(n).toLocaleString("es-CL")}`;
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = todayInSantiago;
 
 const emptyForm: ExpenseFormData = {
   description: "",
@@ -22,14 +23,14 @@ const MONTHS = [
 type Toast = { id: number; type: "success" | "error"; message: string };
 
 export default function ExpensesPage() {
-  const now = new Date();
+  const now = currentMonthYear();
   const [expenses, setExpenses] = useState<IExpense[]>([]);
   const [form, setForm]         = useState<ExpenseFormData>(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError]       = useState("");
   const [loading, setLoading]   = useState(false);
-  const [filterMonth, setFilterMonth] = useState(now.getMonth() + 1);
-  const [filterYear, setFilterYear]   = useState(now.getFullYear());
+  const [filterMonth, setFilterMonth] = useState(now.month);
+  const [filterYear, setFilterYear]   = useState(now.year);
   const [toasts, setToasts]     = useState<Toast[]>([]);
   const [categories, setCategories] = useState<IExpenseCategory[]>([]);
   const [newCategory, setNewCategory] = useState("");
@@ -199,7 +200,7 @@ export default function ExpensesPage() {
   };
 
   const yearOptions = [];
-  for (let y = now.getFullYear(); y >= now.getFullYear() - 3; y--) yearOptions.push(y);
+  for (let y = now.year; y >= now.year - 3; y--) yearOptions.push(y);
 
 
   return (

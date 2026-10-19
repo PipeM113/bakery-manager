@@ -7,10 +7,11 @@ import type { ISale } from "../types/sale";
 import type { IRecipe } from "../types/recipe";
 import type { IIngredient } from "../types/ingredient";
 import api from "../services/api";
+import { todayInSantiago } from "../utils/businessDate";
 
 const clp = (n: number) => `$${Math.round(n).toLocaleString("es-CL")}`;
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = todayInSantiago;
 
 const STATUS_LABEL: Record<IQuotation["status"], string> = {
   pending:   "Pendiente",

@@ -8,6 +8,7 @@ import (
 
 	"github.com/PipeM113/bakery-manager/internal/sales/repository"
 	"github.com/PipeM113/bakery-manager/internal/sales/service"
+	"github.com/PipeM113/bakery-manager/internal/shared/clock"
 	"github.com/PipeM113/bakery-manager/pkg/httputil"
 	mid "github.com/PipeM113/bakery-manager/pkg/middleware"
 	"github.com/PipeM113/bakery-manager/pkg/money"
@@ -16,10 +17,11 @@ import (
 
 type SaleHandler struct {
 	svc *service.SaleService
+	clk clock.Clock
 }
 
-func NewSaleHandler(svc *service.SaleService) *SaleHandler {
-	return &SaleHandler{svc: svc}
+func NewSaleHandler(svc *service.SaleService, clk clock.Clock) *SaleHandler {
+	return &SaleHandler{svc: svc, clk: clk}
 }
 
 func userID(r *http.Request) string {
@@ -48,6 +50,11 @@ func (h *SaleHandler) Create(w http.ResponseWriter, r *http.Request) {
 		log.Printf("[sales] validación fallida: %s", msg)
 		httputil.JSONError(w, msg, http.StatusBadRequest)
 		return
+	}
+
+	// A sale without a date is dated with today's date in Santiago.
+	if body.SaleDate == "" {
+		body.SaleDate = h.clk.Today()
 	}
 
 	input := repository.RegisterSaleInput{

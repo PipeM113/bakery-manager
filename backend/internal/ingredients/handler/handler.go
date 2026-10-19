@@ -8,10 +8,10 @@ import (
 	"net/http"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/PipeM113/bakery-manager/internal/ingredients/repository"
 	"github.com/PipeM113/bakery-manager/internal/ingredients/service"
+	"github.com/PipeM113/bakery-manager/internal/shared/clock"
 	"github.com/PipeM113/bakery-manager/pkg/httputil"
 	mid "github.com/PipeM113/bakery-manager/pkg/middleware"
 	"github.com/go-chi/chi/v5"
@@ -24,10 +24,11 @@ var allowedUnits = map[string]bool{
 type IngredientHandler struct {
 	repo      *repository.IngredientRepository
 	importSvc *service.IngredientImportService
+	clk       clock.Clock
 }
 
-func NewIngredientHandler(repo *repository.IngredientRepository, importSvc *service.IngredientImportService) *IngredientHandler {
-	return &IngredientHandler{repo: repo, importSvc: importSvc}
+func NewIngredientHandler(repo *repository.IngredientRepository, importSvc *service.IngredientImportService, clk clock.Clock) *IngredientHandler {
+	return &IngredientHandler{repo: repo, importSvc: importSvc, clk: clk}
 }
 
 func userID(r *http.Request) string {
@@ -201,7 +202,7 @@ func (h *IngredientHandler) Export(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	filename := fmt.Sprintf("insumos_%s.xlsx", time.Now().Format("20060102"))
+	filename := fmt.Sprintf("insumos_%s.xlsx", strings.ReplaceAll(h.clk.Today(), "-", ""))
 	w.Header().Set("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
 	w.WriteHeader(http.StatusOK)
