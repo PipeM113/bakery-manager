@@ -27,11 +27,14 @@ func adjustOK(t *testing.T, api *client, ingredientID string, body map[string]an
 	return decode(t, raw)
 }
 
-// flourWithStock: 2 pesos per gram.
+var flourCount int
+
+// flourWithStock: 2 pesos per gram. Each call is a new ingredient with its own name (names are unique).
 func flourWithStock(t *testing.T, api *client, stock float64) string {
 	t.Helper()
+	flourCount++
 	return createIngredient(t, api, map[string]any{
-		"name": "Harina", "default_unit": "gr", "package_size": 1000, "package_price": 2000, "stock_quantity": stock,
+		"name": "Harina " + itoa(flourCount), "default_unit": "gr", "package_size": 1000, "package_price": 2000, "stock_quantity": stock,
 	})
 }
 
