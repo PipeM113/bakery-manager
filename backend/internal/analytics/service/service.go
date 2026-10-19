@@ -93,8 +93,20 @@ func (s *AnalyticsService) GetMonthlyMetrics(ctx context.Context, userID string,
 		return m, fmt.Errorf("read expenses by category: %w", err)
 	}
 
+	// Mermas of the month (the other adjustments are no loss)
+	err = s.db.QueryRow(ctx, `
+		SELECT COALESCE(SUM(loss_amount), 0)::bigint
+		FROM stock_adjustments
+		WHERE user_id = $1 AND reason = 'merma'
+		  AND adjusted_on >= $2::date AND adjusted_on < ($2::date + interval '1 month')`,
+		userID, fmt.Sprintf("%04d-%02d-01", year, month),
+	).Scan(&m.TotalWasteCost)
+	if err != nil {
+		return m, fmt.Errorf("total waste cost: %w", err)
+	}
+
 	m.GrossProfit = m.TotalRevenue - m.TotalIngredientsCost
-	m.NetProfit = m.GrossProfit - m.TotalFixedCosts - m.TotalOperationalExpenses
+	m.NetProfit = m.GrossProfit - m.TotalFixedCosts - m.TotalOperationalExpenses - m.TotalWasteCost
 	if m.TotalRevenue > 0 {
 		m.ProfitMargin = percentOneDecimal(m.NetProfit, m.TotalRevenue)
 	}
@@ -211,11 +223,17 @@ func (s *AnalyticsService) GetTrendData(ctx context.Context, userID string, mont
 	if err != nil {
 		return nil, err
 	}
-	expenses, err := perMonth("expenses", `
-		SELECT to_char(expense_date, 'YYYY-MM'), SUM(amount)::bigint
-		FROM operational_expenses
-		WHERE user_id = $1 AND expense_date >= $2::date AND expense_date < $3::date
-		GROUP BY 1`)
+	// Expenses and the mermas are both money that left the month: one question for the two.
+	expenses, err := perMonth("expenses and waste", `
+		SELECT ym, SUM(total)::bigint FROM (
+			SELECT to_char(expense_date, 'YYYY-MM') AS ym, amount AS total
+			FROM operational_expenses
+			WHERE user_id = $1 AND expense_date >= $2::date AND expense_date < $3::date
+			UNION ALL
+			SELECT to_char(adjusted_on, 'YYYY-MM'), loss_amount
+			FROM stock_adjustments
+			WHERE user_id = $1 AND reason = 'merma' AND adjusted_on >= $2::date AND adjusted_on < $3::date
+		) t GROUP BY 1`)
 	if err != nil {
 		return nil, err
 	}

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import IngredientImportModal from "../components/IngredientImportModal";
+import StockAdjustmentModal from "../components/StockAdjustmentModal";
 import { ingredientService } from "../api/ingredientService";
 import type { IIngredient, IngredientFormData } from "../types/ingredient";
 import { emptyIngredientForm } from "../types/ingredient";
@@ -42,6 +43,7 @@ export default function IngredientsPage() {
   const [saving, setSaving]           = useState(false);
   const [error, setError]             = useState("");
   const [showImport, setShowImport]   = useState(false);
+  const [adjusting, setAdjusting]     = useState<IIngredient | null>(null);
   const [exporting, setExporting]     = useState(false);
   const [successMsg, setSuccessMsg]   = useState("");
   const successTimer                  = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -238,6 +240,10 @@ export default function IngredientsPage() {
                   </p>
                 </div>
                 <div className="flex items-center gap-3 ml-4">
+                  <button onClick={() => setAdjusting(i)}
+                    className="text-xs text-negro/70 hover:text-oro tracking-wider transition-colors">
+                    Ajustar stock
+                  </button>
                   <button onClick={() => openEdit(i)}
                     className="text-xs text-negro/70 hover:text-oro tracking-wider transition-colors">
                     Editar
@@ -251,6 +257,15 @@ export default function IngredientsPage() {
             );
           })}
         </div>
+      )}
+
+      {/* Stock adjustment (merma, corrección, otro) */}
+      {adjusting && (
+        <StockAdjustmentModal
+          ingredient={ingredients.find((x) => x.id === adjusting.id) ?? adjusting}
+          onClose={() => setAdjusting(null)}
+          onSaved={load}
+        />
       )}
 
       {/* Import Modal */}

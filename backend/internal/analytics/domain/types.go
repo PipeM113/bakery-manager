@@ -17,6 +17,7 @@ type MonthlyMetrics struct {
 	TotalIngredientsCost     int64             `json:"total_ingredients_cost"`
 	TotalFixedCosts          int64             `json:"total_fixed_costs"`
 	TotalOperationalExpenses int64             `json:"total_operational_expenses"`
+	TotalWasteCost           int64             `json:"total_waste_cost"` // mermas of the month, valued at what they cost
 	GrossProfit              int64             `json:"gross_profit"`
 	NetProfit                int64             `json:"net_profit"`
 	ProfitMargin             float64           `json:"profit_margin"` // net profit over revenue, in percent

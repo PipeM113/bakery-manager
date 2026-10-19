@@ -103,3 +103,10 @@ Una venta puede ser de **recetas completas** o de **porciones**. Una porción es
 de la receta: en una torta que rinde 12 porciones, 3 porciones descuentan 3/12 de cada
 ingrediente. El precio unitario de una venta por porción es el precio de una porción. Ver
 `docs/ventas-y-stock.md`.
+
+## Merma
+
+Algo que se perdió o se echó a perder (se cayó, venció). Al registrarla como ajuste de stock con
+motivo "merma" baja el stock y cuenta como **pérdida**: su valor (cantidad × precio por unidad,
+redondeado una vez a pesos enteros) se resta de la ganancia neta del mes. Las correcciones de
+stock y los ajustes "otro" no son pérdida. Ver `docs/ajustes-de-stock.md`.
