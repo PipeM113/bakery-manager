@@ -47,7 +47,11 @@ func twoDaysAgo() string { return time.Now().AddDate(0, 0, -2).Format("2006-01-0
 func TestD2_AmountsMustBeWholePositivePesos(t *testing.T) {
 	api, _ := newPricingAPI(t)
 	otros := categoryID(t, api, "otros")
-	flourRecipeID := flourRecipe(t, api, nil)
+	flour := createIngredient(t, api, map[string]any{"name": "Harina", "default_unit": "gr", "package_size": 1000, "package_price": 2000, "stock_quantity": 5000})
+	flourRecipeID := createRecipe(t, api, map[string]any{
+		"name": "Bizcocho", "description": "d", "yield": 1,
+		"ingredients": []map[string]any{{"ingredient_id": flour, "quantity": 500, "unit": "gr"}},
+	})
 
 	bad := []any{1500.5, 0, -5, 2000000001, "1500"}
 	for _, amount := range bad {

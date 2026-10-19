@@ -9,6 +9,7 @@ import (
 	"github.com/PipeM113/bakery-manager/internal/fixed_costs/service"
 	"github.com/PipeM113/bakery-manager/pkg/httputil"
 	mid "github.com/PipeM113/bakery-manager/pkg/middleware"
+	"github.com/PipeM113/bakery-manager/pkg/money"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -42,20 +43,24 @@ func (h *FixedCostHandler) List(w http.ResponseWriter, r *http.Request) {
 
 func (h *FixedCostHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var body struct {
-		Name          string  `json:"name"`
-		MonthlyAmount float64 `json:"monthly_amount"`
+		Name          string `json:"name"`
+		MonthlyAmount int64  `json:"monthly_amount"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		httputil.JSONError(w, "request inválido", http.StatusBadRequest)
 		return
 	}
 	body.Name = strings.TrimSpace(body.Name)
-	if body.Name == "" || body.MonthlyAmount <= 0 {
+	if body.Name == "" {
 		httputil.JSONError(w, "nombre y monto son requeridos", http.StatusBadRequest)
 		return
 	}
+	if !money.Valid(body.MonthlyAmount, false) {
+		httputil.JSONError(w, "el monto debe ser un número entero de pesos, mayor a 0 y hasta 2.000.000.000", http.StatusBadRequest)
+		return
+	}
 
-	log.Printf("[fixed_costs] POST /fixed-costs user=%s name=%q amount=%.2f", userID(r), body.Name, body.MonthlyAmount)
+	log.Printf("[fixed_costs] POST /fixed-costs user=%s name=%q amount=%d", userID(r), body.Name, body.MonthlyAmount)
 
 	fc, err := h.svc.Create(r.Context(), userID(r), body.Name, body.MonthlyAmount)
 	if err != nil {
@@ -71,17 +76,21 @@ func (h *FixedCostHandler) Create(w http.ResponseWriter, r *http.Request) {
 func (h *FixedCostHandler) Update(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	var body struct {
-		Name          string  `json:"name"`
-		MonthlyAmount float64 `json:"monthly_amount"`
-		IsActive      bool    `json:"is_active"`
+		Name          string `json:"name"`
+		MonthlyAmount int64  `json:"monthly_amount"`
+		IsActive      bool   `json:"is_active"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		httputil.JSONError(w, "request inválido", http.StatusBadRequest)
 		return
 	}
 	body.Name = strings.TrimSpace(body.Name)
-	if body.Name == "" || body.MonthlyAmount <= 0 {
+	if body.Name == "" {
 		httputil.JSONError(w, "nombre y monto son requeridos", http.StatusBadRequest)
+		return
+	}
+	if !money.Valid(body.MonthlyAmount, false) {
+		httputil.JSONError(w, "el monto debe ser un número entero de pesos, mayor a 0 y hasta 2.000.000.000", http.StatusBadRequest)
 		return
 	}
 

@@ -12,7 +12,7 @@ type FixedCost struct {
 	ID            string    `json:"id"`
 	UserID        string    `json:"user_id"`
 	Name          string    `json:"name"`
-	MonthlyAmount float64   `json:"monthly_amount"`
+	MonthlyAmount int64     `json:"monthly_amount"`
 	IsActive      bool      `json:"is_active"`
 	CreatedAt     time.Time `json:"created_at"`
 	UpdatedAt     time.Time `json:"updated_at"`
@@ -26,7 +26,7 @@ func NewFixedCostRepository(db *pgxpool.Pool) *FixedCostRepository {
 	return &FixedCostRepository{db: db}
 }
 
-func (r *FixedCostRepository) Create(ctx context.Context, userID, name string, amount float64) (FixedCost, error) {
+func (r *FixedCostRepository) Create(ctx context.Context, userID, name string, amount int64) (FixedCost, error) {
 	var fc FixedCost
 	err := r.db.QueryRow(ctx, `
 		INSERT INTO fixed_costs (user_id, name, monthly_amount)
@@ -62,7 +62,7 @@ func (r *FixedCostRepository) GetAll(ctx context.Context, userID string) ([]Fixe
 	return costs, nil
 }
 
-func (r *FixedCostRepository) Update(ctx context.Context, id, userID, name string, amount float64, isActive bool) (FixedCost, error) {
+func (r *FixedCostRepository) Update(ctx context.Context, id, userID, name string, amount int64, isActive bool) (FixedCost, error) {
 	var fc FixedCost
 	err := r.db.QueryRow(ctx, `
 		UPDATE fixed_costs
@@ -85,8 +85,8 @@ func (r *FixedCostRepository) Delete(ctx context.Context, id, userID string) err
 	return nil
 }
 
-func (r *FixedCostRepository) SumActive(ctx context.Context, userID string) (float64, error) {
-	var total float64
+func (r *FixedCostRepository) SumActive(ctx context.Context, userID string) (int64, error) {
+	var total int64
 	err := r.db.QueryRow(ctx, `
 		SELECT COALESCE(SUM(monthly_amount), 0)
 		FROM fixed_costs

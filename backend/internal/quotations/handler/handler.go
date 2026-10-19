@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"net/http"
 	"strings"
 	"time"
@@ -104,7 +105,7 @@ func (h *QuotationHandler) Generate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// SuggestedPrice already includes ceilTo500 + extra_charge + delivery_cost
-	finalPrice := breakdown.SuggestedPrice
+	finalPrice := int64(math.Round(breakdown.SuggestedPrice))
 
 	buf, err := quoteSvc.GenerateQuotePDF(quoteSvc.QuoteData{
 		RecipeName:   recipe.Name,
@@ -115,7 +116,7 @@ func (h *QuotationHandler) Generate(w http.ResponseWriter, r *http.Request) {
 		PhotoURL:     recipe.PhotoURL,
 		BasePrice:    breakdown.BasePrice,
 		DeliveryCost: breakdown.DeliveryCost,
-		FinalPrice:   finalPrice,
+		FinalPrice:   float64(finalPrice),
 		Date:         time.Now(),
 	})
 	if err != nil {

@@ -22,6 +22,8 @@ import (
 	"github.com/PipeM113/bakery-manager/internal/config"
 	costHandler "github.com/PipeM113/bakery-manager/internal/costs/handler"
 	costService "github.com/PipeM113/bakery-manager/internal/costs/service"
+	catHand "github.com/PipeM113/bakery-manager/internal/expense_categories/handler"
+	catRepo "github.com/PipeM113/bakery-manager/internal/expense_categories/repository"
 	fcHand "github.com/PipeM113/bakery-manager/internal/fixed_costs/handler"
 	fcRepo "github.com/PipeM113/bakery-manager/internal/fixed_costs/repository"
 	fcSvc "github.com/PipeM113/bakery-manager/internal/fixed_costs/service"
@@ -130,6 +132,11 @@ func New(cfg config.Config, db *pgxpool.Pool, photos PhotoUploader) http.Handler
 		expenseRepository := expRepo.NewExpenseRepository(db)
 		expenseService := expSvc.NewExpenseService(expenseRepository)
 		expenseHandler := expHand.NewExpenseHandler(expenseService)
+		categoryHandler := catHand.NewCategoryHandler(catRepo.NewCategoryRepository(db))
+		r.Get("/expense-categories", categoryHandler.List)
+		r.Post("/expense-categories", categoryHandler.Create)
+		r.Put("/expense-categories/{id}", categoryHandler.Rename)
+		r.Delete("/expense-categories/{id}", categoryHandler.Delete)
 		r.Post("/expenses", expenseHandler.Create)
 		r.Get("/expenses", expenseHandler.List)
 		r.Put("/expenses/{id}", expenseHandler.Update)

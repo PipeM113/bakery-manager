@@ -12,7 +12,7 @@ export const expenseService = {
   create: async (form: {
     description: string;
     amount: number;
-    category: string;
+    category_id: string;
     expense_date: string;
   }): Promise<IExpense> => {
     const { data } = await api.post<IExpense>("/expenses", form);
@@ -21,7 +21,7 @@ export const expenseService = {
 
   update: async (
     id: string,
-    form: { description: string; amount: number; category: string; expense_date: string }
+    form: { description: string; amount: number; category_id: string; expense_date: string }
   ): Promise<IExpense> => {
     const { data } = await api.put<IExpense>(`/expenses/${id}`, form);
     return data;

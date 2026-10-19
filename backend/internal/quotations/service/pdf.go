@@ -20,22 +20,22 @@ type QuoteData struct {
 	Yield        float64
 	YieldUnit    string
 	PhotoURL     *string
-	BasePrice    float64  // price with margin, before delivery (may not be rounded)
-	DeliveryCost float64  // delivery cost (multiple of 500), shown if > 0
-	FinalPrice   float64  // final rounded total (ceilTo500)
+	BasePrice    float64 // price with margin, before delivery (may not be rounded)
+	DeliveryCost float64 // delivery cost (multiple of 500), shown if > 0
+	FinalPrice   float64 // final rounded total (ceilTo500)
 	Date         time.Time
 }
 
 // Business contact constants – edit here to update all PDFs.
 const (
-	bizName     = "Angeles'S Coffee & Bakery"
-	bizPhone    = "+56 9 1234 5678"
-	bizWhatsApp = "+56 9 1234 5678"
+	bizName      = "Angeles'S Coffee & Bakery"
+	bizPhone     = "+56 9 1234 5678"
+	bizWhatsApp  = "+56 9 1234 5678"
 	bizInstagram = "@angelesscoffee"
-	bizBanco    = "Banco Estado"
-	bizCuenta   = "123-456789-0"
-	bizTitular  = "Ángeles Martínez"
-	bizRUT      = "12.345.678-9"
+	bizBanco     = "Banco Estado"
+	bizCuenta    = "123-456789-0"
+	bizTitular   = "Ángeles Martínez"
+	bizRUT       = "12.345.678-9"
 )
 
 // GenerateQuotePDF builds an A4 PDF cotización and returns its bytes.
