@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 
 // Four sections fit in the bar at 360 px; the rest are one tap away in "Más".
 const main = [
@@ -23,6 +24,7 @@ const item = (active: boolean) =>
 export default function BottomNav() {
   const [open, setOpen] = useState(false);
   const { pathname } = useLocation();
+  const { logout } = useAuth();
   const moreActive = more.some((l) => pathname.startsWith(l.to));
 
   return (
@@ -42,6 +44,15 @@ export default function BottomNav() {
               <span className="font-light">{label}</span>
             </NavLink>
           ))}
+          <button
+            type="button"
+            data-testid="nav-logout"
+            onClick={logout}
+            className="flex items-center gap-3 px-6 min-h-[48px] w-full text-left text-sm tracking-wider text-negro/70 border-t border-linea"
+          >
+            <span className="text-lg leading-none">⎋</span>
+            <span className="font-light">Cerrar sesión</span>
+          </button>
         </div>
       )}
       <div className="flex items-stretch h-16">
