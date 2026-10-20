@@ -288,7 +288,7 @@ func (h *QuotationHandler) PDF(w http.ResponseWriter, r *http.Request) {
 		ClientName: q.ClientName, DeliveryCost: q.DeliveryCost, Total: q.Total,
 		Date: q.CreatedAt.In(clock.Santiago),
 		Business: quoteSvc.Business{
-			Name: profile.Name, Phone: profile.Phone, Instagram: profile.Instagram, Bank: profile.Bank,
+			Phone: profile.Phone, Bank: profile.Bank,
 			AccountType: profile.AccountType, Holder: profile.Holder, Email: profile.Email,
 			Account: h.env.Account, RUT: h.env.RUT,
 		},

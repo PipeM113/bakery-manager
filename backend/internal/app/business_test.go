@@ -11,8 +11,9 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// Sprint 12, rule Q11 (revised): name, phone, Instagram, bank and holder are edited in the app;
-// the RUT and the bank account come from the environment and are never sent to the screen.
+// Sprint 12, rule Q11 (revised twice): phone, bank, account type, holder and e-mail are edited in the
+// app; the RUT and the bank account come from the environment and are never sent to the screen. The name
+// of the business and its Instagram belong to the brand: they are fixed in the code (Q11g).
 
 func missingOf(t *testing.T, body map[string]any) []string {
 	t.Helper()
@@ -28,18 +29,24 @@ func missingOf(t *testing.T, body map[string]any) []string {
 func TestQ11_TheProfileStartsEmptyAndSaysWhatIsMissing(t *testing.T) {
 	api, _ := newQuotesAPI(t, fullBusiness)
 	body := getJSON(t, api, "/business")
-	for _, f := range []string{"name", "phone", "instagram", "bank", "account_type", "holder", "email"} {
+	for _, f := range []string{"phone", "bank", "account_type", "holder", "email"} {
 		if v, ok := body[f].(string); !ok || v != "" {
 			t.Errorf("%s = %v, want an empty text", f, body[f])
 		}
 	}
-	want := []string{"account_type", "bank", "email", "holder", "instagram", "name", "phone"}
+	want := []string{"account_type", "bank", "email", "holder", "phone"}
 	if got := missingOf(t, body); !slices.Equal(got, want) {
 		t.Errorf("missing = %v, want %v", got, want)
 	}
 
+	for _, brand := range []string{"name", "instagram"} {
+		if _, there := body[brand]; there {
+			t.Errorf("the profile still has %q: it belongs to the brand now", brand)
+		}
+	}
+
 	bare, _ := newQuotesAPI(t, config.Business{})
-	want = []string{"BIZ_ACCOUNT", "BIZ_RUT", "account_type", "bank", "email", "holder", "instagram", "name", "phone"}
+	want = []string{"BIZ_ACCOUNT", "BIZ_RUT", "account_type", "bank", "email", "holder", "phone"}
 	if got := missingOf(t, getJSON(t, bare, "/business")); !slices.Equal(got, want) {
 		t.Errorf("missing without the environment = %v, want %v", got, want)
 	}
@@ -48,17 +55,17 @@ func TestQ11_TheProfileStartsEmptyAndSaysWhatIsMissing(t *testing.T) {
 func TestQ11_SaveAndReadTheProfile(t *testing.T) {
 	api, _ := newQuotesAPI(t, fullBusiness)
 	status, raw := api.do("PUT", "/business", map[string]any{
-		"name": "  Panadería de Prueba ", "phone": "+56 9 1111 2222", "instagram": "prueba",
-		"bank": "Banco Prueba", "account_type": "Cuenta Corriente", "holder": " Titular Prueba", "email": " Pagos@Prueba.test ",
+		"phone": " +56 9 1111 2222 ",
+		"bank":  "Banco Prueba", "account_type": "Cuenta Corriente", "holder": " Titular Prueba", "email": " Pagos@Prueba.test ",
 	})
 	if status != http.StatusOK {
 		t.Fatalf("PUT: status = %d: %s", status, raw)
 	}
 	saved := decode(t, raw)
-	want := map[string]string{"name": "Panadería de Prueba", "phone": "+56 9 1111 2222", "instagram": "@prueba", "bank": "Banco Prueba", "account_type": "Cuenta Corriente", "holder": "Titular Prueba", "email": "pagos@prueba.test"}
+	want := map[string]string{"phone": "+56 9 1111 2222", "bank": "Banco Prueba", "account_type": "Cuenta Corriente", "holder": "Titular Prueba", "email": "pagos@prueba.test"}
 	for k, v := range want {
 		if saved[k] != v {
-			t.Errorf("saved %s = %q, want %q (trimmed, with the @ of Instagram, the e-mail in lower case)", k, saved[k], v)
+			t.Errorf("saved %s = %q, want %q (trimmed, the e-mail in lower case)", k, saved[k], v)
 		}
 	}
 	read := getJSON(t, api, "/business")
@@ -99,7 +106,7 @@ func TestQ11_BadProfilesAreRefusedAndNothingChanges(t *testing.T) {
 		}
 	}
 	read := getJSON(t, api, "/business")
-	if read["name"] != profile["name"] || read["holder"] != profile["holder"] {
+	if read["phone"] != profile["phone"] || read["holder"] != profile["holder"] {
 		t.Errorf("a refused request changed the profile: %v", read)
 	}
 }
@@ -208,5 +215,42 @@ func TestQ11_ThePDFUsesTheCurrentProfile(t *testing.T) {
 	text := pdfTextOf(t, after)
 	if !strings.Contains(text, "Titular Nuevo") || !strings.Contains(text, "Banco Nuevo") || !strings.Contains(text, "nuevo@prueba.test") || strings.Contains(text, "Titular Prueba") {
 		t.Errorf("the old PDF did not pick up the new data:\n%s", text)
+	}
+}
+
+// Q11g: the name and the Instagram of the brand are fixed; nobody has to fill them in, and they cannot be changed.
+func TestQ11_TheBrandNameAndInstagramAreFixedInThePDF(t *testing.T) {
+	api, _ := newReadyAPI(t) // the profile has no name and no Instagram
+	_, cake, _ := bakery(t, api)
+	id := createQuote(t, api, quote("Ana", 0, ql(cake, 1, "")))["id"].(string)
+
+	status, pdf := api.do("GET", "/quotations/"+id+"/pdf", nil)
+	if status != http.StatusOK {
+		t.Fatalf("the PDF needs nothing about the brand from the profile: status = %d: %.200s", status, pdf)
+	}
+	text := pdfTextOf(t, pdf)
+	for _, want := range []string{"Angeles Bakery", "@angelescoffee_bakery"} {
+		if !strings.Contains(text, want) {
+			t.Errorf("the PDF does not carry %q:\n%s", want, text)
+		}
+	}
+
+	// They are not part of the API any more: sending them is refused, not ignored, and nothing changes.
+	for _, extra := range []map[string]any{{"name": "Otra Marca"}, {"instagram": "@otra_marca"}, {"favorite_color": "rojo"}} {
+		body := map[string]any{}
+		for k, v := range profile {
+			body[k] = v
+		}
+		for k, v := range extra {
+			body[k] = v
+		}
+		if status, raw := api.do("PUT", "/business", body); status != http.StatusBadRequest {
+			t.Errorf("PUT with %v: status = %d, want 400 (an unknown field is refused): %s", extra, status, raw)
+		}
+	}
+	_, after := api.do("GET", "/quotations/"+id+"/pdf", nil)
+	text = pdfTextOf(t, after)
+	if strings.Contains(text, "Otra Marca") || strings.Contains(text, "otra_marca") || !strings.Contains(text, "@angelescoffee_bakery") {
+		t.Errorf("the brand changed:\n%s", text)
 	}
 }

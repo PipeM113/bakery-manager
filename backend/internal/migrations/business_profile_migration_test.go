@@ -24,14 +24,14 @@ func TestQ11_ProfileTableHasOnlyWhatIsEdited(t *testing.T) {
 	businessProfileMigrationExists(t)
 	pool := pgtest.NewDatabase(t)
 	pgtest.Migrate(t, pool, migrationsDir, "up")
-	for _, col := range []string{"name", "phone", "instagram", "bank", "account_type", "holder", "email", "updated_at", "updated_by"} {
+	for _, col := range []string{"phone", "bank", "account_type", "holder", "email", "updated_at", "updated_by"} {
 		if columnCount(t, pool, "business_profile", col) != 1 {
 			t.Errorf("business_profile has no %s", col)
 		}
 	}
-	for _, col := range []string{"account", "rut", "bank_account"} {
+	for _, col := range []string{"account", "rut", "bank_account", "name", "instagram"} {
 		if columnCount(t, pool, "business_profile", col) != 0 {
-			t.Errorf("business_profile must not store %s (it comes from the environment)", col)
+			t.Errorf("business_profile must not store %s (the RUT and the account come from the environment, the name and the Instagram from the brand)", col)
 		}
 	}
 	var rls bool
@@ -47,17 +47,17 @@ func TestQ11_ThereIsOneEmptyRowAndNeverMore(t *testing.T) {
 	pgtest.Migrate(t, pool, migrationsDir, "up")
 	ctx := context.Background()
 	var n int
-	var name, phone, instagram, bank, accountType, holder, email string
+	var phone, bank, accountType, holder, email string
 	if err := pool.QueryRow(ctx, `select count(*) from business_profile`).Scan(&n); err != nil || n != 1 {
 		t.Fatalf("rows = %d (%v), want 1", n, err)
 	}
-	if err := pool.QueryRow(ctx, `select name, phone, instagram, bank, account_type, holder, email from business_profile`).Scan(&name, &phone, &instagram, &bank, &accountType, &holder, &email); err != nil {
+	if err := pool.QueryRow(ctx, `select phone, bank, account_type, holder, email from business_profile`).Scan(&phone, &bank, &accountType, &holder, &email); err != nil {
 		t.Fatal(err)
 	}
-	if name+phone+instagram+bank+accountType+holder+email != "" {
-		t.Errorf("the profile does not start empty: %q %q %q %q %q %q %q", name, phone, instagram, bank, accountType, holder, email)
+	if phone+bank+accountType+holder+email != "" {
+		t.Errorf("the profile does not start empty: %q %q %q %q %q", phone, bank, accountType, holder, email)
 	}
-	if _, err := pool.Exec(ctx, `insert into business_profile (name) values ('otra')`); err == nil {
+	if _, err := pool.Exec(ctx, `insert into business_profile (phone) values ('otra')`); err == nil {
 		t.Error("a second row was accepted")
 	}
 }

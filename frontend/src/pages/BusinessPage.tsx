@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { businessService, ACCOUNT_TYPES, type BusinessForm } from "../api/businessService";
 
-const empty: BusinessForm = { name: "", phone: "", instagram: "", bank: "", account_type: "", holder: "", email: "" };
+const empty: BusinessForm = { phone: "", bank: "", account_type: "", holder: "", email: "" };
 
 const fieldClass = "w-full border border-linea bg-white px-3 py-2 text-sm font-light text-negro focus:outline-none focus:border-oro";
 const labelClass = "block text-xs tracking-widest uppercase text-negro/70 mb-1.5 font-light";
@@ -50,24 +50,14 @@ export default function BusinessPage() {
       <div className="mb-8">
         <h1 className="font-display text-3xl text-negro">Datos del negocio</h1>
         <p className="text-negro/70 text-sm font-light mt-2">
-          Lo que sale en el PDF de las cotizaciones: tu contacto y los datos para que el cliente transfiera.
+          Lo que sale en el PDF de las cotizaciones y puede cambiar: el teléfono y los datos para que el cliente transfiera. El nombre y el Instagram de la marca ya están fijos.
         </p>
       </div>
 
       <form data-testid="business-form" onSubmit={handleSubmit} className="bg-white border border-linea p-6 space-y-4">
         <div>
-          <label htmlFor="biz-name" className={labelClass}>Nombre del negocio</label>
-          <input id="biz-name" className={fieldClass} value={form.name} onChange={set("name")} maxLength={100} />
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label htmlFor="biz-phone" className={labelClass}>Teléfono</label>
-            <input id="biz-phone" type="tel" className={fieldClass} value={form.phone} onChange={set("phone")} maxLength={30} placeholder="+56 9 1234 5678" />
-          </div>
-          <div>
-            <label htmlFor="biz-instagram" className={labelClass}>Instagram</label>
-            <input id="biz-instagram" className={fieldClass} value={form.instagram} onChange={set("instagram")} maxLength={31} placeholder="@mitienda" />
-          </div>
+          <label htmlFor="biz-phone" className={labelClass}>Teléfono</label>
+          <input id="biz-phone" type="tel" className={fieldClass} value={form.phone} onChange={set("phone")} maxLength={30} placeholder="+56 9 1234 5678" />
         </div>
 
         <div className="flex items-center gap-4 pt-2">

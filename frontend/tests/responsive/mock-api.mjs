@@ -125,7 +125,7 @@ export const recipeMetrics = recipes.map((r, i) => ({
 export const pdfBytes = Buffer.from("%PDF-1.1\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 200 200]>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF");
 
 export const businessProfile = {
-  name: "Panadería de Prueba", phone: "+56 9 1111 2222", instagram: "@prueba", bank: "Banco Prueba", account_type: "Cuenta Corriente", holder: "Titular Prueba", email: "pagos@prueba.test", missing: [],
+  phone: "+56 9 1111 2222", bank: "Banco Prueba", account_type: "Cuenta Corriente", holder: "Titular Prueba", email: "pagos@prueba.test", missing: [],
 };
 
 /** Answers every call the screens make; returns undefined for what it does not know. */

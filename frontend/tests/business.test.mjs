@@ -17,14 +17,17 @@ test("the service reads and saves the profile", () => {
   assert.match(s, /missing/);
 });
 
-test("the screen has the five fields and a save button", () => {
+test("the screen has the five editable fields and a save button", () => {
   const path = join(root, "src/pages/BusinessPage.tsx");
   assert.ok(existsSync(path), "pages/BusinessPage.tsx does not exist");
   const s = readFileSync(path, "utf8");
   assert.match(s, /data-testid="business-form"/);
-  for (const label of ["Nombre del negocio", "Teléfono", "Instagram", "Banco", "Tipo de cuenta", "Titular de la cuenta", "Correo electrónico"]) {
+  for (const label of ["Teléfono", "Banco", "Tipo de cuenta", "Titular de la cuenta", "Correo electrónico"]) {
     assert.ok(s.includes(label), `no field "${label}"`);
   }
+  // The name of the business and its Instagram belong to the brand (Q11g): nobody fills them in.
+  assert.ok(!s.includes("Nombre del negocio"), "the brand name is not a field any more");
+  assert.ok(!/label[^>]*>\s*Instagram/.test(s) && !s.includes('id="biz-instagram"'), "the Instagram is not a field any more");
   assert.match(s, /Guardar/);
   assert.match(s, /BIZ_RUT|BIZ_ACCOUNT/, "it should tell that the RUT and the account are set in Vercel");
 });
