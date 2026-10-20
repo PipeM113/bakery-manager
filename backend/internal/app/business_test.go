@@ -235,17 +235,22 @@ func TestQ11_TheBrandNameAndInstagramAreFixedInThePDF(t *testing.T) {
 		}
 	}
 
-	// Sending them does not change them: the brand is not edited from the screen.
-	changed := map[string]any{"name": "Otra Marca", "instagram": "@otra_marca"}
-	for k, v := range profile {
-		changed[k] = v
-	}
-	if status, raw := api.do("PUT", "/business", changed); status != http.StatusOK {
-		t.Fatalf("PUT: %d %s", status, raw)
+	// They are not part of the API any more: sending them is refused, not ignored, and nothing changes.
+	for _, extra := range []map[string]any{{"name": "Otra Marca"}, {"instagram": "@otra_marca"}, {"favorite_color": "rojo"}} {
+		body := map[string]any{}
+		for k, v := range profile {
+			body[k] = v
+		}
+		for k, v := range extra {
+			body[k] = v
+		}
+		if status, raw := api.do("PUT", "/business", body); status != http.StatusBadRequest {
+			t.Errorf("PUT with %v: status = %d, want 400 (an unknown field is refused): %s", extra, status, raw)
+		}
 	}
 	_, after := api.do("GET", "/quotations/"+id+"/pdf", nil)
 	text = pdfTextOf(t, after)
 	if strings.Contains(text, "Otra Marca") || strings.Contains(text, "otra_marca") || !strings.Contains(text, "@angelescoffee_bakery") {
-		t.Errorf("the brand was changed from the profile:\n%s", text)
+		t.Errorf("the brand changed:\n%s", text)
 	}
 }

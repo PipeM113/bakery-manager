@@ -318,3 +318,14 @@ func TestQ10_TheSamePhotoTwiceIsEmbeddedOnce(t *testing.T) {
 		t.Errorf("%d images, want %d", got, base+1)
 	}
 }
+
+func TestQ11g_TheInstagramIsALinkToTheProfile(t *testing.T) {
+	out := raw(t, sample(line("Torta", 1, "recipe", 1500, 1500)))
+	if !regexp.MustCompile(`/URI \(https://www\.instagram\.com/angelescoffee_bakery\)`).MatchString(out) {
+		t.Error("the PDF has no link to https://www.instagram.com/angelescoffee_bakery")
+	}
+	text := pdftotext(t, generate(t, sample(line("Torta", 1, "recipe", 1500, 1500))))
+	if !strings.Contains(text, "@angelescoffee_bakery") {
+		t.Error("the link must show the name of the account, @angelescoffee_bakery")
+	}
+}
