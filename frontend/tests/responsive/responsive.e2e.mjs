@@ -17,8 +17,7 @@
 //   button "Nueva cotización" -> window (role=dialog) with [data-testid="quote-line"] (select aria-label "Producto",
 //     input aria-label "Cantidad"), [data-testid="quote-add-line"], [data-testid="quote-delivery"], placeholder
 //     "Nombre del cliente" and the main button "Crear y descargar PDF"
-//   /business "Datos del negocio": [data-testid="business-form"] with the fields "Nombre del negocio", "Teléfono",
-//     "Instagram", "Banco", "Tipo de cuenta", "Titular de la cuenta", "Correo electrónico" and the button "Guardar"; reachable from the navigation
+//   /business "Datos del negocio": [data-testid="business-form"] with the fields "Teléfono", "Banco", "Tipo de cuenta", "Titular de la cuenta", "Correo electrónico" and the button "Guardar"; reachable from the navigation
 //   /account "Mi cuenta": [data-testid="account-form"] with "Contraseña actual", "Nueva contraseña",
 //     "Repite la nueva contraseña" and the button "Cambiar contraseña"; reachable from the navigation
 //   [data-testid="quote-download"]              "Descargar PDF" button of each quotation card / row
@@ -397,7 +396,7 @@ for (const w of WIDTHS) {
   test(`Q15 business data form at ${w}px`, { timeout: 60000 }, withPage(w, "/business", {}, async (page) => {
     const form = page.locator('[data-testid="business-form"]');
     await form.waitFor({ state: "visible" });
-    for (const label of ["Nombre del negocio", "Teléfono", "Instagram", "Banco", "Tipo de cuenta", "Titular de la cuenta", "Correo electrónico"]) {
+    for (const label of ["Teléfono", "Banco", "Tipo de cuenta", "Titular de la cuenta", "Correo electrónico"]) {
       await form.getByLabel(label).waitFor({ state: "visible" });
     }
     assert.equal(await form.getByLabel("Teléfono").inputValue(), "+56 9 1111 2222", "the form shows what is saved");

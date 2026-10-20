@@ -71,5 +71,6 @@ test("the docs explain the quotation and where the business data lives", () => {
     assert.ok(docs("despliegue.md").includes(word), `docs/despliegue.md does not mention ${word}`);
   }
   assert.doesNotMatch(docs("despliegue.md"), /BIZ_(NAME|PHONE|INSTAGRAM|BANK|HOLDER)/, "those are edited in the app now");
+  assert.ok(q.includes("angelescoffee_bakery") && q.includes("Angeles Bakery"), "docs/cotizaciones.md should say that the name and the Instagram are fixed brand data");
   assert.doesNotMatch(docs("pedidos.md"), /Cotizaciones con varios productos \(van con el PDF/);
 });
