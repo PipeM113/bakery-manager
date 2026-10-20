@@ -52,15 +52,20 @@ horas. Si las filas no caben pasa a otra página; el total y los datos van junto
 
 ## Datos del negocio
 
-Lo que el PDF imprime del negocio se edita en la app, en **Datos del negocio** (menú "Más" en el
-celular, barra lateral en el computador). Las dos cuentas pueden editarlo y el cambio vale desde el
-siguiente PDF, también para cotizaciones antiguas (son datos del negocio, no de la cotización).
+El PDF imprime tres tipos de datos del negocio:
+
+- **De la marca, fijos en el código** (`backend/internal/quotations/service/pdf.go`): el nombre, **Angeles Bakery**,
+  y el Instagram, **@angelescoffee_bakery**, que en el PDF es un enlace a
+  `https://www.instagram.com/angelescoffee_bakery`. No se editan ni pueden faltar. Si cambian, se cambian en el
+  código.
+- **Editables en la app**, en **Datos del negocio** (menú "Más" en el celular, barra lateral en el computador).
+  Las dos cuentas pueden editarlos y el cambio vale desde el siguiente PDF, también para cotizaciones antiguas
+  (son datos del negocio, no de la cotización).
+- **En Vercel**: el RUT y el número de cuenta. Nunca llegan a la pantalla ni a la base.
 
 | Dato | Dónde | Notas |
 |---|---|---|
-| Nombre del negocio | App | Hasta 100 caracteres |
 | Teléfono | App | Números, espacios, `+`, `-` y paréntesis; al menos 8 dígitos |
-| Instagram | App | Usuario sin espacios; se guarda con `@` |
 | Banco | App | Hasta 60 caracteres |
 | Tipo de cuenta | App | Cuenta Corriente, Cuenta Vista, Cuenta RUT o Cuenta de Ahorro |
 | Titular de la cuenta | App | Hasta 100 caracteres |
@@ -68,10 +73,13 @@ siguiente PDF, también para cotizaciones antiguas (son datos del negocio, no de
 | **RUT** | **Variable `BIZ_RUT` en Vercel** | Nunca llega a la pantalla ni a la base |
 | **Número de cuenta** | **Variable `BIZ_ACCOUNT` en Vercel** | Igual |
 
-Ningún dato viene de relleno: la ficha parte vacía. Mientras falte algo, el PDF responde 503 y el
-mensaje dice qué falta y dónde completarlo (los campos de la app o las variables de Vercel), y la
-pantalla de cotizaciones muestra un aviso con un enlace a "Datos del negocio". Crear cotizaciones
-funciona igual.
+`PUT /business` solo acepta esos cinco campos: **uno que no existe (por ejemplo `name` o `instagram`) se rechaza con
+400**, no se ignora. Las variables de Vercel las lee el servidor al arrancar: después de crearlas o cambiarlas hay
+que **volver a desplegar**.
+
+Ningún dato viene de relleno: la ficha parte vacía. Mientras falte algo, el PDF responde 503 y el mensaje dice qué
+falta y dónde completarlo (los campos de la app o las variables de Vercel), y la pantalla de cotizaciones muestra un
+aviso con un enlace a "Datos del negocio". Crear cotizaciones funciona igual.
 
 ## Migraciones
 
@@ -80,6 +88,7 @@ funciona igual.
   que ya existía pasa a tener una línea (cantidad 1, su receta, su total); su total conserva el significado.
   La bajada devuelve la receta de la primera línea y pierde las demás líneas.
 - **25:** crea `business_profile`, una sola fila que nace vacía.
+- **27:** elimina las columnas `name` e `instagram` de `business_profile` (son de la marca y viven en el código). Los valores que tuvieran se pierden; la bajada las devuelve vacías.
 
 ## Lo que no hace (todavía)
 

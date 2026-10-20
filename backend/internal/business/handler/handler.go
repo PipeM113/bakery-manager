@@ -44,8 +44,10 @@ func (h *BusinessHandler) Get(w http.ResponseWriter, r *http.Request) {
 func (h *BusinessHandler) Save(w http.ResponseWriter, r *http.Request) {
 	var in repository.Profile
 	r.Body = http.MaxBytesReader(w, r.Body, 1<<16)
-	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
-		httputil.JSONError(w, "request inválido", http.StatusBadRequest)
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields() // a field that is not part of the profile is refused, not ignored
+	if err := dec.Decode(&in); err != nil {
+		httputil.JSONError(w, "request inválido: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	claims, _ := r.Context().Value(mid.UserKey).(mid.UserClaims)

@@ -1,0 +1,2 @@
+ALTER TABLE business_profile ADD COLUMN name TEXT NOT NULL DEFAULT '';
+ALTER TABLE business_profile ADD COLUMN instagram TEXT NOT NULL DEFAULT '';

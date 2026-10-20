@@ -57,9 +57,17 @@ type QuoteLine struct {
 	LineTotal int64
 }
 
-// Business is what the PDF prints about the business: contact and transfer data.
+// The brand: its name and Instagram do not change, so they are not data to fill in. The Instagram is
+// printed as the account name and works as a link to the profile.
+const (
+	BrandName         = "Angeles Bakery"
+	BrandInstagram    = "@angelescoffee_bakery"
+	BrandInstagramURL = "https://www.instagram.com/angelescoffee_bakery"
+)
+
+// Business is what the PDF prints about the business besides the brand: phone and transfer data.
 type Business struct {
-	Name, Phone, Instagram     string
+	Phone                      string
 	Bank, AccountType, Account string
 	Holder, RUT, Email         string
 }
@@ -260,9 +268,11 @@ func GenerateQuotePDF(data QuoteData) (*bytes.Buffer, error) {
 	for i, s := range transfer {
 		cell(lm, y+float64(i)*5.5, half, 5, s, "L")
 	}
-	for i, s := range []string{b.Name, b.Phone, b.Instagram} {
+	for i, s := range []string{BrandName, b.Phone, BrandInstagram} {
 		cell(lm+half+5, y+float64(i)*5.5, half-5, 5, s, "L")
 	}
+	// The Instagram line is a link: tapping it opens the profile.
+	pdf.LinkString(lm+half+5, y+2*5.5, pdf.GetStringWidth(BrandInstagram), 5, BrandInstagramURL)
 	y += float64(len(transfer))*5.5 + 6
 
 	pdf.SetFillColor(lino[0], lino[1], lino[2])

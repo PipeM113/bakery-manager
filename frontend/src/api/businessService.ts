@@ -1,10 +1,8 @@
 import api from "../services/api";
 
-/** The data of the business that the quotation PDF prints. The RUT and the account number are not here. */
+/** What the quotation PDF prints and can change. The RUT and the account number are not here (Vercel); the name and the Instagram of the brand are fixed in the backend. */
 export interface IBusinessProfile {
-  name: string;
   phone: string;
-  instagram: string;
   bank: string;
   account_type: string;
   holder: string;
