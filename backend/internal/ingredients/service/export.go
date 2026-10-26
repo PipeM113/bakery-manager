@@ -33,8 +33,8 @@ func formatCLP(n float64) string {
 }
 
 // ExportIngredientsToExcel generates an Excel file with the following columns:
-// A=Nombre, B=Marca, C=Unidad, D=Tamaño Presentación, E=Precio Presentación, F=Precio Unitario (info)
-// Columns A–E can be modified and re-imported. Column F is informational only.
+// A=Nombre, B=Marca, C=Unidad, D=Tamaño Presentación, E=Precio Presentación, F=Proveedor, G=Precio Unitario (info)
+// Columns A–F can be modified and re-imported. Column G is informational only.
 func ExportIngredientsToExcel(ingredients []repository.Ingredient) (*bytes.Buffer, error) {
 	f := excelize.NewFile()
 	defer f.Close()
@@ -44,8 +44,8 @@ func ExportIngredientsToExcel(ingredients []repository.Ingredient) (*bytes.Buffe
 
 	// Header style: bold, gold background (#C9A84C), white text
 	headerStyle, err := f.NewStyle(&excelize.Style{
-		Font: &excelize.Font{Bold: true, Color: "FFFFFF", Size: 11},
-		Fill: excelize.Fill{Type: "pattern", Color: []string{"C9A84C"}, Pattern: 1},
+		Font:      &excelize.Font{Bold: true, Color: "FFFFFF", Size: 11},
+		Fill:      excelize.Fill{Type: "pattern", Color: []string{"C9A84C"}, Pattern: 1},
 		Alignment: &excelize.Alignment{Horizontal: "center", Vertical: "center"},
 		Border: []excelize.Border{
 			{Type: "bottom", Color: "A07830", Style: 2},
@@ -57,8 +57,8 @@ func ExportIngredientsToExcel(ingredients []repository.Ingredient) (*bytes.Buffe
 
 	// Info header style (column F): same gold but slightly muted
 	infoHeaderStyle, err := f.NewStyle(&excelize.Style{
-		Font: &excelize.Font{Bold: true, Color: "FFFFFF", Size: 11},
-		Fill: excelize.Fill{Type: "pattern", Color: []string{"B89840"}, Pattern: 1},
+		Font:      &excelize.Font{Bold: true, Color: "FFFFFF", Size: 11},
+		Fill:      excelize.Fill{Type: "pattern", Color: []string{"B89840"}, Pattern: 1},
 		Alignment: &excelize.Alignment{Horizontal: "center", Vertical: "center"},
 		Border: []excelize.Border{
 			{Type: "bottom", Color: "A07830", Style: 2},
@@ -121,16 +121,16 @@ func ExportIngredientsToExcel(ingredients []repository.Ingredient) (*bytes.Buffe
 		return nil, err
 	}
 
-	// Columns A–E are importable; F is informational
-	headers := []string{"Nombre", "Marca", "Unidad", "Tamaño Presentación", "Precio Presentación", "Precio Unitario (info)"}
-	cols := []string{"A", "B", "C", "D", "E", "F"}
-	colWidths := []float64{30, 20, 12, 20, 22, 22}
+	// Columns A–F are importable; G is informational
+	headers := []string{"Nombre", "Marca", "Unidad", "Tamaño Presentación", "Precio Presentación", "Proveedor", "Precio Unitario (info)"}
+	cols := []string{"A", "B", "C", "D", "E", "F", "G"}
+	colWidths := []float64{30, 20, 12, 20, 22, 22, 22}
 
 	for i, h := range headers {
 		cell := cols[i] + "1"
 		f.SetCellValue(sheet, cell, h)
 		style := headerStyle
-		if i == 5 {
+		if i == 6 {
 			style = infoHeaderStyle
 		}
 		f.SetCellStyle(sheet, cell, cell, style)
@@ -172,9 +172,13 @@ func ExportIngredientsToExcel(ingredients []repository.Ingredient) (*bytes.Buffe
 		f.SetCellValue(sheet, "E"+rowStr, ing.PackagePrice)
 		f.SetCellStyle(sheet, "E"+rowStr, "E"+rowStr, numStyle)
 
-		// F: Precio Unitario (CLP formatted, informational only)
-		f.SetCellValue(sheet, "F"+rowStr, formatCLP(ing.PricePerUnit))
-		f.SetCellStyle(sheet, "F"+rowStr, "F"+rowStr, infoStyle)
+		// F: Proveedor (importable)
+		f.SetCellValue(sheet, "F"+rowStr, ing.Supplier)
+		f.SetCellStyle(sheet, "F"+rowStr, "F"+rowStr, textStyle)
+
+		// G: Precio Unitario (CLP formatted, informational only)
+		f.SetCellValue(sheet, "G"+rowStr, formatCLP(ing.PricePerUnit))
+		f.SetCellStyle(sheet, "G"+rowStr, "G"+rowStr, infoStyle)
 
 		f.SetRowHeight(sheet, row, 18)
 	}

@@ -21,7 +21,7 @@ func ingredientKeysMigrationExists(t *testing.T) {
 	}
 }
 
-const insertIngredient = `insert into ingredients (name, brand, unit, package_size, package_price) values ($1, $2, 'gr', 1000, 1000)`
+const insertIngredient = `insert into ingredients (name, brand, default_unit, price_per_unit, package_size, package_price) values ($1, $2, 'gr', 1, 1000, 1000)`
 
 func TestE1_TheNewColumnsExistAndDefaultToNothing(t *testing.T) {
 	ingredientKeysMigrationExists(t)
@@ -48,7 +48,7 @@ func TestE1_TheKeyIsNameBrandAndSupplierWithoutCase(t *testing.T) {
 	pgtest.Migrate(t, pool, migrationsDir, "up")
 	ctx := context.Background()
 	add := func(name, brand, supplier string) error {
-		_, err := pool.Exec(ctx, `insert into ingredients (name, brand, supplier, unit, package_size, package_price) values ($1, $2, $3, 'gr', 250, 1000)`, name, brand, supplier)
+		_, err := pool.Exec(ctx, `insert into ingredients (name, brand, supplier, default_unit, price_per_unit, package_size, package_price) values ($1, $2, $3, 'gr', 4, 250, 1000)`, name, brand, supplier)
 		return err
 	}
 	for _, c := range [][3]string{{"Mantequilla", "Soprole", "La Vega"}, {"Mantequilla", "Soprole", "Líder"}, {"Mantequilla", "Colún", "La Vega"}} {
@@ -77,10 +77,10 @@ func TestE9_AStockAdjustmentCanBeAPurchase(t *testing.T) {
 	if err := pool.QueryRow(ctx, insertIngredient+` returning id`, "Harina", "").Scan(&ing); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := pool.Exec(ctx, `insert into stock_adjustments (ingredient_id, reason, quantity_delta, unit, adjusted_on) values ($1, 'compra', 500, 'gr', '2026-03-01')`, ing); err != nil {
+	if _, err := pool.Exec(ctx, `insert into stock_adjustments (ingredient_id, reason, quantity_delta, unit, stock_before, stock_after, adjusted_on) values ($1, 'compra', 500, 'gr', 0, 500, '2026-03-01')`, ing); err != nil {
 		t.Fatalf("reason compra refused: %v", err)
 	}
-	if _, err := pool.Exec(ctx, `insert into stock_adjustments (ingredient_id, reason, quantity_delta, unit, adjusted_on) values ($1, 'robo', 1, 'gr', '2026-03-01')`, ing); err == nil {
+	if _, err := pool.Exec(ctx, `insert into stock_adjustments (ingredient_id, reason, quantity_delta, unit, stock_before, stock_after, adjusted_on) values ($1, 'robo', 1, 'gr', 0, 1, '2026-03-01')`, ing); err == nil {
 		t.Error("an unknown reason must still be refused")
 	}
 }

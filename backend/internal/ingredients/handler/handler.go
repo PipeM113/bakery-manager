@@ -2,12 +2,14 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/PipeM113/bakery-manager/internal/ingredients/repository"
 	"github.com/PipeM113/bakery-manager/internal/ingredients/service"
@@ -19,6 +21,41 @@ import (
 
 var allowedUnits = map[string]bool{
 	"gr": true, "kg": true, "ml": true, "lt": true, "und": true,
+}
+
+const (
+	duplicateMessage = "ya existe un insumo con ese nombre, marca y proveedor"
+	maxSupplier      = 100
+	maxGramsPerLiter = 20000
+	maxGramsPerUnit  = 100000
+)
+
+// validate trims the text fields and checks the whole body; it returns what is wrong, or "".
+func validate(body *repository.Ingredient) string {
+	body.Name = strings.TrimSpace(body.Name)
+	body.Brand = strings.TrimSpace(body.Brand)
+	body.Supplier = strings.TrimSpace(body.Supplier)
+	switch {
+	case body.Kind != "" && !repository.ValidKind(body.Kind):
+		return "kind inválido, use: ingredient, supply"
+	case body.Name == "":
+		return "el nombre es requerido"
+	case body.Brand == "":
+		return "la marca es requerida"
+	case utf8.RuneCountInString(body.Supplier) > maxSupplier:
+		return "el proveedor no puede pasar de 100 caracteres"
+	case !allowedUnits[body.DefaultUnit]:
+		return "unidad inválida, use: gr, kg, ml, lt, und"
+	case body.PackagePrice <= 0:
+		return "el precio del paquete debe ser mayor a 0"
+	case body.PackageSize <= 0:
+		return "el tamaño del paquete debe ser mayor a 0"
+	case body.GramsPerLiter < 0 || body.GramsPerLiter > maxGramsPerLiter:
+		return "el peso de 1 litro debe estar entre 0 y 20000 gr (0 si no se conoce)"
+	case body.GramsPerUnit < 0 || body.GramsPerUnit > maxGramsPerUnit:
+		return "el peso de 1 unidad debe estar entre 0 y 100000 gr (0 si no se conoce)"
+	}
+	return ""
 }
 
 type IngredientHandler struct {
@@ -61,30 +98,8 @@ func (h *IngredientHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	body.Name = strings.TrimSpace(body.Name)
-	body.Brand = strings.TrimSpace(body.Brand)
-	if body.Kind != "" && !repository.ValidKind(body.Kind) {
-		httputil.JSONError(w, "kind inválido, use: ingredient, supply", http.StatusBadRequest)
-		return
-	}
-	if body.Name == "" {
-		httputil.JSONError(w, "el nombre es requerido", http.StatusBadRequest)
-		return
-	}
-	if body.Brand == "" {
-		httputil.JSONError(w, "la marca es requerida", http.StatusBadRequest)
-		return
-	}
-	if !allowedUnits[body.DefaultUnit] {
-		httputil.JSONError(w, "unidad inválida, use: gr, kg, ml, lt, und", http.StatusBadRequest)
-		return
-	}
-	if body.PackagePrice <= 0 {
-		httputil.JSONError(w, "el precio del paquete debe ser mayor a 0", http.StatusBadRequest)
-		return
-	}
-	if body.PackageSize <= 0 {
-		httputil.JSONError(w, "el tamaño del paquete debe ser mayor a 0", http.StatusBadRequest)
+	if msg := validate(&body); msg != "" {
+		httputil.JSONError(w, msg, http.StatusBadRequest)
 		return
 	}
 
@@ -93,8 +108,8 @@ func (h *IngredientHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	created, err := h.repo.Create(r.Context(), body)
 	if err != nil {
-		if strings.Contains(err.Error(), "unique") {
-			httputil.JSONError(w, "ya existe un insumo con ese nombre", http.StatusConflict)
+		if errors.Is(err, repository.ErrDuplicate) {
+			httputil.JSONError(w, duplicateMessage, http.StatusConflict)
 			return
 		}
 		log.Printf("[ingredients] Create error: %v", err)
@@ -116,36 +131,23 @@ func (h *IngredientHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	body.ID = id
-	body.Name = strings.TrimSpace(body.Name)
-	body.Brand = strings.TrimSpace(body.Brand)
-	if body.Kind != "" && !repository.ValidKind(body.Kind) {
-		httputil.JSONError(w, "kind inválido, use: ingredient, supply", http.StatusBadRequest)
-		return
-	}
-	if body.Name == "" {
-		httputil.JSONError(w, "el nombre es requerido", http.StatusBadRequest)
-		return
-	}
-	if body.Brand == "" {
-		httputil.JSONError(w, "la marca es requerida", http.StatusBadRequest)
-		return
-	}
-	if !allowedUnits[body.DefaultUnit] {
-		httputil.JSONError(w, "unidad inválida, use: gr, kg, ml, lt, und", http.StatusBadRequest)
-		return
-	}
-	if body.PackagePrice <= 0 {
-		httputil.JSONError(w, "el precio del paquete debe ser mayor a 0", http.StatusBadRequest)
-		return
-	}
-	if body.PackageSize <= 0 {
-		httputil.JSONError(w, "el tamaño del paquete debe ser mayor a 0", http.StatusBadRequest)
+	if msg := validate(&body); msg != "" {
+		httputil.JSONError(w, msg, http.StatusBadRequest)
 		return
 	}
 
 	log.Printf("[ingredients] PUT /ingredients/%s user=%s name=%q", id, userID(r), body.Name)
 
 	updated, err := h.repo.Update(r.Context(), body, userID(r))
+	var needed *repository.EquivalenceNeededError
+	if errors.Is(err, repository.ErrDuplicate) {
+		httputil.JSONError(w, duplicateMessage, http.StatusConflict)
+		return
+	}
+	if errors.As(err, &needed) {
+		httputil.JSONError(w, needed.Error(), http.StatusConflict)
+		return
+	}
 	if err != nil {
 		log.Printf("[ingredients] Update error id=%s: %v", id, err)
 		httputil.JSONError(w, "error actualizando insumo", http.StatusInternalServerError)

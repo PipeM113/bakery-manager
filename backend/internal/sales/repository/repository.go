@@ -127,7 +127,8 @@ func needsOf(ctx context.Context, tx db, line LineInput) ([]need, error) {
 	}
 
 	rows, err := tx.Query(ctx, `
-		SELECT ri.ingredient_id, i.name, ri.quantity, ri.unit, i.default_unit, i.price_per_unit
+		SELECT ri.ingredient_id, i.name, ri.quantity, ri.unit, i.default_unit, i.price_per_unit,
+		       i.grams_per_liter, i.grams_per_unit
 		FROM recipe_ingredients ri
 		JOIN ingredients i ON i.id = ri.ingredient_id
 		WHERE ri.recipe_id = $1`, line.RecipeID)
@@ -140,10 +141,11 @@ func needsOf(ctx context.Context, tx db, line LineInput) ([]need, error) {
 		var n need
 		var quantity float64
 		var recipeUnit string
-		if err := rows.Scan(&n.ingredientID, &n.name, &quantity, &recipeUnit, &n.unit, &n.pricePerUnit); err != nil {
+		var eq kernel.Equivalence
+		if err := rows.Scan(&n.ingredientID, &n.name, &quantity, &recipeUnit, &n.unit, &n.pricePerUnit, &eq.GramsPerLiter, &eq.GramsPerUnit); err != nil {
 			return nil, fmt.Errorf("scan ingredient: %w", err)
 		}
-		converted, err := kernel.ConvertToBase(quantity*float64(line.QuantitySold)*share, recipeUnit, n.unit)
+		converted, err := kernel.Convert(quantity*float64(line.QuantitySold)*share, recipeUnit, n.unit, eq)
 		if err != nil {
 			return nil, &ValidationError{fmt.Sprintf("%s: %v", n.name, err)}
 		}

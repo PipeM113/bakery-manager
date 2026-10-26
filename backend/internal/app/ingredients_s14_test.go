@@ -342,7 +342,7 @@ func TestE6_SellingTakesTheStockThroughTheEquivalence(t *testing.T) {
 	api, _ := newPricingAPI(t)
 	milk := ing(t, api, "Leche", "Soprole", "", map[string]any{"default_unit": "lt", "package_size": 1, "package_price": 1000, "grams_per_liter": 1250, "stock_quantity": 2})
 	recipe := recipeWith(t, api, "Flan", milk, 625, "gr")
-	sellOK(t, api, map[string]any{"recipe_id": recipe, "quantity": 1})
+	sellOK(t, api, map[string]any{"recipe_id": recipe, "quantity_sold": 1})
 	if got := stockOf(t, api, milk); !near(got, 1.5) {
 		t.Errorf("stock = %v lt, want 1.5 (625 gr are half a litre)", got)
 	}

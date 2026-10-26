@@ -132,6 +132,16 @@ func (h *RecipeHandler) Create(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	if err := h.repo.CheckUnits(r.Context(), body.Ingredients); err != nil {
+		var bad *repository.UnitError
+		if errors.As(err, &bad) {
+			httputil.JSONError(w, bad.Error(), http.StatusBadRequest)
+			return
+		}
+		log.Printf("[recipes] CheckUnits error: %v", err)
+		httputil.JSONError(w, "error revisando las unidades", http.StatusInternalServerError)
+		return
+	}
 
 	body.CreatedBy = &claims.ID
 	if body.YieldUnit == "" {
@@ -327,6 +337,16 @@ func (h *RecipeHandler) Update(w http.ResponseWriter, r *http.Request) {
 			httputil.JSONError(w, "la cantidad de cada ingrediente debe ser mayor a 0", http.StatusBadRequest)
 			return
 		}
+	}
+	if err := h.repo.CheckUnits(r.Context(), body.Ingredients); err != nil {
+		var bad *repository.UnitError
+		if errors.As(err, &bad) {
+			httputil.JSONError(w, bad.Error(), http.StatusBadRequest)
+			return
+		}
+		log.Printf("[recipes] CheckUnits error: %v", err)
+		httputil.JSONError(w, "error revisando las unidades", http.StatusInternalServerError)
+		return
 	}
 
 	// Percentages that were not sent keep the values the recipe already has.
