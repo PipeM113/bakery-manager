@@ -11,6 +11,7 @@ const num = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(3).repla
 const REASONS: { value: AdjustmentReason; label: string; help: string }[] = [
   { value: "merma", label: "Merma", help: "Se perdió o se echó a perder. Baja el stock y cuenta como pérdida." },
   { value: "correccion", label: "Corrección", help: "Contaste el stock real. Queda lo que contaste, sin pérdida." },
+  { value: "compra", label: "Compra", help: "Compraste más. Sube el stock, sin pérdida." },
   { value: "otro", label: "Otro", help: "Regalo, muestra u otro caso. Sube o baja el stock, sin pérdida. Pide una nota." },
 ];
 
@@ -51,7 +52,7 @@ export default function StockAdjustmentModal({ ingredient, onClose, onSaved }: P
     }
     if (reason === "otro" && !note.trim()) { setError("Escribe una nota"); return; }
     const form: StockAdjustmentForm = { reason, unit, note: note.trim(), adjusted_on: date };
-    if (reason === "merma") form.quantity = value;
+    if (reason === "merma" || reason === "compra") form.quantity = value;
     if (reason === "correccion") form.counted_quantity = value;
     if (reason === "otro") form.quantity_delta = direction === "down" ? -value : value;
     setSaving(true);

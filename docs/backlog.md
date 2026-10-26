@@ -1,6 +1,6 @@
 # Backlog
 
-Cada sprint sigue el mismo método: contrato, reglas de aceptación aprobadas, tests escritos y vistos en rojo, aprobación, implementación con evidencia y documentación. "Aceptado" significa que el propietario lo probó en la app real. Última actualización: 2026-10-19 (cierre del sprint 13).
+Cada sprint sigue el mismo método: contrato, reglas de aceptación aprobadas, tests escritos y vistos en rojo, aprobación, implementación con evidencia y documentación. "Aceptado" significa que el propietario lo probó en la app real. Última actualización: 2026-10-26 (cierre del sprint 14).
 
 ## Estado de los sprints
 
@@ -19,6 +19,7 @@ Cada sprint sigue el mismo método: contrato, reglas de aceptación aprobadas, t
 | 11 | Un solo negocio con cuentas personales | Hecho | Sí | `docs/acceso.md`, `docs/adr/002-*` |
 | 12 | Cotizaciones con varios productos y PDF con la marca; datos del negocio editables | Hecho | Pendiente | `docs/cotizaciones.md` |
 | 13 | Calidad y detalles | Hecho | Pendiente | `docs/acceso.md`, `docs/despliegue.md` |
+| 14 | Ingredientes: proveedor, orden, stock rápido y equivalencias entre unidades | Hecho (migración 28) | Pendiente | `docs/ingredientes.md` |
 
 Los sprints 0 a 4 usan la numeración antigua y son anteriores al registro de aceptación (por eso "—"). El antiguo "sprint 5, acceso y roles" es hoy el sprint 11, y el antiguo "sprint 6, calidad", el 13. La paleta y las tipografías de la marca están en `docs/diseno.md`. Las casillas viejas de este archivo se reemplazaron por esta tabla.
 
@@ -39,6 +40,13 @@ Los sprints 0 a 4 usan la numeración antigua y son anteriores al registro de ac
 - [x] Una sola función de formato de dinero (`-$271.000`); `App.css` eliminado; ESLint sin errores y en el CI.
 - [x] `go mod tidy` limpio; el CI instala `poppler-utils` para los tests de texto del PDF.
 - [x] Dependencias de producción del frontend actualizadas (`axios`, `react-router-dom`) y `xlsx` eliminado junto con la vista previa del archivo de "Importar ingredientes" (decisión del propietario): `npm audit --omit=dev` da 0 avisos.
+
+## Sprint 14, ingredientes (cerrado en código)
+
+- [x] Un ingrediente se identifica por nombre + marca + proveedor: la misma mantequilla en La Vega y en Líder son dos ingredientes (migración 28).
+- [x] Listas ordenadas sin distinguir mayúsculas ni tildes; selector de orden en Ingredientes; marca y proveedor al elegir productos en las recetas.
+- [x] Botón "+ Stock" para agregar una compra o contar el stock sin entrar a editar.
+- [x] Peso de 1 litro y de 1 unidad (opcionales) para usar gr con productos en ml y und con gr; se pide solo cuando una receta lo necesita y sin bloquear lo demás.
 
 ## Pendiente
 

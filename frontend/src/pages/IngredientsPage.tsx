@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import IngredientImportModal from "../components/IngredientImportModal";
 import StockAdjustmentModal from "../components/StockAdjustmentModal";
+import QuickStockModal from "../components/QuickStockModal";
 import Modal from "../components/Modal";
 import { useIsPhone } from "../hooks/useIsPhone";
 import { ingredientService } from "../api/ingredientService";
@@ -10,8 +11,16 @@ import type { IngredientKind } from "../types/ingredient";
 import { todayInSantiago } from "../utils/businessDate";
 import { formatCLP } from "../utils/money";
 import { apiErrorMessage } from "../utils/apiError";
+import { UNITS } from "../utils/units";
+import { compareIngredients, ingredientLabel, sortKey } from "../utils/ingredients";
 
-const UNITS = ["gr", "kg", "ml", "lt", "und"];
+type SortBy = "name" | "brand" | "supplier" | "stock";
+const SORTS: { value: SortBy; label: string }[] = [
+  { value: "name", label: "Nombre (A–Z)" },
+  { value: "brand", label: "Marca" },
+  { value: "supplier", label: "Proveedor" },
+  { value: "stock", label: "Stock más bajo" },
+];
 
 
 function PriceDisplay({ price, unit }: { price: number; unit: string }) {
@@ -46,6 +55,9 @@ export default function IngredientsPage() {
   const [error, setError]             = useState("");
   const [showImport, setShowImport]   = useState(false);
   const [adjusting, setAdjusting]     = useState<IIngredient | null>(null);
+  const [quickStock, setQuickStock]   = useState<IIngredient | null>(null);
+  const [sortBy, setSortBy]           = useState<SortBy>("name");
+  const [showEq, setShowEq]           = useState(false);
   const phone = useIsPhone();
   const [exporting, setExporting]     = useState(false);
   const [successMsg, setSuccessMsg]   = useState("");
@@ -66,14 +78,21 @@ export default function IngredientsPage() {
     successTimer.current = setTimeout(() => setSuccessMsg(""), 3000);
   };
 
-  const filtered = ingredients.filter((i) =>
-    (i.kind ?? "ingredient") === tab && i.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const query = sortKey(search);
+  const filtered = ingredients
+    .filter((i) => (i.kind ?? "ingredient") === tab && sortKey(ingredientLabel(i)).includes(query))
+    .sort((a, b) => {
+      if (sortBy === "brand") return sortKey(a.brand).localeCompare(sortKey(b.brand)) || compareIngredients(a, b);
+      if (sortBy === "supplier") return sortKey(a.supplier).localeCompare(sortKey(b.supplier)) || compareIngredients(a, b);
+      if (sortBy === "stock") return a.stock_quantity - b.stock_quantity || compareIngredients(a, b);
+      return compareIngredients(a, b);
+    });
   const singular = tab === "supply" ? "insumo" : "ingrediente";
 
   const openCreate = () => {
     setEditing(null);
     setForm({ ...emptyIngredientForm, kind: tab });
+    setShowEq(false);
     setError("");
     setShowForm(true);
   };
@@ -89,7 +108,11 @@ export default function IngredientsPage() {
       stock_quantity:  i.stock_quantity,
       alert_threshold: i.alert_threshold,
       brand:        i.brand,
+      supplier:        i.supplier ?? "",
+      grams_per_liter: i.grams_per_liter || "",
+      grams_per_unit:  i.grams_per_unit || "",
     });
+    setShowEq(i.grams_per_liter > 0 || i.grams_per_unit > 0);
     setError("");
     setShowForm(true);
   };
@@ -112,7 +135,10 @@ export default function IngredientsPage() {
       setShowForm(false);
       load();
     } catch (e) {
-      setError(apiErrorMessage(e, "Error al guardar"));
+      const message = apiErrorMessage(e, "Error al guardar");
+      // A recipe needs the weight of 1 litre or of 1 unit to keep working with the new unit: ask for it here.
+      if (/peso de 1 (litro|unidad)/.test(message)) setShowEq(true);
+      setError(message);
     } finally {
       setSaving(false);
     }
@@ -211,9 +237,18 @@ export default function IngredientsPage() {
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         className="w-full bg-white border border-linea text-negro text-sm
-                   px-4 py-3 mb-6 font-light tracking-wide placeholder-negro/70
+                   px-4 py-3 mb-4 font-light tracking-wide placeholder-negro/70
                    focus:outline-none focus:border-oro transition-all"
       />
+
+      <div className="flex items-center gap-2 mb-6">
+        <label htmlFor="ingredient-sort" className="text-xs tracking-widest uppercase text-negro/70 font-light">Ordenar por</label>
+        <select id="ingredient-sort" data-testid="ingredient-sort" value={sortBy}
+          onChange={(e) => setSortBy(e.target.value as SortBy)}
+          className="bg-white border border-linea text-negro text-sm px-3 py-2 font-light focus:outline-none focus:border-oro">
+          {SORTS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+      </div>
 
       {/* Lista */}
       {filtered.length === 0 ? (
@@ -235,12 +270,17 @@ export default function IngredientsPage() {
                     <p className="text-negro/70 text-xs font-light mt-0.5">
                       Envase: {i.package_size} {i.default_unit} · {formatCLP(i.package_price)}
                       {i.brand && <span> · {i.brand}</span>}
+                      {i.supplier && <span> · {i.supplier}</span>}
                     </p>
                     <p className="text-negro/70 text-xs font-light mt-0.5">
                       Stock: {Number.isInteger(i.stock_quantity) ? i.stock_quantity : i.stock_quantity.toFixed(3)} {i.default_unit}
                     </p>
                   </div>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    <button onClick={() => setQuickStock(i)} data-testid="stock-quick"
+                      className="border border-linea text-xs text-negro hover:text-oro tracking-wider transition-colors">
+                      + Stock
+                    </button>
                     <button onClick={() => setAdjusting(i)}
                       className="border border-linea text-xs text-negro/70 hover:text-oro tracking-wider transition-colors">
                       Ajustar stock
@@ -263,7 +303,7 @@ export default function IngredientsPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-linea text-left">
-                  {["Nombre", "Marca", "Envase", "Precio por unidad", "Stock", ""].map((h) => (
+                  {["Nombre", "Marca", "Proveedor", "Envase", "Precio por unidad", "Stock", ""].map((h) => (
                     <th key={h} className="px-4 py-3 text-xs tracking-widest uppercase text-negro/70 font-light">{h}</th>
                   ))}
                 </tr>
@@ -278,6 +318,7 @@ export default function IngredientsPage() {
                         {lowStock && <span className="ml-2 text-peligro text-xs">◆ Stock bajo</span>}
                       </td>
                       <td className="px-4 py-3 text-negro/70 font-light">{i.brand}</td>
+                      <td className="px-4 py-3 text-negro/70 font-light">{i.supplier}</td>
                       <td className="px-4 py-3 text-negro/70 font-light whitespace-nowrap">{i.package_size} {i.default_unit} · {formatCLP(i.package_price)}</td>
                       <td className="px-4 py-3"><PriceDisplay price={i.price_per_unit} unit={i.default_unit} /></td>
                       <td className={`px-4 py-3 whitespace-nowrap font-light ${lowStock ? "text-peligro" : "text-negro/70"}`}>
@@ -285,6 +326,8 @@ export default function IngredientsPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3 justify-end whitespace-nowrap">
+                          <button onClick={() => setQuickStock(i)} data-testid="stock-quick"
+                            className="text-xs text-negro hover:text-oro tracking-wider transition-colors">+ Stock</button>
                           <button onClick={() => setAdjusting(i)}
                             className="text-xs text-negro/70 hover:text-oro tracking-wider transition-colors">Ajustar stock</button>
                           <button onClick={() => openEdit(i)}
@@ -300,6 +343,15 @@ export default function IngredientsPage() {
             </table>
           </div>
         )
+      )}
+
+      {/* Quick stock: add what was bought, or count */}
+      {quickStock && (
+        <QuickStockModal
+          ingredient={ingredients.find((x) => x.id === quickStock.id) ?? quickStock}
+          onClose={() => setQuickStock(null)}
+          onSaved={load}
+        />
       )}
 
       {/* Stock adjustment (merma, corrección, otro) */}
@@ -381,6 +433,32 @@ export default function IngredientsPage() {
                 className="w-full bg-crema border border-linea text-negro
                            px-3 py-1.5 text-sm font-light focus:outline-none focus:border-oro transition-all" />
             </div>
+
+            <div>
+              <label className="block text-xs tracking-widest uppercase text-negro/70 mb-1 font-light">Proveedor (opcional)</label>
+              <input type="text" value={form.supplier} placeholder="ej. La Vega, Líder" maxLength={100}
+                onChange={(e) => setForm({ ...form, supplier: e.target.value })}
+                className="w-full bg-crema border border-linea text-negro
+                           px-3 py-1.5 text-sm font-light focus:outline-none focus:border-oro transition-all" />
+            </div>
+
+            <details open={showEq} onToggle={(e) => setShowEq((e.target as HTMLDetailsElement).open)}>
+              <summary className="text-xs tracking-widest uppercase text-oro cursor-pointer font-light">
+                Equivalencias (opcional)
+              </summary>
+              <p className="text-xs text-negro/70 font-light my-2">
+                Solo si usas este producto en otra unidad en las recetas (por ejemplo, la leche se compra en litros y la receta pide gramos). Déjalo vacío si no lo sabes.
+              </p>
+              {([["grams_per_liter", "Peso de 1 litro (gr)", "ej. 1030"], ["grams_per_unit", "Peso de 1 unidad (gr)", "ej. 60"]] as const).map(([key, text, hint]) => (
+                <div key={key} className="mb-2">
+                  <label className="block text-xs tracking-widest uppercase text-negro/70 mb-1 font-light">{text}</label>
+                  <input type="number" step="any" min={0} value={form[key]} placeholder={hint}
+                    onChange={(e) => setForm({ ...form, [key]: e.target.value === "" ? "" : parseFloat(e.target.value) })}
+                    className="w-full bg-crema border border-linea text-negro
+                               px-3 py-1.5 text-sm font-light focus:outline-none focus:border-oro transition-all" />
+                </div>
+              ))}
+            </details>
 
         </Modal>
       )}
