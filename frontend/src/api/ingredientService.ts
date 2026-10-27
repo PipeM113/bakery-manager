@@ -29,6 +29,8 @@ export const ingredientService = {
       price_per_unit: pkgPrice / pkgSize,
       stock_quantity: Number(form.stock_quantity) || 0,
       alert_threshold: Number(form.alert_threshold) || 0,
+      grams_per_liter: Number(form.grams_per_liter) || 0,
+      grams_per_unit: Number(form.grams_per_unit) || 0,
     });
     return data;
   },
@@ -43,6 +45,8 @@ export const ingredientService = {
       price_per_unit: pkgPrice / pkgSize,
       stock_quantity: Number(form.stock_quantity) || 0,
       alert_threshold: Number(form.alert_threshold) || 0,
+      grams_per_liter: Number(form.grams_per_liter) || 0,
+      grams_per_unit: Number(form.grams_per_unit) || 0,
     });
     return data;
   },

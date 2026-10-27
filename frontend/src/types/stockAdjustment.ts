@@ -1,4 +1,4 @@
-export type AdjustmentReason = "merma" | "correccion" | "otro";
+export type AdjustmentReason = "merma" | "correccion" | "otro" | "compra";
 
 export interface IStockAdjustment {
   id: string;
@@ -19,7 +19,7 @@ export interface IStockAdjustment {
   created_at: string;
 }
 
-/** Quantity (merma), counted_quantity (correccion) or quantity_delta (otro), according to the reason. */
+/** Quantity (merma, compra), counted_quantity (correccion) or quantity_delta (otro), according to the reason. */
 export interface StockAdjustmentForm {
   reason: AdjustmentReason;
   quantity?: number;

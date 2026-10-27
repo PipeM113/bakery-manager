@@ -155,9 +155,9 @@ func TestAC5_CoreFlowsWorkWithoutPreparedStatements(t *testing.T) {
 		}
 	})
 
-	t.Run("a duplicate ingredient name is a conflict", func(t *testing.T) {
+	t.Run("a duplicate name, brand and supplier is a conflict", func(t *testing.T) {
 		status, _ := api.do("POST", "/ingredients", map[string]any{
-			"name": "Harina", "brand": "Otra", "default_unit": "gr",
+			"name": "Harina", "brand": "Marca", "default_unit": "gr",
 			"package_size": 500, "package_price": 900,
 		})
 		if status != http.StatusConflict {

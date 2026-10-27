@@ -17,11 +17,12 @@ export const ingredients = [
     package_size: i % 2 ? 1000 : 1, package_price: 1990 + i * 733, price_per_unit: 1.99 + i,
     stock_quantity: i === 3 ? 20 : 500 + i * 37.5, alert_threshold: i === 3 ? 100 : 0,
     brand: ["Colun", "Selecta", "", "Soprole", "Campo", "Loncoleche"][i % 6], created_at: iso, updated_at: iso,
+    supplier: ["La Vega", "", "Líder", "Mayorista Central de Abastecimiento"][i % 4], grams_per_liter: i === 5 ? 1030 : 0, grams_per_unit: i === 4 ? 60 : 0,
   })),
   ...supplyNames.map((name, i) => ({
     id: `00000000-0000-4000-8000-0000000002${String(i).padStart(2, "0")}`, kind: "supply", name,
     default_unit: "und", package_size: 10, package_price: 8500, price_per_unit: 850,
-    stock_quantity: 40, alert_threshold: 10, brand: "Cartonera", created_at: iso, updated_at: iso,
+    stock_quantity: 40, alert_threshold: 10, brand: "Cartonera", supplier: "", grams_per_liter: 0, grams_per_unit: 0, created_at: iso, updated_at: iso,
   })),
 ];
 

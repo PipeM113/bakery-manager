@@ -154,6 +154,16 @@ for (const w of WIDTHS) {
     }
   }));
 
+  test(`E4 ingredients at ${w}px can be sorted and show the supplier`, { timeout: 60000 }, withPage(w, "/ingredients", {}, async (page) => {
+    await page.locator('[data-testid="ingredients-list"]').waitFor({ state: "visible" });
+    const sort = page.locator('[data-testid="ingredient-sort"]');
+    assert.ok(await sort.isVisible(), "there is no way to choose the order");
+    const text = await page.locator('[data-testid="ingredients-list"]').innerText();
+    assert.ok(text.includes("La Vega"), "the supplier is not shown");
+    const m = await page.evaluate(() => ({ doc: document.documentElement.scrollWidth, view: window.innerWidth }));
+    assert.ok(m.doc <= m.view + 1, "horizontal scroll");
+  }));
+
   test(`R2 quotations at ${w}px`, { timeout: 60000 }, withPage(w, "/sales", {}, async (page) => {
     const list = page.locator('[data-testid="quotations-list"]');
     await list.waitFor({ state: "visible" });
@@ -229,6 +239,7 @@ for (const w of [768, 1280]) {
 const WINDOWS = [
   { name: "new ingredient", open: (page) => page.getByRole("button", { name: "+ Nuevo" }).click() },
   { name: "import Excel", open: (page) => page.getByRole("button", { name: /Importar Excel/ }).click() },
+  { name: "quick stock", open: (page) => page.locator('[data-testid="stock-quick"]').first().click() },
   { name: "adjust stock", open: (page) => page.getByRole("button", { name: "Ajustar stock" }).first().click() },
 ];
 const SCREENS = [{ w: 360, h: 640 }, { w: 390, h: 700 }, { w: 768, h: 900 }, { w: 1280, h: 800 }];

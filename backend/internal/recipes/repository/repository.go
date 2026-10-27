@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"time"
 
+	"github.com/PipeM113/bakery-manager/internal/shared/kernel"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -16,6 +18,8 @@ type RecipeIngredient struct {
 	IngredientID string  `json:"ingredient_id"`
 	Name         string  `json:"name"`
 	Kind         string  `json:"kind"` // "ingredient" or "supply"
+	Brand        string  `json:"brand"`
+	Supplier     string  `json:"supplier"`
 	Quantity     float64 `json:"quantity"`
 	Unit         string  `json:"unit"`
 }
@@ -96,7 +100,7 @@ func (r *RecipeRepository) GetAll(ctx context.Context) ([]Recipe, error) {
 		SELECT id, created_by, parent_id, name, description, yield, yield_unit,
 		       photo_url, is_base, scale_factor, indirect_cost_pct, labor_cost_pct, margin_pct,
 		       extra_charge, delivery_cost, created_at, updated_at
-		FROM recipes ORDER BY name ASC`)
+		FROM recipes`)
 	if err != nil {
 		return nil, fmt.Errorf("get all recipes: %w", err)
 	}
@@ -126,13 +130,18 @@ func (r *RecipeRepository) GetAll(ctx context.Context) ([]Recipe, error) {
 	if len(recipes) == 0 {
 		return recipes, nil
 	}
+	// Alphabetical without case or accents (the database collation does not do that).
+	sort.SliceStable(recipes, func(a, b int) bool { return kernel.SortKey(recipes[a].Name) < kernel.SortKey(recipes[b].Name) })
+	for i, rec := range recipes {
+		index[rec.ID] = i
+	}
 
 	ids := make([]string, 0, len(recipes))
 	for _, rec := range recipes {
 		ids = append(ids, rec.ID)
 	}
 	ingRows, err := r.db.Query(ctx, `
-		SELECT ri.id, ri.recipe_id, ri.ingredient_id, i.name, i.kind, ri.quantity, ri.unit
+		SELECT ri.id, ri.recipe_id, ri.ingredient_id, i.name, i.kind, i.brand, i.supplier, ri.quantity, ri.unit
 		FROM recipe_ingredients ri
 		JOIN ingredients i ON i.id = ri.ingredient_id
 		WHERE ri.recipe_id = ANY($1::uuid[])`, ids)
@@ -142,7 +151,7 @@ func (r *RecipeRepository) GetAll(ctx context.Context) ([]Recipe, error) {
 	defer ingRows.Close()
 	for ingRows.Next() {
 		var ing RecipeIngredient
-		if err := ingRows.Scan(&ing.ID, &ing.RecipeID, &ing.IngredientID, &ing.Name, &ing.Kind, &ing.Quantity, &ing.Unit); err != nil {
+		if err := ingRows.Scan(&ing.ID, &ing.RecipeID, &ing.IngredientID, &ing.Name, &ing.Kind, &ing.Brand, &ing.Supplier, &ing.Quantity, &ing.Unit); err != nil {
 			return nil, fmt.Errorf("scan ingredient: %w", err)
 		}
 		i := index[ing.RecipeID]
@@ -172,7 +181,7 @@ func (r *RecipeRepository) GetByID(ctx context.Context, id string) (Recipe, erro
 	}
 
 	rows, err := r.db.Query(ctx, `
-		SELECT ri.id, ri.recipe_id, ri.ingredient_id, i.name, i.kind, ri.quantity, ri.unit
+		SELECT ri.id, ri.recipe_id, ri.ingredient_id, i.name, i.kind, i.brand, i.supplier, ri.quantity, ri.unit
 		FROM recipe_ingredients ri
 		JOIN ingredients i ON i.id = ri.ingredient_id
 		WHERE ri.recipe_id = $1`, id)
@@ -183,7 +192,7 @@ func (r *RecipeRepository) GetByID(ctx context.Context, id string) (Recipe, erro
 
 	for rows.Next() {
 		var ing RecipeIngredient
-		if err := rows.Scan(&ing.ID, &ing.RecipeID, &ing.IngredientID, &ing.Name, &ing.Kind, &ing.Quantity, &ing.Unit); err != nil {
+		if err := rows.Scan(&ing.ID, &ing.RecipeID, &ing.IngredientID, &ing.Name, &ing.Kind, &ing.Brand, &ing.Supplier, &ing.Quantity, &ing.Unit); err != nil {
 			return Recipe{}, fmt.Errorf("scan ingredient: %w", err)
 		}
 		rec.Ingredients = append(rec.Ingredients, ing)
@@ -332,4 +341,50 @@ func (r *RecipeRepository) PhotoInUse(ctx context.Context, url, exceptRecipeID s
 		return true, fmt.Errorf("check photo use: %w", err) // when in doubt, keep it
 	}
 	return used, nil
+}
+
+// UnitError is a line whose unit cannot be used with its ingredient.
+type UnitError struct{ Message string }
+
+func (e *UnitError) Error() string { return e.Message }
+
+// CheckUnits refuses a line whose unit is of another family than its ingredient's when the ingredient
+// does not have the equivalence that joins them (the weight of 1 litre or of 1 unit).
+func (r *RecipeRepository) CheckUnits(ctx context.Context, lines []RecipeIngredient) error {
+	ids := make([]string, 0, len(lines))
+	for _, l := range lines {
+		ids = append(ids, l.IngredientID)
+	}
+	rows, err := r.db.Query(ctx, `SELECT id::text, name, default_unit, grams_per_liter, grams_per_unit
+		FROM ingredients WHERE id = ANY($1::uuid[])`, ids)
+	if err != nil {
+		return fmt.Errorf("get ingredient units: %w", err)
+	}
+	defer rows.Close()
+	type known struct {
+		name, unit string
+		eq         kernel.Equivalence
+	}
+	byID := map[string]known{}
+	for rows.Next() {
+		var id string
+		var k known
+		if err := rows.Scan(&id, &k.name, &k.unit, &k.eq.GramsPerLiter, &k.eq.GramsPerUnit); err != nil {
+			return fmt.Errorf("scan ingredient units: %w", err)
+		}
+		byID[id] = k
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	for _, l := range lines {
+		k, ok := byID[l.IngredientID]
+		if !ok {
+			continue // the insert reports an ingredient that does not exist
+		}
+		if _, err := kernel.Convert(1, l.Unit, k.unit, k.eq); err != nil {
+			return &UnitError{fmt.Sprintf("%s en %s: %v", k.name, l.Unit, err)}
+		}
+	}
+	return nil
 }

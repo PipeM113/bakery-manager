@@ -11,6 +11,10 @@ export interface IIngredient {
   stock_quantity: number;
   alert_threshold: number;
   brand: string;
+  supplier: string;
+  /** Weight of 1 litre / of 1 unit in gr; 0 when it is not known. */
+  grams_per_liter: number;
+  grams_per_unit: number;
   created_at: string;
   updated_at: string;
 }
@@ -24,6 +28,9 @@ export type IngredientFormData = {
   stock_quantity: number | "";
   alert_threshold: number | "";
   brand: string;
+  supplier: string;
+  grams_per_liter: number | "";
+  grams_per_unit: number | "";
 };
 
 export const emptyIngredientForm: IngredientFormData = {
@@ -35,4 +42,7 @@ export const emptyIngredientForm: IngredientFormData = {
   stock_quantity: "",
   alert_threshold: "",
   brand: "",
+  supplier: "",
+  grams_per_liter: "",
+  grams_per_unit: "",
 };

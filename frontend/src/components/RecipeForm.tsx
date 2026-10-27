@@ -3,6 +3,8 @@ import type { IRecipe, IIngredientOption, RecipeFormData } from "../types/recipe
 import { emptyRecipeForm } from "../types/recipe";
 import RecipePhotoUpload from "./RecipePhotoUpload";
 import { apiErrorMessage } from "../utils/apiError";
+import { equivalenceNeeded, unitsFor } from "../utils/units";
+import { compareIngredients, ingredientLabel, sortKey } from "../utils/ingredients";
 
 interface Props {
   editing: IRecipe | null;
@@ -92,8 +94,14 @@ export default function RecipeForm({ editing, ingredients, onSave, onSaveAs, onC
 
   // Ingredients first, then supplies (boxes, cardboard); each group stays in name order.
   const filteredForPicker = ingredients
-    .filter((i) => i.name.toLowerCase().includes(ingSearch.toLowerCase()))
-    .sort((a, b) => Number((a.kind ?? "ingredient") === "supply") - Number((b.kind ?? "ingredient") === "supply"));
+    .filter((i) => sortKey(ingredientLabel(i)).includes(sortKey(ingSearch)))
+    .sort((a, b) => Number((a.kind ?? "ingredient") === "supply") - Number((b.kind ?? "ingredient") === "supply") || compareIngredients(a, b));
+
+  // Using a unit of another family than the one the product is kept in needs its equivalence.
+  const missingEquivalence = (line: { ingredient_id: string; unit: string }) => {
+    const source = ingredients.find((i) => i.id === line.ingredient_id);
+    return source ? equivalenceNeeded(line.unit, source.default_unit, source) : null;
+  };
 
   const updateIngredient = (idx: number, field: string, value: string | number) => {
     setForm((f) => {
@@ -252,7 +260,8 @@ export default function RecipeForm({ editing, ingredients, onSave, onSaveAs, onC
           {/* Fix 4: ingredient list BEFORE the add button */}
           <div className="space-y-2">
             {form.ingredients.map((ing, idx) => (
-              <div key={idx} className="flex gap-2 items-center">
+              <div key={idx} className="space-y-1">
+              <div className="flex gap-2 items-center">
                 <select
                   value={ing.ingredient_id}
                   onChange={(e) => updateIngredient(idx, "ingredient_id", e.target.value)}
@@ -260,9 +269,9 @@ export default function RecipeForm({ editing, ingredients, onSave, onSaveAs, onC
                 >
                   {([["ingredient", "Ingredientes"], ["supply", "Insumos (cajas, cartones)"]] as const).map(([kind, label]) => (
                     <optgroup key={kind} label={label}>
-                      {ingredients.filter((i) => (i.kind ?? "ingredient") === kind).map((i) => (
+                      {ingredients.filter((i) => (i.kind ?? "ingredient") === kind).sort(compareIngredients).map((i) => (
                         <option key={i.id} value={i.id}>
-                          {i.name}
+                          {ingredientLabel(i)}
                         </option>
                       ))}
                     </optgroup>
@@ -275,19 +284,29 @@ export default function RecipeForm({ editing, ingredients, onSave, onSaveAs, onC
                   onChange={(e) => updateIngredient(idx, "quantity", parseFloat(e.target.value) || 0)}
                   className="w-20 bg-crema border border-linea text-negro px-3 py-2 text-xs font-light focus:outline-none focus:border-oro transition-all"
                 />
-                <input
-                  type="text"
+                <select
+                  aria-label="Unidad"
                   value={ing.unit}
-                  placeholder="Und"
                   onChange={(e) => updateIngredient(idx, "unit", e.target.value)}
-                  className="w-16 bg-crema border border-linea text-negro px-3 py-2 text-xs font-light focus:outline-none focus:border-oro transition-all"
-                />
+                  className="w-20 bg-crema border border-linea text-negro px-2 py-2 text-xs font-light focus:outline-none focus:border-oro transition-all"
+                >
+                  {unitsFor(ingredients.find((i) => i.id === ing.ingredient_id)?.default_unit ?? ing.unit).concat(
+                    unitsFor(ing.unit).includes(ing.unit) ? [] : [ing.unit]).map((u) => (
+                    <option key={u} value={u}>{u}</option>
+                  ))}
+                </select>
                 <button
                   onClick={() => removeIngredient(idx)}
                   className="text-negro/70 hover:text-peligro text-lg shrink-0 transition-colors"
                 >
                   ×
                 </button>
+              </div>
+              {missingEquivalence(ing) && (
+                <p className="text-peligro text-xs font-light -mt-1">
+                  Para usar {ing.unit} aquí falta el dato «{missingEquivalence(ing) === "grams_per_liter" ? "Peso de 1 litro" : "Peso de 1 unidad"}» del producto. Complétalo en Ingredientes (Editar → Equivalencias).
+                </p>
+              )}
               </div>
             ))}
           </div>
@@ -391,7 +410,7 @@ export default function RecipeForm({ editing, ingredients, onSave, onSaveAs, onC
                         onChange={() => togglePicker(i.id)}
                         className="accent-negro w-4 h-4"
                       />
-                      <span className="text-negro/70 text-sm font-light">{i.name}</span>
+                      <span className="text-negro/70 text-sm font-light">{ingredientLabel(i)}</span>
                     </label>
                     </div>
                   ))}

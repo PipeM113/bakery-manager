@@ -122,7 +122,8 @@ func (s *CostService) LoadRecipe(ctx context.Context, recipeID string) (Recipe, 
 
 	rows, err := s.db.Query(ctx, `
 		SELECT ri.ingredient_id, i.name, i.kind, ri.quantity, ri.unit,
-		       i.price_per_unit, i.default_unit, i.package_price, i.package_size
+		       i.price_per_unit, i.default_unit, i.package_price, i.package_size,
+		       i.grams_per_liter, i.grams_per_unit
 		FROM recipe_ingredients ri
 		JOIN ingredients i ON i.id = ri.ingredient_id
 		WHERE ri.recipe_id = $1`, recipeID)
@@ -134,16 +135,18 @@ func (s *CostService) LoadRecipe(ctx context.Context, recipeID string) (Recipe, 
 	for rows.Next() {
 		var ing domain.IngredientCost
 		var recipeUnit, baseUnit string
+		var eq kernel.Equivalence
 		if err := rows.Scan(
 			&ing.IngredientID, &ing.Name, &ing.Kind,
 			&ing.Quantity, &recipeUnit,
 			&ing.PricePerUnit, &baseUnit,
 			&ing.PackagePrice, &ing.PackageSize,
+			&eq.GramsPerLiter, &eq.GramsPerUnit,
 		); err != nil {
 			return Recipe{}, fmt.Errorf("scan ingredient: %w", err)
 		}
 
-		converted, err := kernel.ConvertToBase(ing.Quantity, recipeUnit, baseUnit)
+		converted, err := kernel.Convert(ing.Quantity, recipeUnit, baseUnit, eq)
 		if err != nil {
 			return Recipe{}, fmt.Errorf("ingrediente %q: %w", ing.Name, err)
 		}

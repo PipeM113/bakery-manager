@@ -6,8 +6,10 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/PipeM113/bakery-manager/internal/shared/clock"
+	"github.com/PipeM113/bakery-manager/internal/shared/kernel"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/xuri/excelize/v2"
@@ -21,6 +23,7 @@ type IngredientImportRow struct {
 	RowNum       int
 	Name         string
 	Brand        string
+	Supplier     string
 	PackageSize  float64
 	PackagePrice float64
 	DefaultUnit  string
@@ -50,8 +53,9 @@ func NewIngredientImportService(db *pgxpool.Pool, clk clock.Clock) *IngredientIm
 }
 
 // ParseIngredientsFromExcel reads an .xlsx file and returns parsed rows.
-// Expected columns: A=Nombre, B=Marca, C=Unidad, D=Tamaño Presentación, E=Precio Presentación
-// Column F (Precio Unitario info) is ignored. Row 1 (header) is skipped.
+// Expected columns: A=Nombre, B=Marca, C=Unidad, D=Tamaño Presentación, E=Precio Presentación.
+// The supplier is read from the column whose header is "Proveedor", if there is one; the "Precio Unitario"
+// column (info) is ignored. Row 1 (header) is skipped.
 func ParseIngredientsFromExcel(filePath string) ([]IngredientImportRow, int, error) {
 	f, err := excelize.OpenFile(filePath)
 	if err != nil {
@@ -71,6 +75,13 @@ func ParseIngredientsFromExcel(filePath string) ([]IngredientImportRow, int, err
 
 	if len(allRows) < 2 {
 		return nil, 0, nil
+	}
+
+	supplierCol := -1
+	for c, h := range allRows[0] {
+		if kernel.SortKey(h) == "proveedor" {
+			supplierCol = c
+		}
 	}
 
 	var rows []IngredientImportRow
@@ -94,6 +105,12 @@ func ParseIngredientsFromExcel(filePath string) ([]IngredientImportRow, int, err
 		// B: Marca (optional)
 		brand := strings.TrimSpace(row[1])
 
+		// "Proveedor" (optional)
+		supplier := ""
+		if supplierCol >= 0 && supplierCol < len(row) {
+			supplier = strings.TrimSpace(row[supplierCol])
+		}
+
 		// C: Unidad (required)
 		unit := strings.TrimSpace(strings.ToLower(row[2]))
 		if unit == "unidad" {
@@ -115,6 +132,7 @@ func ParseIngredientsFromExcel(filePath string) ([]IngredientImportRow, int, err
 			RowNum:       excelRow,
 			Name:         name,
 			Brand:        brand,
+			Supplier:     supplier,
 			PackageSize:  pkgSize,
 			PackagePrice: pkgPrice,
 			DefaultUnit:  unit,
@@ -126,7 +144,7 @@ func ParseIngredientsFromExcel(filePath string) ([]IngredientImportRow, int, err
 }
 
 // Import validates rows and upserts them in a single transaction.
-// Existing ingredients (matched by name, case-insensitive) are updated.
+// Existing ingredients (matched by name, brand and supplier, case-insensitive) are updated.
 // New ingredients are inserted. Stock and alert threshold are preserved on update.
 func (s *IngredientImportService) Import(ctx context.Context, rows []IngredientImportRow, skipped int) (ImportResult, error) {
 	result := ImportResult{Skipped: skipped, Errors: []ImportRowError{}}
@@ -136,24 +154,28 @@ func (s *IngredientImportService) Import(ctx context.Context, rows []IngredientI
 	}
 
 	// Validate row by row. A rejected row is reported with its reason; the rest are imported.
-	seenNames := map[string]int{} // lowercase name -> first row number
+	seenKeys := map[string]int{} // lowercase name|brand|supplier -> first row number
 	valid := make([]IngredientImportRow, 0, len(rows))
 
 	for _, row := range rows {
 		reject := func(reason string) {
 			result.Errors = append(result.Errors, ImportRowError{Row: row.RowNum, Reason: reason})
 		}
-		norm := strings.ToLower(row.Name)
+		key := strings.ToLower(row.Name) + "|" + strings.ToLower(row.Brand) + "|" + strings.ToLower(row.Supplier)
 
 		if row.ParseError != "" {
 			reject(row.ParseError)
 			continue
 		}
-		if firstRow, seen := seenNames[norm]; seen {
-			reject(fmt.Sprintf("nombre duplicado en el archivo (primera aparición: fila %d)", firstRow))
+		if utf8.RuneCountInString(row.Supplier) > 100 {
+			reject("el proveedor no puede pasar de 100 caracteres")
 			continue
 		}
-		seenNames[norm] = row.RowNum
+		if firstRow, seen := seenKeys[key]; seen {
+			reject(fmt.Sprintf("nombre, marca y proveedor repetidos en el archivo (primera aparición: fila %d)", firstRow))
+			continue
+		}
+		seenKeys[key] = row.RowNum
 
 		if row.DefaultUnit == "" || !validUnits[row.DefaultUnit] {
 			reject(fmt.Sprintf("unidad inválida '%s' (válidas: gr, kg, ml, lt, und)", row.DefaultUnit))
@@ -176,12 +198,13 @@ func (s *IngredientImportService) Import(ctx context.Context, rows []IngredientI
 	for _, row := range rows {
 		pricePerUnit := row.PackagePrice / row.PackageSize
 
-		// Check if ingredient already exists (case-insensitive)
+		// Check if ingredient already exists (same name, brand and supplier, case-insensitive)
 		var existingID string
 		var oldPricePerUnit float64
 		err := tx.QueryRow(ctx,
-			`SELECT id, price_per_unit FROM ingredients WHERE LOWER(name) = LOWER($1)`,
-			row.Name,
+			`SELECT id, price_per_unit FROM ingredients
+			 WHERE LOWER(name) = LOWER($1) AND LOWER(COALESCE(brand, '')) = LOWER($2) AND LOWER(supplier) = LOWER($3)`,
+			row.Name, row.Brand, row.Supplier,
 		).Scan(&existingID, &oldPricePerUnit)
 
 		if err == nil {
@@ -217,11 +240,11 @@ func (s *IngredientImportService) Import(ctx context.Context, rows []IngredientI
 			err = tx.QueryRow(ctx, `
 				INSERT INTO ingredients
 				  (name, default_unit, package_size, package_price, price_per_unit,
-				   stock_quantity, alert_threshold, brand)
-				VALUES ($1,$2,$3,$4,$5,0,0,$6)
+				   stock_quantity, alert_threshold, brand, supplier)
+				VALUES ($1,$2,$3,$4,$5,0,0,$6,$7)
 				RETURNING id`,
 				row.Name, row.DefaultUnit, row.PackageSize, row.PackagePrice,
-				pricePerUnit, row.Brand,
+				pricePerUnit, row.Brand, row.Supplier,
 			).Scan(&newID)
 			if err != nil {
 				return result, fmt.Errorf("insertando fila %d: %w", row.RowNum, err)

@@ -4,6 +4,8 @@ export interface IRecipeIngredient {
   ingredient_id: string;
   name: string;
   kind: "ingredient" | "supply";
+  brand?: string;
+  supplier?: string;
   quantity: number;
   unit: string;
 }
@@ -35,6 +37,10 @@ export interface IIngredientOption {
   kind?: "ingredient" | "supply";
   name: string;
   default_unit: string;
+  brand?: string;
+  supplier?: string;
+  grams_per_liter?: number;
+  grams_per_unit?: number;
 }
 
 export type RecipeFormData = {

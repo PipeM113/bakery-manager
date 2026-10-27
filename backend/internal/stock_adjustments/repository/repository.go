@@ -21,6 +21,7 @@ const (
 	ReasonMerma      = "merma"
 	ReasonCorrection = "correccion"
 	ReasonOther      = "otro"
+	ReasonPurchase   = "compra"
 )
 
 // ErrNotFound means the ingredient does not exist.
@@ -109,10 +110,11 @@ func (r *Repository) Record(ctx context.Context, in Input) (Adjustment, error) {
 
 	var unit string
 	var packageSize, packagePrice, pricePerUnit, stock float64
+	var eq kernel.Equivalence
 	err = tx.QueryRow(ctx, `
-		SELECT default_unit, package_size, package_price, price_per_unit, stock_quantity
+		SELECT default_unit, package_size, package_price, price_per_unit, stock_quantity, grams_per_liter, grams_per_unit
 		FROM ingredients WHERE id = $1 FOR UPDATE`, in.IngredientID,
-	).Scan(&unit, &packageSize, &packagePrice, &pricePerUnit, &stock)
+	).Scan(&unit, &packageSize, &packagePrice, &pricePerUnit, &stock, &eq.GramsPerLiter, &eq.GramsPerUnit)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Adjustment{}, ErrNotFound
 	}
@@ -129,7 +131,7 @@ func (r *Repository) Record(ctx context.Context, in Input) (Adjustment, error) {
 		given = unit
 	}
 	toIngredientUnit := func(q float64) (float64, error) {
-		v, err := kernel.ConvertToBase(q, given, unit)
+		v, err := kernel.Convert(q, given, unit, eq)
 		if err != nil {
 			return 0, &ValidationError{err.Error()}
 		}
@@ -153,6 +155,15 @@ func (r *Repository) Record(ctx context.Context, in Input) (Adjustment, error) {
 		}
 		after = round3(stock - q)
 		loss = lossOf(q, unitPrice(packagePrice, packageSize, pricePerUnit))
+	case ReasonPurchase:
+		if in.Quantity == nil || *in.Quantity <= 0 {
+			return Adjustment{}, &ValidationError{"la compra necesita una cantidad mayor a 0"}
+		}
+		q, err := toIngredientUnit(*in.Quantity)
+		if err != nil {
+			return Adjustment{}, err
+		}
+		after = round3(stock + q)
 	case ReasonCorrection:
 		if in.CountedQuantity == nil || *in.CountedQuantity < 0 {
 			return Adjustment{}, &ValidationError{"la corrección necesita la cantidad contada (0 o más)"}
@@ -178,7 +189,7 @@ func (r *Repository) Record(ctx context.Context, in Input) (Adjustment, error) {
 			return Adjustment{}, &ValidationError{"el stock no puede quedar negativo"}
 		}
 	default:
-		return Adjustment{}, &ValidationError{`el motivo debe ser "merma", "correccion" u "otro"`}
+		return Adjustment{}, &ValidationError{`el motivo debe ser "merma", "correccion", "otro" o "compra"`}
 	}
 
 	stock = round3(stock)
