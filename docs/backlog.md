@@ -53,7 +53,7 @@ Los sprints 0 a 4 usan la numeración antigua y son anteriores al registro de ac
 - [ ] Probar S6 a S10, S12 y S13 en la app real, sobre todo desde el celular, y marcarlos como aceptados.
 - [ ] Medir en Vercel el tiempo de una cotización de 30 líneas con fotos (nunca se midió).
 - [ ] Cargar los datos reales con su mamá, escribirle un manual corto de una página y hacer un piloto de 1 a 2 semanas.
-- [ ] Respaldo del esquema con `pg_dump` y verificar "Exposed schemas" en Supabase (`docs/despliegue.md`).
+- [ ] Correr `infra/backup/backup.sh` contra Supabase y `restore-check.sh` (los scripts están ensayados en local; falta la corrida real) y verificar "Exposed schemas" en Supabase (`docs/despliegue.md`).
 
 ## Ideas anotadas, no decididas
 
