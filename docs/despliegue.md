@@ -152,13 +152,22 @@ Despliega los dos proyectos.
 
 ## 7. Respaldo manual
 
-El plan Free de Supabase **no hace respaldos automáticos** y pausa el proyecto tras una semana sin actividad. Antes de cambios riesgosos y cada tanto, con el pooler de sesión:
+El plan Free de Supabase **no hace respaldos automáticos** y pausa el proyecto tras una semana sin actividad. El respaldo lo haces tú, con los scripts de `infra/backup/`:
 
 ```sh
-pg_dump "$MIGRATE_URL" --schema=manager --no-owner --no-privileges -Fc -f manager-$(date +%F).dump
+cd infra/backup
+# 1. Respaldar (pooler de sesión, puerto 5432; el mismo MIGRATE_URL de las migraciones)
+MIGRATE_URL='postgres://manager_app.<ref>:<clave>@<host-del-pooler>:5432/postgres' ./backup.sh
+# 2. Probar que se puede restaurar (en un PostgreSQL LOCAL, nunca en el proyecto)
+SCRATCH_URL='postgres://postgres:<clave>@127.0.0.1:5432/postgres' ./restore-check.sh ~/bakery-backups/manager-<fecha>.dump
 ```
 
-Guarda el archivo fuera del repo (contiene los datos del negocio y los hashes de contraseñas). Para restaurar en un proyecto vacío: ejecuta el paso 1 y `pg_restore --no-owner -d "$MIGRATE_URL" manager-<fecha>.dump`.
+- `backup.sh` guarda `manager-<fecha>.dump` y un archivo `.counts` (filas por tabla) en `~/bakery-backups` (cámbialo con `BACKUP_DIR`; conserva los 8 últimos, con `KEEP`). **Guarda esa carpeta fuera del repo**: contiene los datos del negocio y los hashes de contraseñas.
+- **Supabase corre PostgreSQL 17**: un `pg_dump` 16 se niega a respaldarlo. El script lo avisa y se detiene; instala `postgresql-client-17`.
+- `restore-check.sh` carga el respaldo en una base temporal local, compara las filas de cada tabla con el `.counts` y la borra. Rechaza una dirección que parezca el proyecto real. Un respaldo que nunca se restauró no cuenta como respaldo.
+- Cuándo: una vez por semana mientras dure el piloto, y siempre antes de aplicar una migración. Copia el último `.dump` a otro lugar (otro disco o un almacenamiento tuyo): si solo está en el computador que falla, no sirve.
+- Los scripts se ensayaron contra un PostgreSQL 16 local con las 28 migraciones y datos de prueba: respaldan, restauran y detectan una diferencia de filas. **Aún no se han corrido contra Supabase** (falta la clave de conexión, que no debe pasar por el chat).
+- Para restaurar en un proyecto vacío: ejecuta el paso 1 de este documento (rol y esquema) y `pg_restore --no-owner -d "$MIGRATE_URL" manager-<fecha>.dump`; después, el paso de dueños de la sección de migraciones.
 
 ## Verificación en el mundo real
 
