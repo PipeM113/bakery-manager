@@ -112,7 +112,7 @@ En el panel del proyecto del backend (Settings, Environment Variables). Nada de 
 
 | Variable | Valor |
 |---|---|
-| `DATABASE_URL` | Cadena del **pooler de transacciones** (6543) con el usuario `manager_app.<project_ref>`: `postgresql://manager_app.<project_ref>:<contraseña>@<host-del-pooler>:6543/postgres`. Sin corchetes (los de la plantilla de Supabase), sin comillas y sin espacios. La contraseña, la de `manager_app` (no la de la base), generada con `openssl rand -hex 24`: con `#`, `/`, `?` o espacios la URL es inválida y el backend responde `500` en la verificación del paso 6. |
+| `DATABASE_URL` | Cadena del **pooler de transacciones** (6543) con el usuario `manager_app.<project_ref>`: `postgresql://manager_app.<project_ref>:<contraseña>@<host-del-pooler>:6543/postgres?sslmode=require`. Sin corchetes (los de la plantilla de Supabase), sin comillas y sin espacios. La contraseña, la de `manager_app` (no la de la base), generada con `openssl rand -hex 24`: con `#`, `/`, `?` o espacios la URL es inválida y el backend responde `500` en la verificación del paso 6. |
 | `JWT_SECRET` | Aleatorio, de al menos 32 caracteres. Genéralo con `openssl rand -base64 48` y pégalo directo en el panel. |
 | `CORS_ORIGINS` | La URL exacta del frontend, sin `/` final y sin `*`, por ejemplo `https://<tu-frontend>.vercel.app`. Varias, separadas por coma. |
 | `DB_MAX_CONNS` | `4` (valor por defecto). Cada instancia abre como máximo ese número de conexiones. |
@@ -174,3 +174,7 @@ Pendiente de confirmar:
 
 - [ ] `manager` no figura en "Exposed schemas" y las tres filas de la consulta del paso 1 dan `false`.
 - [ ] Respaldo con `pg_dump` probado al menos una vez.
+
+## Headers de seguridad del frontend
+
+`frontend/vercel.json` envía la política de seguridad de contenido (CSP) y otros headers. La CSP permite conectarse solo al backend (`bakery-manager-ofbi.vercel.app`) y cargar fotos solo del bucket del proyecto de Supabase. **Si cambia el dominio del backend o el proyecto de Supabase, cámbialos también allí**, o la app no podrá hablar con el backend. `npm run test:csp` (en `frontend/`) construye la app y la recorre con esos headers; falla ante cualquier bloqueo.

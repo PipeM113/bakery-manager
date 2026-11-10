@@ -56,6 +56,12 @@ Los sprints 0 a 4 usan la numeración antigua y son anteriores al registro de ac
 - [x] `internal/recipeneeds`: una sola regla de necesidades de receta para costos y ventas (N1).
 - [x] Pruebas de flujo en el navegador: stock rápido, cambio de unidad con equivalencia, aviso en la receta y borrado rechazado (F1 a F3, D5).
 
+## Auditoría mínima de seguridad (2026-11)
+
+- [x] Puntos 5 (documentación), 16, 17, 18 y 20 arreglados (`docs/auditoria-seguridad-2026-11.md`).
+- [ ] Poner `?sslmode=require` en `DATABASE_URL` en Vercel y comprobar HSTS y la redirección a HTTPS (los confirma Felipe).
+- [ ] Correr `govulncheck` desde un entorno con acceso a `vuln.go.dev`.
+
 ## Pendiente
 
 - [ ] Probar S6 a S10, S12 y S13 en la app real, sobre todo desde el celular, y marcarlos como aceptados.

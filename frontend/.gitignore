@@ -25,3 +25,4 @@ dist-ssr
 
 # Responsive suite output (screenshots)
 test-results
+dist-csp
