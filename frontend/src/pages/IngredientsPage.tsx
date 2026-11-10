@@ -58,6 +58,7 @@ export default function IngredientsPage() {
   const [quickStock, setQuickStock]   = useState<IIngredient | null>(null);
   const [sortBy, setSortBy]           = useState<SortBy>("name");
   const [showEq, setShowEq]           = useState(false);
+  const [deleteError, setDeleteError] = useState("");
   const phone = useIsPhone();
   const [exporting, setExporting]     = useState(false);
   const [successMsg, setSuccessMsg]   = useState("");
@@ -164,8 +165,15 @@ export default function IngredientsPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm("¿Eliminar este elemento?")) return;
-    await ingredientService.delete(id);
-    load();
+    setDeleteError("");
+    try {
+      await ingredientService.delete(id);
+      setDeleteError("");
+      load();
+    } catch (e) {
+      // 409: it is in a recipe or in the sales history; the message says which.
+      setDeleteError(apiErrorMessage(e, "No se pudo eliminar"));
+    }
   };
 
   if (loading) return (
@@ -188,6 +196,13 @@ export default function IngredientsPage() {
       {successMsg && (
         <div className="fixed top-4 right-4 z-50 bg-white border border-salvia text-negro px-4 py-3 text-sm font-light shadow-md">
           {successMsg}
+        </div>
+      )}
+
+      {deleteError && (
+        <div role="alert" className="mb-4 bg-rosa text-negro px-4 py-3 text-sm font-light flex items-start justify-between gap-3">
+          <span>{deleteError}</span>
+          <button onClick={() => setDeleteError("")} aria-label="Cerrar aviso" className="text-negro/70 hover:text-negro shrink-0">×</button>
         </div>
       )}
 

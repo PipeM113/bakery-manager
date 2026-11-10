@@ -40,3 +40,36 @@ ver `docs/despliegue.md`).
 
 - No convierte el stock ni el precio al cambiar de familia: son números que se revisan a mano.
 - La ventana de la receta avisa cuando falta la equivalencia, pero la completa en Ingredientes.
+
+## Eliminar (sprint 15)
+
+Un ingrediente o una receta con historia no se borra: la API responde **409** con el motivo y la pantalla
+(Ingredientes y Recetas) lo muestra en un aviso. Antes respondía un 500 genérico y el botón "Eliminar"
+parecía roto.
+
+- **D1.** Un ingrediente que usan recetas: "No se puede eliminar: se usa en las recetas Alfajor, Brownie,
+  Cheesecake y 2 más" (hasta tres nombres, en orden alfabético).
+- **D2.** Un ingrediente que ya no está en ninguna receta pero aparece en el historial de ventas: "aparece en
+  el historial de N ventas".
+- **D3.** Una receta con ventas o cotizaciones: "tiene 2 ventas y 1 cotización registradas". Su foto no se borra
+  del bucket. Los pedidos cuentan como ventas.
+- **D4.** Lo que no tiene uso se sigue borrando (204), con la foto de la receta.
+- **D5.** El motivo aparece en la pantalla (`role="alert"`), con una ×  para cerrarlo.
+
+Quien quiera retirar una receta con ventas no puede hacerlo hoy: archivarla (esconderla sin borrar el
+historial) queda como idea en `docs/backlog.md`.
+
+## Fotos de las recetas (sprint 15)
+
+- **P1.** `POST /recipes` rechaza `photo_url` (400): la foto entra solo por la subida
+  (`POST /recipes/{id}/photo`). "Guardar como" y "Guardar escalada" siguen copiando la foto de la receta original.
+- **P2.** El PDF de una cotización solo descarga fotos cuya dirección empieza con la dirección pública del
+  bucket del proyecto (`<SUPABASE_URL>/storage/v1/object/public/<bucket>/`) y no sigue redirecciones. Sin
+  almacenamiento configurado no descarga ninguna. Una foto que no cumple se omite: la línea sale sin foto y el
+  PDF se genera igual.
+
+## Una sola regla para "cuánto necesita una receta" (sprint 15)
+
+N1. `internal/recipeneeds` lee las líneas de una receta y las convierte a la unidad de cada ingrediente con sus
+equivalencias. Costos (y, por lo tanto, cotizaciones) y ventas la usan; antes cada uno tenía su copia. Un test de
+higiene (`internal/hygiene/recipeneeds_s15_test.go`) limita desde qué archivos se llama a `kernel.Convert`.

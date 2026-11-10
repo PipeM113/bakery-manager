@@ -8,7 +8,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/PipeM113/bakery-manager/internal/shared/kernel"
+	"github.com/PipeM113/bakery-manager/internal/recipeneeds"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -126,33 +126,19 @@ func needsOf(ctx context.Context, tx db, line LineInput) ([]need, error) {
 		share = 1 / yield
 	}
 
-	rows, err := tx.Query(ctx, `
-		SELECT ri.ingredient_id, i.name, ri.quantity, ri.unit, i.default_unit, i.price_per_unit,
-		       i.grams_per_liter, i.grams_per_unit
-		FROM recipe_ingredients ri
-		JOIN ingredients i ON i.id = ri.ingredient_id
-		WHERE ri.recipe_id = $1`, line.RecipeID)
+	lines, err := recipeneeds.Load(ctx, tx, line.RecipeID, float64(line.QuantitySold)*share)
+	var conv *recipeneeds.ConversionError
+	if errors.As(err, &conv) {
+		return nil, &ValidationError{conv.Error()}
+	}
 	if err != nil {
 		return nil, fmt.Errorf("fetch recipe ingredients: %w", err)
 	}
-	defer rows.Close()
 	var needs []need
-	for rows.Next() {
-		var n need
-		var quantity float64
-		var recipeUnit string
-		var eq kernel.Equivalence
-		if err := rows.Scan(&n.ingredientID, &n.name, &quantity, &recipeUnit, &n.unit, &n.pricePerUnit, &eq.GramsPerLiter, &eq.GramsPerUnit); err != nil {
-			return nil, fmt.Errorf("scan ingredient: %w", err)
-		}
-		converted, err := kernel.Convert(quantity*float64(line.QuantitySold)*share, recipeUnit, n.unit, eq)
-		if err != nil {
-			return nil, &ValidationError{fmt.Sprintf("%s: %v", n.name, err)}
-		}
-		n.used = round(converted, 4)
-		needs = append(needs, n)
+	for _, l := range lines {
+		needs = append(needs, need{ingredientID: l.IngredientID, name: l.Name, unit: l.Unit, pricePerUnit: l.PricePerUnit, used: round(l.Quantity, 4)})
 	}
-	return needs, rows.Err()
+	return needs, nil
 }
 
 // takeLines records each line as a sale (with the money it brought in) and takes its ingredients

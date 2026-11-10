@@ -279,7 +279,9 @@ func TestQ10_JPEGPNGAndWebPAreDrawnWhateverTheirAddressSays(t *testing.T) {
 	srv := photoServer(t)
 	base := images(raw(t, sample(line("Torta", 1, "recipe", 1500, 1500))))
 	for _, path := range []string{"/jpeg-named.png", "/png-named.jpg", "/webp-named.jpeg"} {
-		got := images(raw(t, sample(withPhoto(line("Torta", 1, "recipe", 1500, 1500), srv.URL+path))))
+		data := sample(withPhoto(line("Torta", 1, "recipe", 1500, 1500), srv.URL+path))
+		data.PhotoBase = srv.URL + "/"
+		got := images(raw(t, data))
 		if got != base+1 {
 			t.Errorf("%s: %d images, want %d (the logo and the photo)", path, got, base+1)
 		}
@@ -295,12 +297,14 @@ func TestQ10_APhotoThatCannotBeReadDoesNotStopThePDF(t *testing.T) {
 	base := images(raw(t, sample(line("Torta", 1, "recipe", 1500, 1500))))
 	for _, path := range []string{"/garbage.jpg", "/huge.jpg", "/slow.jpg", "/missing.jpg"} {
 		data := sample(withPhoto(line("Torta", 1, "recipe", 1500, 1500), srv.URL+path), line("Pie", 1, "recipe", 1000, 1000))
+		data.PhotoBase = srv.URL + "/"
 		out := raw(t, data)
 		if got := images(out); got != base {
 			t.Errorf("%s: %d images, want %d (the line goes without photo)", path, got, base)
 		}
 	}
 	data := sample(withPhoto(line("Torta", 1, "recipe", 1500, 1500), "http://127.0.0.1:1/unreachable.jpg"))
+	data.PhotoBase = "http://127.0.0.1:1/"
 	if text := pdftotext(t, generate(t, data)); !strings.Contains(text, "Torta") {
 		t.Error("the line of the photo that is unreachable is missing")
 	}
@@ -310,10 +314,12 @@ func TestQ10_TheSamePhotoTwiceIsEmbeddedOnce(t *testing.T) {
 	srv := photoServer(t)
 	base := images(raw(t, sample(line("Torta", 1, "recipe", 1500, 1500))))
 	url := srv.URL + "/jpeg-named.png"
-	got := images(raw(t, sample(
+	data := sample(
 		withPhoto(line("Torta", 1, "recipe", 1500, 1500), url),
 		withPhoto(line("Torta grande", 2, "recipe", 1500, 3000), url),
-	)))
+	)
+	data.PhotoBase = srv.URL + "/"
+	got := images(raw(t, data))
 	if got != base+1 {
 		t.Errorf("%d images, want %d", got, base+1)
 	}

@@ -28,11 +28,11 @@ test("F3: the ingredient and the unit of a recipe line have a label", () => {
 });
 
 test("the delete rules and the sprint are written down", () => {
-  const rules = read("docs/ingredientes.md");
+  const rules = read("../docs/ingredientes.md");
   for (const word of ["409", "ventas", "cotizaciones", "recetas", "Eliminar"]) {
     assert.ok(rules.includes(word), `docs/ingredientes.md does not mention "${word}"`);
   }
   assert.match(rules, /D1/);
   assert.match(rules, /P2|bucket/i, "the photos rule (P2) is not written down");
-  assert.match(read("docs/backlog.md"), /\|\s*15\s*\|/);
+  assert.match(read("../docs/backlog.md"), /\|\s*15\s*\|/);
 });

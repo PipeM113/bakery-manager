@@ -163,3 +163,16 @@ func TestP1_ASavedCopyStillKeepsThePhotoOfTheOriginal(t *testing.T) {
 		t.Errorf("the copy has photo_url %v, want %q", got, original)
 	}
 }
+
+// Support tests from the adversarial review of S15.
+func TestD1_TwoRecipesWithTheSameNameCountAsTwo(t *testing.T) {
+	api, _ := newPricingAPI(t)
+	flour := ing(t, api, "Harina", "M", "", nil)
+	for _, name := range []string{"Pan", "Pan", "Pan", "Pan", "Pan"} {
+		recipeWith(t, api, name, flour, 100, "gr")
+	}
+	_, raw := api.do("DELETE", "/ingredients/"+flour, nil)
+	if !strings.Contains(string(raw), "y 2 más") {
+		t.Errorf("message %s: five recipes, three named, should say \"y 2 más\"", raw)
+	}
+}

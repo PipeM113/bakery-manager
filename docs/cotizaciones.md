@@ -95,3 +95,8 @@ aviso con un enlace a "Datos del negocio". Crear cotizaciones funciona igual.
 - Crear el pedido al confirmar la cotización.
 - Editar una cotización guardada: se crea otra.
 - Aplicar a la cotización los datos del negocio que tenía el día en que se hizo.
+
+## Fotos en el PDF (sprint 15)
+
+El PDF solo descarga las fotos que están en el bucket público del proyecto (ver `docs/ingredientes.md`, P2) y no
+sigue redirecciones. Una foto con otra dirección no se descarga: la línea sale sin foto.
