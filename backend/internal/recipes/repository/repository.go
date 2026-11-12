@@ -25,15 +25,24 @@ type RecipeIngredient struct {
 	Unit         string  `json:"unit"`
 }
 
+// recipeColumns is what a recipe is read with: its own columns and the name of its type, if it has one.
+const recipeColumns = `r.id, r.created_by, r.parent_id, r.name, r.description, r.yield, r.yield_unit,
+		       r.photo_url, r.is_base, r.scale_factor, r.indirect_cost_pct, r.labor_cost_pct, r.margin_pct,
+		       r.extra_charge, r.delivery_cost, r.created_at, r.updated_at, r.category_id, COALESCE(c.name, '')`
+
 type Recipe struct {
-	ID              string             `json:"id"`
-	CreatedBy       *string            `json:"created_by"`
-	ParentID        *string            `json:"parent_id"`
-	Name            string             `json:"name"`
-	Description     string             `json:"description"`
-	Yield           float64            `json:"yield"`
-	YieldUnit       string             `json:"yield_unit"`
-	PhotoURL        *string            `json:"photo_url"`
+	ID          string  `json:"id"`
+	CreatedBy   *string `json:"created_by"`
+	ParentID    *string `json:"parent_id"`
+	Name        string  `json:"name"`
+	Description string  `json:"description"`
+	Yield       float64 `json:"yield"`
+	YieldUnit   string  `json:"yield_unit"`
+	PhotoURL    *string `json:"photo_url"`
+	CategoryID  *string `json:"category_id"`
+	Category    string  `json:"category"`
+	// CategorySet says that an update carries a type (or null to clear it); without it the type stays.
+	CategorySet     bool               `json:"-"`
 	IsBase          bool               `json:"is_base"`
 	ScaleFactor     float64            `json:"scale_factor"`
 	IndirectCostPct float64            `json:"indirect_cost_pct"`
@@ -65,13 +74,13 @@ func (r *RecipeRepository) Create(ctx context.Context, recipe Recipe) (Recipe, e
 		recipe.ScaleFactor = 1.0
 	}
 	err = tx.QueryRow(ctx, `
-		INSERT INTO recipes (created_by, parent_id, name, description, yield, yield_unit, photo_url, is_base, scale_factor, indirect_cost_pct, labor_cost_pct, margin_pct, extra_charge, delivery_cost)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+		INSERT INTO recipes (created_by, parent_id, name, description, yield, yield_unit, photo_url, is_base, scale_factor, indirect_cost_pct, labor_cost_pct, margin_pct, extra_charge, delivery_cost, category_id)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
 		RETURNING id, created_at, updated_at`,
 		recipe.CreatedBy, recipe.ParentID, recipe.Name, recipe.Description,
 		recipe.Yield, recipe.YieldUnit, recipe.PhotoURL, recipe.IsBase,
 		recipe.ScaleFactor, recipe.IndirectCostPct, recipe.LaborCostPct, recipe.MarginPct,
-		recipe.ExtraCharge, recipe.DeliveryCost,
+		recipe.ExtraCharge, recipe.DeliveryCost, recipe.CategoryID,
 	).Scan(&recipe.ID, &recipe.CreatedAt, &recipe.UpdatedAt)
 	if err != nil {
 		return Recipe{}, fmt.Errorf("insert recipe: %w", err)
@@ -98,10 +107,8 @@ func (r *RecipeRepository) Create(ctx context.Context, recipe Recipe) (Recipe, e
 // GetAll lists every recipe with its ingredients, in two queries however many recipes there are.
 func (r *RecipeRepository) GetAll(ctx context.Context) ([]Recipe, error) {
 	rows, err := r.db.Query(ctx, `
-		SELECT id, created_by, parent_id, name, description, yield, yield_unit,
-		       photo_url, is_base, scale_factor, indirect_cost_pct, labor_cost_pct, margin_pct,
-		       extra_charge, delivery_cost, created_at, updated_at
-		FROM recipes`)
+		SELECT `+recipeColumns+`
+		FROM recipes r LEFT JOIN recipe_categories c ON c.id = r.category_id`)
 	if err != nil {
 		return nil, fmt.Errorf("get all recipes: %w", err)
 	}
@@ -115,7 +122,7 @@ func (r *RecipeRepository) GetAll(ctx context.Context) ([]Recipe, error) {
 			&rec.ID, &rec.CreatedBy, &rec.ParentID, &rec.Name, &rec.Description,
 			&rec.Yield, &rec.YieldUnit, &rec.PhotoURL, &rec.IsBase,
 			&rec.ScaleFactor, &rec.IndirectCostPct, &rec.LaborCostPct, &rec.MarginPct,
-			&rec.ExtraCharge, &rec.DeliveryCost, &rec.CreatedAt, &rec.UpdatedAt,
+			&rec.ExtraCharge, &rec.DeliveryCost, &rec.CreatedAt, &rec.UpdatedAt, &rec.CategoryID, &rec.Category,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("scan recipe: %w", err)
@@ -167,15 +174,13 @@ func (r *RecipeRepository) GetAll(ctx context.Context) ([]Recipe, error) {
 func (r *RecipeRepository) GetByID(ctx context.Context, id string) (Recipe, error) {
 	var rec Recipe
 	err := r.db.QueryRow(ctx, `
-		SELECT id, created_by, parent_id, name, description, yield, yield_unit,
-		       photo_url, is_base, scale_factor, indirect_cost_pct, labor_cost_pct, margin_pct,
-		       extra_charge, delivery_cost, created_at, updated_at
-		FROM recipes WHERE id = $1`, id,
+		SELECT `+recipeColumns+`
+		FROM recipes r LEFT JOIN recipe_categories c ON c.id = r.category_id WHERE r.id = $1`, id,
 	).Scan(
 		&rec.ID, &rec.CreatedBy, &rec.ParentID, &rec.Name, &rec.Description,
 		&rec.Yield, &rec.YieldUnit, &rec.PhotoURL, &rec.IsBase,
 		&rec.ScaleFactor, &rec.IndirectCostPct, &rec.LaborCostPct, &rec.MarginPct,
-		&rec.ExtraCharge, &rec.DeliveryCost, &rec.CreatedAt, &rec.UpdatedAt,
+		&rec.ExtraCharge, &rec.DeliveryCost, &rec.CreatedAt, &rec.UpdatedAt, &rec.CategoryID, &rec.Category,
 	)
 	if err != nil {
 		return Recipe{}, fmt.Errorf("get recipe: %w", err)
@@ -250,10 +255,12 @@ func (r *RecipeRepository) Update(ctx context.Context, id string, recipe Recipe)
 		SET name=$1, description=$2, yield=$3, yield_unit=$4, indirect_cost_pct=$5,
 		    labor_cost_pct=$6,
 		    scale_factor=CASE WHEN $8 > 0 THEN $8 ELSE scale_factor END,
+		    category_id=CASE WHEN $9 THEN $10::uuid ELSE category_id END,
 		    updated_at=NOW()
 		WHERE id=$7`,
 		recipe.Name, recipe.Description, recipe.Yield, recipe.YieldUnit,
 		recipe.IndirectCostPct, recipe.LaborCostPct, id, recipe.ScaleFactor,
+		recipe.CategorySet, recipe.CategoryID,
 	)
 	if err != nil {
 		return Recipe{}, fmt.Errorf("update recipe: %w", err)
@@ -320,6 +327,7 @@ func (r *RecipeRepository) SaveScaled(ctx context.Context, recipeID string, scal
 		Yield:           original.Yield * scaleFactor,
 		YieldUnit:       original.YieldUnit,
 		PhotoURL:        original.PhotoURL,
+		CategoryID:      original.CategoryID,
 		IsBase:          false,
 		ScaleFactor:     scaleFactor,
 		IndirectCostPct: original.IndirectCostPct,
@@ -411,4 +419,14 @@ func (r *RecipeRepository) CheckUnits(ctx context.Context, lines []RecipeIngredi
 		}
 	}
 	return nil
+}
+
+// CategoryExists says whether a type of recipe with this id exists.
+func (r *RecipeRepository) CategoryExists(ctx context.Context, id string) (bool, error) {
+	var ok bool
+	err := r.db.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM recipe_categories WHERE id = $1::uuid)`, id).Scan(&ok)
+	if err != nil {
+		return false, fmt.Errorf("check recipe type: %w", err)
+	}
+	return ok, nil
 }

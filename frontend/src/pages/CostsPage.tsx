@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import RecipeOptions from "../components/RecipeOptions";
 import { recipeService } from "../api/recipeService";
 import type { IRecipe } from "../types/recipe";
 import QuotationGenerator from "../components/QuotationGenerator";
@@ -48,7 +49,7 @@ export default function CostsPage() {
                      px-4 py-3 text-sm font-light focus:outline-none focus:border-oro transition-all"
         >
           <option value="">— Elige una receta —</option>
-          {recipes.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+          <RecipeOptions recipes={recipes} />
         </select>
       </div>
 

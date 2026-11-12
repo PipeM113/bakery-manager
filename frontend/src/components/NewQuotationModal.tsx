@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import RecipeOptions from "./RecipeOptions";
 import Modal from "./Modal";
 import { recipeService } from "../api/recipeService";
 import { quotationService, type IQuotation, type SoldAs } from "../api/quotationService";
@@ -122,7 +123,7 @@ export default function NewQuotationModal({ onClose, onCreated }: Props) {
             <select aria-label="Producto" className={fieldClass} value={l.recipe_id} disabled={!!created}
               onChange={(e) => update(l.key, { recipe_id: e.target.value })}>
               <option value="">Elige una receta…</option>
-              {recipes.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+              <RecipeOptions recipes={recipes} />
             </select>
             <div className="grid grid-cols-2 gap-3">
               <input aria-label="Cantidad" type="number" inputMode="numeric" min={1} step={1} className={fieldClass}

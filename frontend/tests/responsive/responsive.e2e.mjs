@@ -29,7 +29,7 @@ import { existsSync, mkdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
-import { answer, pdfBytes, recipes } from "./mock-api.mjs";
+import { answer, pdfBytes, recipes, recipeTypes } from "./mock-api.mjs";
 
 const frontendDir = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const shots = join(frontendDir, "test-results", "responsive");
@@ -573,5 +573,206 @@ for (const w of FLOW_WIDTHS) {
     await page.getByRole("button", { name: "Eliminar" }).first().click();
     const alert = page.getByRole("alert").filter({ hasText: "tiene 2 ventas registradas" });
     await alert.waitFor({ state: "visible", timeout: 5000 });
+  }));
+}
+
+// ---- Sprint 16: types of recipe, search and cost in the list (U1 to U6) ----
+// Contract of the screens:
+//   [data-testid="recipe-search"]            search box of the recipes screen (name or type, without case or accents)
+//   [data-testid="recipe-card"]              one recipe of the list; shows the thumbnail, the name, "Costo total" and "Precio sugerido"
+//   [data-testid="type-group"]               heading of a group (only when some recipe has a type); "Sin tipo" goes last
+//   [data-testid="type-chips"] button        "Todos" and one chip per type (only with 2 or more types in use)
+//   button "Tipos"                           opens the window (role=dialog) that manages the types; rows [data-testid="type-row"]
+//   select aria-label "Tipo"                 in the recipe form; options "Sin tipo", each type and "+ Crear tipo…"
+const withoutTypes = (method, path) => (method === "GET" && path === "/recipes"
+  ? { body: recipes.map((r) => ({ ...r, category_id: null, category: "" })) } : undefined);
+const cards = (page) => page.locator('[data-testid="recipe-card"]');
+const names = async (page) => (await cards(page).allInnerTexts()).map((t) => t.split("\n")[0].trim());
+
+for (const w of FLOW_WIDTHS) {
+  test(`U1 search finds by name or type without case or accents at ${w}px`, { timeout: 60000 }, flow(w, "/recipes", {}, async (page) => {
+    const search = page.locator('[data-testid="recipe-search"]');
+    await search.fill("LIMON");
+    assert.deepEqual(await names(page), ["Pie de limón"]);
+    await search.fill("hojarasca");
+    assert.equal((await names(page)).length, 2, "the two recipes of the type Hojarasca (one also by its name)");
+    await search.fill("zzz");
+    assert.equal(await cards(page).count(), 0);
+    await page.getByText(/No se encontr/).first().waitFor({ state: "visible" });
+    await search.fill("");
+    assert.equal(await cards(page).count(), recipes.length);
+  }));
+
+  test(`U1 each recipe shows its cost and its suggested price at ${w}px`, { timeout: 60000 }, flow(w, "/recipes", {}, async (page) => {
+    const text = await cards(page).filter({ hasText: "Pavlova" }).innerText();
+    assert.match(text, /Costo total/);
+    assert.match(text, /\$15\.000/);
+    assert.match(text, /Precio sugerido/);
+    assert.match(text, /\$21\.000/);
+    const none = await cards(page).filter({ hasText: "Pan de pascua" }).innerText();
+    assert.match(none, /Sin costo/, "a recipe that cannot be priced says so instead of showing 0");
+  }));
+
+  test(`U1 the whole row opens the detail at ${w}px`, { timeout: 60000 }, flow(w, "/recipes", {}, async (page) => {
+    await cards(page).filter({ hasText: "Brownie" }).first().click({ position: { x: 20, y: 20 } });
+    await page.getByRole("heading", { name: /Brownie/ }).waitFor({ state: "visible", timeout: 5000 });
+  }));
+
+  test(`U2 the list is grouped by type, with "Sin tipo" last, at ${w}px`, { timeout: 60000 }, flow(w, "/recipes", {}, async (page) => {
+    const headings = (await page.locator('[data-testid="type-group"]').allInnerTexts()).map((t) => t.replace(/\s+/g, " ").trim());
+    assert.equal(headings.length, 4, `groups: ${headings.join(" | ")}`);
+    assert.match(headings[0], /^Hojarasca.*2/);
+    assert.match(headings[1], /^Merengue.*2/);
+    assert.match(headings[2], /^Tortas bizcocho.*2/);
+    assert.match(headings[3], /^Sin tipo.*2/);
+  }));
+
+  test(`U2 the chips filter by type and "Todos" brings everything back at ${w}px`, { timeout: 60000 }, flow(w, "/recipes", {}, async (page) => {
+    const chips = page.locator('[data-testid="type-chips"] button');
+    assert.deepEqual((await chips.allInnerTexts()).map((t) => t.replace(/\s+\d+$/, "").trim()), ["Todos", "Hojarasca", "Merengue", "Tortas bizcocho"]);
+    await chips.filter({ hasText: "Merengue" }).click();
+    assert.deepEqual((await names(page)).sort(), ["Merengue italiano", "Pavlova de frutillas"]);
+    await chips.filter({ hasText: "Todos" }).click();
+    assert.equal(await cards(page).count(), recipes.length);
+  }));
+
+  test(`U2 with no types in use the list is flat, with no headings and no chips, at ${w}px`, { timeout: 60000 }, flow(w, "/recipes", { respond: withoutTypes }, async (page) => {
+    assert.equal(await cards(page).count(), recipes.length);
+    assert.equal(await page.locator('[data-testid="type-group"]').count(), 0);
+    assert.equal(await page.locator('[data-testid="type-chips"]').count(), 0);
+  }));
+
+  // U3: the type is chosen, or created, in the form of the recipe.
+  test(`U3 a type is created from the recipe form and saved with the recipe at ${w}px`, { timeout: 60000 }, flow(w, "/recipes", {
+    respond: (method, path) => (method === "POST" && path === "/recipe-categories" ? { status: 201, body: { id: "00000000-0000-4000-8000-0000000007f1", name: "Alfajores", recipe_count: 0 } } : undefined),
+  }, async (page, context) => {
+    await cards(page).filter({ hasText: "Brownie" }).getByRole("button", { name: "Editar" }).click();
+    await page.getByRole("heading", { name: "Editar receta" }).waitFor({ state: "visible" });
+    const select = page.getByLabel("Tipo", { exact: true });
+    const options = (await select.locator("option").allInnerTexts()).map((t) => t.trim());
+    assert.deepEqual(options, ["Sin tipo", "Hojarasca", "Merengue", "Tortas bizcocho", "+ Crear tipo…"]);
+    await select.selectOption({ label: "+ Crear tipo…" });
+    await page.getByPlaceholder("Nombre del tipo").fill("Alfajores");
+    await page.getByRole("button", { name: "Crear", exact: true }).click();
+    await page.waitForFunction(() => document.querySelector('select[aria-label="Tipo"]')?.selectedOptions[0]?.textContent?.trim() === "Alfajores");
+    const created = context.calls.find((c) => c.method === "POST" && c.path === "/recipe-categories");
+    assert.equal(created.body.name, "Alfajores");
+    await page.getByRole("button", { name: /^Guardar$/ }).first().click();
+    await page.waitForFunction(() => !document.body.innerText.includes("Editar receta"));
+    const saved = context.calls.find((c) => c.method === "PUT" && /^\/recipes\/[^/]+$/.test(c.path));
+    assert.equal(saved.body.category_id, "00000000-0000-4000-8000-0000000007f1");
+  }));
+
+  test(`U3 a recipe saved without choosing a type sends none at ${w}px`, { timeout: 60000 }, flow(w, "/recipes", {}, async (page, context) => {
+    await cards(page).filter({ hasText: "Brownie" }).getByRole("button", { name: "Editar" }).click();
+    await page.getByRole("heading", { name: "Editar receta" }).waitFor({ state: "visible" });
+    await page.getByRole("button", { name: /^Guardar$/ }).first().click();
+    await page.waitForFunction(() => !document.body.innerText.includes("Editar receta"));
+    const saved = context.calls.find((c) => c.method === "PUT" && /^\/recipes\/[^/]+$/.test(c.path));
+    assert.ok(!saved.body.category_id, "a recipe without type must not send a category_id");
+  }));
+
+  // U4: the window "Tipos".
+  test(`U4 the window Tipos lists, renames and deletes types at ${w}px`, { timeout: 60000 }, flow(w, "/recipes", {}, async (page, context) => {
+    await page.getByRole("button", { name: "Tipos", exact: true }).click();
+    const dialog = page.locator('[role="dialog"]').first();
+    await dialog.waitFor({ state: "visible" });
+    const rows = dialog.locator('[data-testid="type-row"]');
+    assert.equal(await rows.count(), recipeTypes.length);
+    assert.match(await rows.filter({ hasText: "Merengue" }).innerText(), /2/, "each type shows how many recipes it has");
+
+    await rows.filter({ hasText: "Hojarasca" }).getByRole("button", { name: "Renombrar" }).click();
+    await dialog.getByRole("textbox").fill("Hojarasca fina");
+    await dialog.getByRole("button", { name: /^Guardar$/ }).click();
+    const rename = context.calls.find((c) => c.method === "PUT" && /^\/recipe-categories\/[^/]+$/.test(c.path));
+    assert.equal(rename.body.name, "Hojarasca fina");
+
+    await rows.filter({ hasText: "Merengue" }).getByRole("button", { name: "Eliminar" }).click();
+    await dialog.getByText(/2 recetas quedar[aá]n sin tipo/).waitFor({ state: "visible" });
+    await dialog.getByRole("button", { name: /S[ií], eliminar/ }).click();
+    assert.ok(context.calls.some((c) => c.method === "DELETE" && /^\/recipe-categories\/[^/]+$/.test(c.path)), "the delete was not sent");
+  }));
+
+  test(`U4 a repeated name shows the reason inside the window at ${w}px`, { timeout: 60000 }, flow(w, "/recipes", {
+    respond: (method, path) => (method === "POST" && path === "/recipe-categories" ? { status: 409, body: { error: "ya existe un tipo con ese nombre" } } : undefined),
+  }, async (page) => {
+    await page.getByRole("button", { name: "Tipos", exact: true }).click();
+    const dialog = page.locator('[role="dialog"]').first();
+    await dialog.waitFor({ state: "visible" });
+    await dialog.getByPlaceholder("Nombre del tipo").fill("Merengue");
+    await dialog.getByRole("button", { name: "Crear", exact: true }).click();
+    await dialog.getByRole("alert").filter({ hasText: "ya existe un tipo con ese nombre" }).waitFor({ state: "visible", timeout: 5000 });
+  }));
+
+  // U5: the selectors of the other screens group the recipes by type.
+  const GROUPS = ["Hojarasca", "Merengue", "Tortas bizcocho", "Sin tipo"];
+  const groupsIn = (scope) => scope.locator("select optgroup").evaluateAll((els) => els.map((e) => e.label));
+
+  test(`U5 the recipe selector of Costos is grouped by type at ${w}px`, { timeout: 60000 }, flow(w, "/costs", {}, async (page) => {
+    assert.deepEqual(await groupsIn(page), GROUPS);
+  }));
+
+  test(`U5 the selectors of Ventas, Pedidos and Cotización are grouped by type at ${w}px`, { timeout: 90000 }, flow(w, "/sales", {}, async (page) => {
+    // The sale form is part of the page (its button "Registrar Venta" is the submit), not a window.
+    assert.deepEqual(await groupsIn(page), GROUPS, "Registrar Venta");
+    await page.getByRole("button", { name: "Nueva cotización" }).click();
+    assert.deepEqual(await groupsIn(page.locator('[role="dialog"]').first()), GROUPS, "Nueva cotización");
+    await page.reload({ waitUntil: "networkidle" });
+    await page.getByRole("button", { name: "Pedidos", exact: true }).click();
+    await page.getByRole("button", { name: "Nuevo pedido" }).click();
+    assert.deepEqual(await groupsIn(page.locator('[role="dialog"]').first()), GROUPS, "Nuevo pedido");
+  }));
+
+  test(`U5 with no types the selectors stay flat at ${w}px`, { timeout: 60000 }, flow(w, "/costs", { respond: withoutTypes }, async (page) => {
+    assert.equal(await page.locator("select optgroup").count(), 0);
+  }));
+}
+
+// U6: the window Tipos fits every screen, with its main button within reach and touch targets of 44px on a phone.
+for (const { w, h } of SCREENS) {
+  test(`U6 window "Tipos" at ${w}x${h}`, { timeout: 60000 }, withPage(w, "/recipes", { height: h }, async (page) => {
+    await page.getByRole("button", { name: "Tipos", exact: true }).click();
+    const dialog = page.locator('[role="dialog"]').first();
+    await dialog.waitFor({ state: "visible", timeout: 5000 });
+    assert.ok(inViewport(await dialog.boundingBox(), w, h), "the window does not fit the screen");
+    const primary = dialog.locator("[data-primary-action]").first();
+    assert.ok(await primary.isVisible(), "the window has no main button (data-primary-action)");
+    assert.ok(inViewport(await primary.boundingBox(), w, h), "the main button is out of reach without scrolling");
+    if (isPhone(w)) {
+      const bad = (await page.evaluate(interactive)).filter((s) => !/^a "/.test(s));
+      assert.deepEqual(bad.slice(0, 8), [], "things in the window are too small");
+    }
+  }));
+}
+
+// Support tests from the adversarial review of S16.
+for (const w of FLOW_WIDTHS) {
+  test(`U3 a new type that was named but not confirmed is created when the recipe is saved at ${w}px`, { timeout: 60000 }, flow(w, "/recipes", {
+    respond: (method, path) => (method === "POST" && path === "/recipe-categories" ? { status: 201, body: { id: "00000000-0000-4000-8000-0000000007f2", name: "Pascua", recipe_count: 0 } } : undefined),
+  }, async (page, context) => {
+    await cards(page).filter({ hasText: "Brownie" }).getByRole("button", { name: "Editar" }).click();
+    await page.getByRole("heading", { name: "Editar receta" }).waitFor({ state: "visible" });
+    await page.getByLabel("Tipo", { exact: true }).selectOption({ label: "+ Crear tipo…" });
+    await page.getByPlaceholder("Nombre del tipo").fill("Pascua");
+    await page.getByRole("button", { name: /^Guardar$/ }).first().click();
+    await page.waitForFunction(() => !document.body.innerText.includes("Editar receta"));
+    assert.ok(context.calls.some((c) => c.method === "POST" && c.path === "/recipe-categories" && c.body.name === "Pascua"), "the type was not created");
+    const saved = context.calls.find((c) => c.method === "PUT" && /^\/recipes\/[^/]+$/.test(c.path));
+    assert.equal(saved.body.category_id, "00000000-0000-4000-8000-0000000007f2");
+  }));
+
+  test(`U3 choosing "+ Crear tipo…" and saving without a name stops the save at ${w}px`, { timeout: 60000 }, flow(w, "/recipes", {}, async (page, context) => {
+    await cards(page).filter({ hasText: "Brownie" }).getByRole("button", { name: "Editar" }).click();
+    await page.getByRole("heading", { name: "Editar receta" }).waitFor({ state: "visible" });
+    await page.getByLabel("Tipo", { exact: true }).selectOption({ label: "+ Crear tipo…" });
+    await page.getByRole("button", { name: /^Guardar$/ }).first().click();
+    await page.getByRole("alert").filter({ hasText: /nombre del tipo/i }).waitFor({ state: "visible", timeout: 5000 });
+    assert.ok(!context.calls.some((c) => c.method === "PUT"), "the recipe was saved with a type left half done");
+  }));
+
+  test(`U1 the detail also opens from the keyboard at ${w}px`, { timeout: 60000 }, flow(w, "/recipes", {}, async (page) => {
+    await cards(page).filter({ hasText: "Brownie" }).getByRole("button", { name: "Brownie" }).focus();
+    await page.keyboard.press("Enter");
+    await page.getByRole("heading", { name: /Brownie/ }).waitFor({ state: "visible", timeout: 5000 });
   }));
 }
