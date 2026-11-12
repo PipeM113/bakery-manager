@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/PipeM113/bakery-manager/internal/shared/clock"
@@ -244,12 +245,65 @@ func (r *IngredientRepository) Update(ctx context.Context, i Ingredient, userID 
 	return i, nil
 }
 
+// Delete removes an ingredient that nothing uses. One that a recipe uses, or that is in the history of
+// a sale, gives a *kernel.InUseError that says which.
 func (r *IngredientRepository) Delete(ctx context.Context, id string) error {
-	_, err := r.db.Exec(ctx, `DELETE FROM ingredients WHERE id = $1`, id)
+	rows, err := r.db.Query(ctx, `
+		SELECT DISTINCT r.id, r.name FROM recipe_ingredients ri JOIN recipes r ON r.id = ri.recipe_id
+		WHERE ri.ingredient_id = $1`, id)
 	if err != nil {
+		return fmt.Errorf("get recipes of the ingredient: %w", err)
+	}
+	var recipes []string // one entry per recipe: two recipes may share a name
+	for rows.Next() {
+		var rid, name string
+		if err := rows.Scan(&rid, &name); err != nil {
+			rows.Close()
+			return fmt.Errorf("scan recipe name: %w", err)
+		}
+		recipes = append(recipes, name)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("read recipes of the ingredient: %w", err)
+	}
+	if len(recipes) > 0 {
+		sort.Slice(recipes, func(a, b int) bool { // the raw name breaks ties between "Pan" and "pan": the message is always the same
+			if ka, kb := kernel.SortKey(recipes[a]), kernel.SortKey(recipes[b]); ka != kb {
+				return ka < kb
+			}
+			return recipes[a] < recipes[b]
+		})
+		return &kernel.InUseError{Message: "No se puede eliminar: se usa en " + recipeList(recipes)}
+	}
+
+	var sales int
+	if err := r.db.QueryRow(ctx, `SELECT count(DISTINCT sale_id) FROM sale_ingredients WHERE ingredient_id = $1`, id).Scan(&sales); err != nil {
+		return fmt.Errorf("count sales of the ingredient: %w", err)
+	}
+	if sales > 0 {
+		return &kernel.InUseError{Message: "No se puede eliminar: aparece en el historial de " + kernel.Count(sales, "venta", "ventas")}
+	}
+
+	if _, err := r.db.Exec(ctx, `DELETE FROM ingredients WHERE id = $1`, id); err != nil {
+		if kernel.IsForeignKeyViolation(err) { // something that appeared after the checks
+			return &kernel.InUseError{Message: "No se puede eliminar: otros registros lo usan"}
+		}
 		return fmt.Errorf("delete ingredient: %w", err)
 	}
 	return nil
+}
+
+// recipeList writes "las recetas Alfajor, Brownie, Cheesecake y 2 más" (at most three names).
+func recipeList(names []string) string {
+	switch {
+	case len(names) == 1:
+		return "la receta " + names[0]
+	case len(names) <= 3:
+		return "las recetas " + strings.Join(names[:len(names)-1], ", ") + " y " + names[len(names)-1]
+	default:
+		return fmt.Sprintf("las recetas %s y %d más", strings.Join(names[:3], ", "), len(names)-3)
+	}
 }
 
 func (r *IngredientRepository) GetPriceHistory(ctx context.Context, id string) ([]PriceHistory, error) {

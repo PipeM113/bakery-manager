@@ -12,6 +12,7 @@ import (
 
 	costs "github.com/PipeM113/bakery-manager/internal/costs/service"
 	"github.com/PipeM113/bakery-manager/internal/recipes/repository"
+	"github.com/PipeM113/bakery-manager/internal/shared/kernel"
 	"github.com/PipeM113/bakery-manager/pkg/httputil"
 	"github.com/PipeM113/bakery-manager/pkg/middleware"
 	"github.com/go-chi/chi/v5"
@@ -104,6 +105,10 @@ func (h *RecipeHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := in.validatePcts(); err != nil {
 		httputil.JSONError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if in.PhotoURL != nil {
+		httputil.JSONError(w, "la foto se sube después de crear la receta, no se envía en photo_url", http.StatusBadRequest)
 		return
 	}
 	body := in.Recipe
@@ -293,6 +298,11 @@ func (h *RecipeHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	log.Printf("[recipes] DELETE /recipes/%s user=%s", id, claims.ID)
 	photo, _ := h.repo.PhotoURLOf(r.Context(), id)
 	if err := h.repo.Delete(r.Context(), id); err != nil {
+		var inUse *kernel.InUseError
+		if errors.As(err, &inUse) {
+			httputil.JSONError(w, inUse.Message, http.StatusConflict)
+			return
+		}
 		log.Printf("[recipes] Delete error id=%s user=%s: %v", id, claims.ID, err)
 		httputil.JSONError(w, "error eliminando receta", http.StatusInternalServerError)
 		return

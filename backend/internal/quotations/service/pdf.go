@@ -79,6 +79,9 @@ type QuoteData struct {
 	DeliveryCost int64
 	Total        int64
 	Business     Business
+	// PhotoBase is the public address of the photo bucket: only photos whose address starts with it are
+	// downloaded (empty: none is).
+	PhotoBase string
 }
 
 const (
@@ -123,7 +126,7 @@ func GenerateQuotePDF(data QuoteData) (*bytes.Buffer, error) {
 		pdf.Rect(0, 0, pageW, pageH, "F")
 	})
 
-	photos := fetchPhotos(data.Lines)
+	photos := fetchPhotos(data.Lines, data.PhotoBase)
 	registered := map[string]bool{}
 	hasPhotos := false
 	for _, p := range photos {
@@ -330,7 +333,7 @@ func photoName(url string) string { return "photo-" + url }
 
 // fetchPhotos downloads each distinct photo once, all at the same time. The result is aligned with
 // the lines: nil where there is no photo or it could not be read.
-func fetchPhotos(lines []QuoteLine) []*photo {
+func fetchPhotos(lines []QuoteLine, base string) []*photo {
 	out := make([]*photo, len(lines))
 	unique := map[string]*photo{}
 	var mu sync.Mutex
@@ -350,7 +353,7 @@ func fetchPhotos(lines []QuoteLine) []*photo {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			p := downloadPhoto(url)
+			p := downloadPhoto(url, base)
 			mu.Lock()
 			unique[url] = p
 			mu.Unlock()
@@ -367,12 +370,20 @@ func fetchPhotos(lines []QuoteLine) []*photo {
 
 // downloadPhoto returns the photo as a JPEG on a white ground (whatever it was: the type comes from
 // the bytes), or nil when it cannot be fetched or read.
-func downloadPhoto(url string) *photo {
-	if !strings.HasPrefix(url, "http://") && !strings.HasPrefix(url, "https://") {
+func downloadPhoto(url, base string) *photo {
+	if base == "" || !strings.HasPrefix(url, base) {
 		return nil
 	}
-	client := &http.Client{Timeout: photoTimeout}
-	resp, err := client.Get(url) //nolint:gosec // the address was stored by the app itself
+	// A dot segment would climb out of the bucket path on the same host.
+	if strings.Contains(url, "..") || strings.Contains(strings.ToLower(url), "%2e") {
+		return nil
+	}
+	client := &http.Client{
+		Timeout: photoTimeout,
+		// A photo of the bucket is served where it was stored: a redirect would take the request elsewhere.
+		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
+	}
+	resp, err := client.Get(url) //nolint:gosec // the address starts with the bucket of the project
 	if err != nil {
 		return nil
 	}

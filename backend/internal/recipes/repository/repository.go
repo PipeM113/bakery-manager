@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/PipeM113/bakery-manager/internal/shared/kernel"
@@ -203,9 +204,32 @@ func (r *RecipeRepository) GetByID(ctx context.Context, id string) (Recipe, erro
 	return rec, nil
 }
 
+// Delete removes a recipe that has no sales and is in no quotation. Otherwise it gives a
+// *kernel.InUseError that counts them.
 func (r *RecipeRepository) Delete(ctx context.Context, id string) error {
+	var sales, quotations int
+	err := r.db.QueryRow(ctx, `
+		SELECT (SELECT count(*) FROM sales WHERE recipe_id = $1),
+		       (SELECT count(*) FROM (SELECT quotation_id AS id FROM quotation_lines WHERE recipe_id = $1
+		                              UNION SELECT id FROM quotations WHERE recipe_id = $1) q)`, id).Scan(&sales, &quotations)
+	if err != nil {
+		return fmt.Errorf("count the history of the recipe: %w", err)
+	}
+	if sales > 0 || quotations > 0 {
+		var parts []string
+		if sales > 0 {
+			parts = append(parts, kernel.Count(sales, "venta", "ventas"))
+		}
+		if quotations > 0 {
+			parts = append(parts, kernel.Count(quotations, "cotización", "cotizaciones"))
+		}
+		return &kernel.InUseError{Message: "No se puede eliminar: tiene " + strings.Join(parts, " y ") + " registradas"}
+	}
 	tag, err := r.db.Exec(ctx, `DELETE FROM recipes WHERE id = $1`, id)
 	if err != nil {
+		if kernel.IsForeignKeyViolation(err) { // something that appeared after the checks
+			return &kernel.InUseError{Message: "No se puede eliminar: otros registros la usan"}
+		}
 		return fmt.Errorf("delete recipe: %w", err)
 	}
 	if tag.RowsAffected() == 0 {

@@ -28,16 +28,17 @@ const (
 )
 
 type QuotationHandler struct {
-	costSvc  *costSvc.CostService
-	repo     *quoteRepo.QuotationRepository
-	business *bizRepo.Repository
-	env      config.Business
-	db       *pgxpool.Pool
-	clk      clock.Clock
+	costSvc   *costSvc.CostService
+	repo      *quoteRepo.QuotationRepository
+	business  *bizRepo.Repository
+	env       config.Business
+	photoBase string
+	db        *pgxpool.Pool
+	clk       clock.Clock
 }
 
-func NewQuotationHandler(cs *costSvc.CostService, db *pgxpool.Pool, clk clock.Clock, business *bizRepo.Repository, env config.Business) *QuotationHandler {
-	return &QuotationHandler{costSvc: cs, repo: quoteRepo.NewQuotationRepository(db), business: business, env: env, db: db, clk: clk}
+func NewQuotationHandler(cs *costSvc.CostService, db *pgxpool.Pool, clk clock.Clock, business *bizRepo.Repository, env config.Business, photoBase string) *QuotationHandler {
+	return &QuotationHandler{costSvc: cs, repo: quoteRepo.NewQuotationRepository(db), business: business, env: env, photoBase: photoBase, db: db, clk: clk}
 }
 
 func userID(r *http.Request) string {
@@ -286,7 +287,7 @@ func (h *QuotationHandler) PDF(w http.ResponseWriter, r *http.Request) {
 
 	data := quoteSvc.QuoteData{
 		ClientName: q.ClientName, DeliveryCost: q.DeliveryCost, Total: q.Total,
-		Date: q.CreatedAt.In(clock.Santiago),
+		Date: q.CreatedAt.In(clock.Santiago), PhotoBase: h.photoBase,
 		Business: quoteSvc.Business{
 			Phone: profile.Phone, Bank: profile.Bank,
 			AccountType: profile.AccountType, Holder: profile.Holder, Email: profile.Email,

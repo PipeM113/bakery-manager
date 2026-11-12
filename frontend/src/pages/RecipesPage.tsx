@@ -5,6 +5,7 @@ import type { IRecipe, IIngredientOption, RecipeFormData } from "../types/recipe
 import RecipeList from "../components/RecipeList";
 import RecipeForm from "../components/RecipeForm";
 import RecipeDetail from "../components/RecipeDetail";
+import { apiErrorMessage } from "../utils/apiError";
 
 export default function RecipesPage() {
   const [recipes, setRecipes]         = useState<IRecipe[]>([]);
@@ -13,6 +14,7 @@ export default function RecipesPage() {
   const [showForm, setShowForm]       = useState(false);
   const [editing, setEditing]         = useState<IRecipe | null>(null);
   const [detail, setDetail]           = useState<IRecipe | null>(null);
+  const [deleteError, setDeleteError] = useState("");
 
   const load = () => {
     Promise.all([recipeService.getAll(), ingredientService.getAll()])
@@ -54,8 +56,15 @@ export default function RecipesPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm("¿Eliminar esta receta?")) return;
-    await recipeService.delete(id);
-    load();
+    setDeleteError("");
+    try {
+      await recipeService.delete(id);
+      setDeleteError("");
+      load();
+    } catch (e) {
+      // 409: it has sales or quotations; the message says how many.
+      setDeleteError(apiErrorMessage(e, "No se pudo eliminar"));
+    }
   };
 
   if (loading) {
@@ -83,6 +92,13 @@ export default function RecipesPage() {
           + Nueva
         </button>
       </div>
+
+      {deleteError && (
+        <div role="alert" className="mb-4 bg-rosa text-negro px-4 py-3 text-sm font-light flex items-start justify-between gap-3">
+          <span>{deleteError}</span>
+          <button onClick={() => setDeleteError("")} aria-label="Cerrar aviso" className="text-negro/70 hover:text-negro shrink-0">×</button>
+        </div>
+      )}
 
       <RecipeList
         recipes={recipes}

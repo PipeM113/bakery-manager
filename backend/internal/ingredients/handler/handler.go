@@ -14,6 +14,7 @@ import (
 	"github.com/PipeM113/bakery-manager/internal/ingredients/repository"
 	"github.com/PipeM113/bakery-manager/internal/ingredients/service"
 	"github.com/PipeM113/bakery-manager/internal/shared/clock"
+	"github.com/PipeM113/bakery-manager/internal/shared/kernel"
 	"github.com/PipeM113/bakery-manager/pkg/httputil"
 	mid "github.com/PipeM113/bakery-manager/pkg/middleware"
 	"github.com/go-chi/chi/v5"
@@ -162,6 +163,11 @@ func (h *IngredientHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	log.Printf("[ingredients] DELETE /ingredients/%s user=%s", id, userID(r))
 	if err := h.repo.Delete(r.Context(), id); err != nil {
+		var inUse *kernel.InUseError
+		if errors.As(err, &inUse) {
+			httputil.JSONError(w, inUse.Message, http.StatusConflict)
+			return
+		}
 		log.Printf("[ingredients] Delete error id=%s: %v", id, err)
 		httputil.JSONError(w, "error eliminando insumo", http.StatusInternalServerError)
 		return

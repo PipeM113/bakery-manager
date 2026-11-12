@@ -20,6 +20,7 @@ Cada sprint sigue el mismo método: contrato, reglas de aceptación aprobadas, t
 | 12 | Cotizaciones con varios productos y PDF con la marca; datos del negocio editables | Hecho | Pendiente | `docs/cotizaciones.md` |
 | 13 | Calidad y detalles | Hecho | Pendiente | `docs/acceso.md`, `docs/despliegue.md` |
 | 14 | Ingredientes: proveedor, orden, stock rápido y equivalencias entre unidades | Hecho (migración 28) | Pendiente | `docs/ingredientes.md` |
+| 15 | Borrados con motivo, origen de las fotos, una sola regla de necesidades de receta, pruebas de flujos | Hecho | Pendiente | `docs/ingredientes.md` |
 
 Los sprints 0 a 4 usan la numeración antigua y son anteriores al registro de aceptación (por eso "—"). El antiguo "sprint 5, acceso y roles" es hoy el sprint 11, y el antiguo "sprint 6, calidad", el 13. La paleta y las tipografías de la marca están en `docs/diseno.md`. Las casillas viejas de este archivo se reemplazaron por esta tabla.
 
@@ -48,6 +49,13 @@ Los sprints 0 a 4 usan la numeración antigua y son anteriores al registro de ac
 - [x] Botón "+ Stock" para agregar una compra o contar el stock sin entrar a editar.
 - [x] Peso de 1 litro y de 1 unidad (opcionales) para usar gr con productos en ml y und con gr; se pide solo cuando una receta lo necesita y sin bloquear lo demás.
 
+## Sprint 15, borrados y fotos (cerrado en código)
+
+- [x] Borrar algo con historia responde 409 con el motivo y la pantalla lo muestra (D1 a D5).
+- [x] `POST /recipes` rechaza `photo_url`; el PDF solo descarga fotos del bucket del proyecto y no sigue redirecciones (P1, P2).
+- [x] `internal/recipeneeds`: una sola regla de necesidades de receta para costos y ventas (N1).
+- [x] Pruebas de flujo en el navegador: stock rápido, cambio de unidad con equivalencia, aviso en la receta y borrado rechazado (F1 a F3, D5).
+
 ## Pendiente
 
 - [ ] Probar S6 a S10, S12 y S13 en la app real, sobre todo desde el celular, y marcarlos como aceptados.
@@ -57,6 +65,7 @@ Los sprints 0 a 4 usan la numeración antigua y son anteriores al registro de ac
 
 ## Ideas anotadas, no decididas
 
+- [ ] Archivar recetas e ingredientes con historia en vez de bloquear el borrado (hoy responde 409).
 - [ ] Crear el pedido al confirmar una cotización (hoy solo cambia el estado).
 - [ ] Editar una cotización guardada (hoy se crea otra).
 - [ ] Cerrar las sesiones abiertas al cambiar la contraseña (hoy duran hasta 24 horas).

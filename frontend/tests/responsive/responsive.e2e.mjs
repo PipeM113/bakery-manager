@@ -81,13 +81,22 @@ const CORS = {
   "access-control-allow-methods": "*", "access-control-expose-headers": "*",
 };
 
-async function open(width, path, { auth = true, height = HEIGHT } = {}) {
+// `respond(method, pathname, body, calls)` may answer a call before the mock does: it returns { status, body } or undefined.
+// Every call the screens make is kept in `context.calls` so a flow can check what was sent.
+async function open(width, path, { auth = true, height = HEIGHT, respond } = {}) {
   const context = await browser.newContext({ viewport: { width, height }, acceptDownloads: true });
+  context.calls = [];
   if (auth) await context.addInitScript(() => localStorage.setItem("token", "test.token.value"));
   await context.route(`${API}/**`, (route) => {
     const req = route.request();
     const url = new URL(req.url());
     if (req.method() === "OPTIONS") return route.fulfill({ status: 204, headers: CORS });
+    let body;
+    try { body = req.postDataJSON(); } catch { body = undefined; }
+    const call = { method: req.method(), path: url.pathname, body };
+    context.calls.push(call);
+    const custom = respond?.(call.method, call.path, call.body, context.calls);
+    if (custom) return route.fulfill({ status: custom.status ?? 200, headers: CORS, contentType: "application/json", body: JSON.stringify(custom.body ?? {}) });
     const found = answer(req.method(), url.pathname);
     if (!found) return route.fulfill({ status: 404, headers: CORS, contentType: "application/json", body: "{}" });
     if (found.pdf) return route.fulfill({ status: 200, headers: CORS, contentType: "application/pdf", body: pdfBytes });
@@ -485,3 +494,84 @@ test("C7 no screen writes the minus after the $", withPage(1280, "/profitability
   assert.doesNotMatch(text, /\$-\d/, "found an amount written as $-...");
   assert.match(text, /-\$\d/, "the trend of the mock has a negative amount and it should read -$...");
 }));
+
+// ---- Sprint 15: flows (what the screens send and show), not only how they look ----
+
+const flow = (width, path, opts, fn) => async () => {
+  const { page, context } = await open(width, path, opts);
+  try { await fn(page, context); } finally { await context.close(); }
+};
+const FLOW_WIDTHS = [390, 1280];
+const field = (scope, labelText, tag) => scope.locator("label", { hasText: labelText }).locator("..").locator(tag);
+
+for (const w of FLOW_WIDTHS) {
+  // F1: "+ Stock" adds a purchase without going through the edit window.
+  test(`F1 quick stock sends a purchase at ${w}px`, { timeout: 60000 }, flow(w, "/ingredients", {}, async (page, context) => {
+    await page.locator('[data-testid="stock-quick"]').first().click();
+    const dialog = page.locator('[role="dialog"]').first();
+    await dialog.waitFor({ state: "visible" });
+    await dialog.getByRole("button", { name: "Agregar", exact: true }).click();
+    await dialog.locator("input[type=number]").fill("500");
+    await dialog.getByRole("button", { name: /Agregar al stock/ }).click();
+    await dialog.waitFor({ state: "hidden" });
+    const call = context.calls.find((c) => c.method === "POST" && /^\/ingredients\/[^/]+\/stock-adjustments$/.test(c.path));
+    assert.ok(call, "no stock adjustment was sent");
+    assert.equal(call.body.reason, "compra");
+    assert.equal(call.body.quantity, 500);
+  }));
+
+  // F2: changing the unit of an ingredient that a recipe uses asks for the equivalence, there, and then saves.
+  test(`F2 a unit change that needs the weight of 1 litre asks for it and saves at ${w}px`, { timeout: 60000 }, flow(w, "/ingredients", {
+    respond: (method, path, body, calls) => {
+      if (method !== "PUT" || !/^\/ingredients\/[^/]+$/.test(path)) return undefined;
+      const earlier = calls.filter((c) => c.method === "PUT" && c.path === path).length;
+      if (earlier > 1) return undefined;
+      return { status: 409, body: { error: 'la receta "Flan" usa este insumo en gr: para pasar de gr a ml falta el peso de 1 litro del insumo' } };
+    },
+  }, async (page, context) => {
+    await page.getByPlaceholder(/Buscar/).fill("Harina sin polvos");
+    await page.getByRole("button", { name: "Editar" }).first().click();
+    const dialog = page.locator('[role="dialog"]').first();
+    await dialog.waitFor({ state: "visible" });
+    await field(dialog, "Unidad base", "select").selectOption("ml");
+    await dialog.getByRole("button", { name: "Guardar" }).click();
+    await dialog.getByText(/peso de 1 litro/i).first().waitFor({ state: "visible" });
+    const weight = field(dialog, "Peso de 1 litro (gr)", "input");
+    assert.ok(await weight.isVisible(), "the weight of 1 litre is not offered after the refusal");
+    await weight.fill("1250");
+    await dialog.getByRole("button", { name: "Guardar" }).click();
+    await dialog.waitFor({ state: "hidden" });
+    const puts = context.calls.filter((c) => c.method === "PUT" && /^\/ingredients\/[^/]+$/.test(c.path));
+    assert.equal(puts.length, 2, "the second save was not sent");
+    assert.equal(puts[1].body.default_unit, "ml");
+    assert.equal(puts[1].body.grams_per_liter, 1250);
+  }));
+
+  // F3: in a recipe, a unit of another family than the product's warns about the missing equivalence.
+  test(`F3 a recipe line in another family warns about the missing equivalence at ${w}px`, { timeout: 60000 }, flow(w, "/recipes", {}, async (page) => {
+    await page.getByRole("button", { name: "Editar" }).first().click();
+    await page.getByRole("heading", { name: "Editar receta" }).waitFor({ state: "visible" });
+    await page.getByLabel("Ingrediente", { exact: true }).first().selectOption({ label: "Esencia de vainilla concentrada · Colun · Líder" });
+    await page.getByLabel("Unidad", { exact: true }).first().selectOption("gr");
+    await page.getByText(/Peso de 1 litro/).first().waitFor({ state: "visible", timeout: 5000 });
+  }));
+
+  // D5: a refused delete shows why, in the screen.
+  test(`D5 a refused delete of an ingredient shows the reason at ${w}px`, { timeout: 60000 }, flow(w, "/ingredients", {
+    respond: (method, path) => (method === "DELETE" && path.startsWith("/ingredients/") ? { status: 409, body: { error: "No se puede eliminar: se usa en las recetas Pan y Torta" } } : undefined),
+  }, async (page) => {
+    page.on("dialog", (d) => d.accept());
+    await page.getByRole("button", { name: "Eliminar" }).first().click();
+    const alert = page.getByRole("alert").filter({ hasText: "se usa en las recetas Pan y Torta" });
+    await alert.waitFor({ state: "visible", timeout: 5000 });
+  }));
+
+  test(`D5 a refused delete of a recipe shows the reason at ${w}px`, { timeout: 60000 }, flow(w, "/recipes", {
+    respond: (method, path) => (method === "DELETE" && path.startsWith("/recipes/") ? { status: 409, body: { error: "No se puede eliminar: tiene 2 ventas registradas" } } : undefined),
+  }, async (page) => {
+    page.on("dialog", (d) => d.accept());
+    await page.getByRole("button", { name: "Eliminar" }).first().click();
+    const alert = page.getByRole("alert").filter({ hasText: "tiene 2 ventas registradas" });
+    await alert.waitFor({ state: "visible", timeout: 5000 });
+  }));
+}

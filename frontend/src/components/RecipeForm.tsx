@@ -263,6 +263,7 @@ export default function RecipeForm({ editing, ingredients, onSave, onSaveAs, onC
               <div key={idx} className="space-y-1">
               <div className="flex gap-2 items-center">
                 <select
+                  aria-label="Ingrediente"
                   value={ing.ingredient_id}
                   onChange={(e) => updateIngredient(idx, "ingredient_id", e.target.value)}
                   className="flex-1 bg-crema border border-linea text-negro px-3 py-2 text-xs font-light focus:outline-none focus:border-oro transition-all min-w-0"

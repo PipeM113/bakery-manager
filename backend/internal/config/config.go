@@ -38,6 +38,15 @@ type Config struct {
 	Business Business
 }
 
+// PhotoBase is the public address under which the photos of the project are served; the quotation PDF
+// only downloads photos that start with it. Empty when photo storage is not configured.
+func (c Config) PhotoBase() string {
+	if c.SupabaseURL == "" || c.SupabaseBucket == "" {
+		return ""
+	}
+	return c.SupabaseURL + "/storage/v1/object/public/" + c.SupabaseBucket + "/"
+}
+
 // Business holds the two secrets of the quotation PDF that stay in the environment. The rest of
 // the business data (name, phone, bank...) is edited in the app and lives in the database.
 type Business struct {

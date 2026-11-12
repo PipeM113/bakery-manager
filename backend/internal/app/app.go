@@ -145,7 +145,7 @@ func NewWithClock(cfg config.Config, db *pgxpool.Pool, photos PhotoUploader, clk
 		businessHandler := bizHand.NewBusinessHandler(businessRepository, cfg.Business)
 		r.Get("/business", businessHandler.Get)
 		r.Put("/business", businessHandler.Save)
-		quotationHandler := quoteHand.NewQuotationHandler(costSvc, db, clk, businessRepository, cfg.Business)
+		quotationHandler := quoteHand.NewQuotationHandler(costSvc, db, clk, businessRepository, cfg.Business, cfg.PhotoBase())
 		r.Post("/quotations", quotationHandler.Create)
 		r.Get("/quotations", quotationHandler.List)
 		r.Get("/quotations/{id}", quotationHandler.Get)

@@ -7,7 +7,7 @@ import (
 	"math"
 
 	"github.com/PipeM113/bakery-manager/internal/costs/domain"
-	"github.com/PipeM113/bakery-manager/internal/shared/kernel"
+	"github.com/PipeM113/bakery-manager/internal/recipeneeds"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -120,42 +120,19 @@ func (s *CostService) LoadRecipe(ctx context.Context, recipeID string) (Recipe, 
 		return Recipe{}, ErrInvalidYield
 	}
 
-	rows, err := s.db.Query(ctx, `
-		SELECT ri.ingredient_id, i.name, i.kind, ri.quantity, ri.unit,
-		       i.price_per_unit, i.default_unit, i.package_price, i.package_size,
-		       i.grams_per_liter, i.grams_per_unit
-		FROM recipe_ingredients ri
-		JOIN ingredients i ON i.id = ri.ingredient_id
-		WHERE ri.recipe_id = $1`, recipeID)
+	lines, err := recipeneeds.Load(ctx, s.db, recipeID, 1)
+	var conv *recipeneeds.ConversionError
+	if errors.As(err, &conv) {
+		return Recipe{}, fmt.Errorf("ingrediente %q: %w", conv.Ingredient, conv.Err)
+	}
 	if err != nil {
-		return Recipe{}, fmt.Errorf("get ingredients: %w", err)
+		return Recipe{}, err
 	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var ing domain.IngredientCost
-		var recipeUnit, baseUnit string
-		var eq kernel.Equivalence
-		if err := rows.Scan(
-			&ing.IngredientID, &ing.Name, &ing.Kind,
-			&ing.Quantity, &recipeUnit,
-			&ing.PricePerUnit, &baseUnit,
-			&ing.PackagePrice, &ing.PackageSize,
-			&eq.GramsPerLiter, &eq.GramsPerUnit,
-		); err != nil {
-			return Recipe{}, fmt.Errorf("scan ingredient: %w", err)
-		}
-
-		converted, err := kernel.Convert(ing.Quantity, recipeUnit, baseUnit, eq)
-		if err != nil {
-			return Recipe{}, fmt.Errorf("ingrediente %q: %w", ing.Name, err)
-		}
-		ing.Quantity = converted
-		ing.Unit = baseUnit
-		recipe.ingredients = append(recipe.ingredients, ing)
-	}
-	if err := rows.Err(); err != nil {
-		return Recipe{}, fmt.Errorf("read ingredients: %w", err)
+	for _, l := range lines {
+		recipe.ingredients = append(recipe.ingredients, domain.IngredientCost{
+			IngredientID: l.IngredientID, Name: l.Name, Kind: l.Kind, Quantity: l.Quantity, Unit: l.Unit,
+			PricePerUnit: l.PricePerUnit, PackagePrice: l.PackagePrice, PackageSize: l.PackageSize,
+		})
 	}
 	return recipe, nil
 }
