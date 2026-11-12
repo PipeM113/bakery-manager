@@ -58,7 +58,7 @@ func (r *ExpenseRepository) Create(ctx context.Context, userID, description, cat
 	e, err := scanExpense(r.db.QueryRow(ctx, `
 		WITH ins AS (
 			INSERT INTO operational_expenses (created_by, description, amount, category_id, expense_date)
-			VALUES ($1, $2, $3, $4, $5) RETURNING *
+			VALUES ($1, $2, $3, $4, $5) RETURNING id, created_by, description, amount, category_id, expense_date, created_at, updated_at
 		)
 		SELECT `+expenseColumns+` FROM ins e JOIN expense_categories c ON c.id = e.category_id`,
 		userID, description, amount, categoryID, expenseDate))
@@ -101,7 +101,7 @@ func (r *ExpenseRepository) Update(ctx context.Context, id, description, categor
 		WITH upd AS (
 			UPDATE operational_expenses
 			SET description=$1, amount=$2, category_id=$3, expense_date=$4, updated_at=NOW()
-			WHERE id=$5 RETURNING *
+			WHERE id=$5 RETURNING id, created_by, description, amount, category_id, expense_date, created_at, updated_at
 		)
 		SELECT `+expenseColumns+` FROM upd e JOIN expense_categories c ON c.id = e.category_id`,
 		description, amount, categoryID, expenseDate, id))
