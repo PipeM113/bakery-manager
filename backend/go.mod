@@ -10,7 +10,7 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/jung-kurt/gofpdf v1.16.2
 	github.com/xuri/excelize/v2 v2.10.1
-	golang.org/x/crypto v0.49.0
+	golang.org/x/crypto v0.58.0
 	golang.org/x/image v0.25.0
 	golang.org/x/text v0.43.0
 )
@@ -24,6 +24,6 @@ require (
 	github.com/tiendc/go-deepcopy v1.7.2 // indirect
 	github.com/xuri/efp v0.0.1 // indirect
 	github.com/xuri/nfp v0.0.2-0.20250530014748-2ddeb826f9a9 // indirect
-	golang.org/x/net v0.51.0 // indirect
+	golang.org/x/net v0.60.0 // indirect
 	golang.org/x/sync v0.24.0 // indirect
 )
