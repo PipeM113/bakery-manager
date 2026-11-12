@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import type { IRecipe, IIngredientOption, RecipeFormData } from "../types/recipe";
+import type { IRecipe, IRecipeType, IIngredientOption, RecipeFormData } from "../types/recipe";
 import { emptyRecipeForm } from "../types/recipe";
 import RecipePhotoUpload from "./RecipePhotoUpload";
 import { apiErrorMessage } from "../utils/apiError";
@@ -9,12 +9,18 @@ import { compareIngredients, ingredientLabel, sortKey } from "../utils/ingredien
 interface Props {
   editing: IRecipe | null;
   ingredients: IIngredientOption[];
+  /** The types of recipe that exist (optional to use). */
+  types: IRecipeType[];
+  /** Creates a type and gives it back, so the form can choose it. */
+  onCreateType: (name: string) => Promise<IRecipeType>;
   onSave: (data: RecipeFormData) => Promise<void>;
   onSaveAs?: (data: RecipeFormData, versionName: string) => Promise<void>;
   onClose: () => void;
 }
 
-export default function RecipeForm({ editing, ingredients, onSave, onSaveAs, onClose }: Props) {
+const NEW_TYPE = "__new__";
+
+export default function RecipeForm({ editing, ingredients, types, onCreateType, onSave, onSaveAs, onClose }: Props) {
   const [form, setForm] = useState<RecipeFormData>(emptyRecipeForm);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -23,6 +29,11 @@ export default function RecipeForm({ editing, ingredients, onSave, onSaveAs, onC
   const [versionName, setVersionName] = useState("");
   const [savingAs, setSavingAs] = useState(false);
   const [versionError, setVersionError] = useState("");
+
+  // The optional type: choosing "+ Crear tipo…" opens a field to name the new one.
+  const [creatingType, setCreatingType] = useState(false);
+  const [newTypeName, setNewTypeName] = useState("");
+  const [typeError, setTypeError] = useState("");
 
   // Fix 2: dirty-state tracking
   const [isDirty, setIsDirty] = useState(false);
@@ -37,6 +48,7 @@ export default function RecipeForm({ editing, ingredients, onSave, onSaveAs, onC
     if (editing) {
       setForm({
         name: editing.name,
+        category_id: editing.category_id ?? null,
         description: editing.description || "",
         yield: editing.yield,
         yield_unit: editing.yield_unit,
@@ -50,6 +62,9 @@ export default function RecipeForm({ editing, ingredients, onSave, onSaveAs, onC
       setForm(emptyRecipeForm);
     }
     setError("");
+    setCreatingType(false);
+    setNewTypeName("");
+    setTypeError("");
     setDescriptionTouched(false);
     setIsDirty(false);
   }, [editing]);
@@ -194,6 +209,62 @@ export default function RecipeForm({ editing, ingredients, onSave, onSaveAs, onC
             onChange={(e) => { setForm({ ...form, name: e.target.value }); markDirty(); }}
             className={inputCls}
           />
+        </div>
+
+        <div>
+          <label className="block text-xs tracking-widest uppercase text-negro/70 mb-1.5 font-light">
+            Tipo (opcional)
+          </label>
+          <select
+            aria-label="Tipo"
+            value={creatingType ? NEW_TYPE : form.category_id ?? ""}
+            onChange={(e) => {
+              markDirty();
+              setTypeError("");
+              if (e.target.value === NEW_TYPE) { setCreatingType(true); return; }
+              setCreatingType(false);
+              setForm({ ...form, category_id: e.target.value || null });
+            }}
+            className={inputCls}
+          >
+            <option value="">Sin tipo</option>
+            {[...types].sort((a, b) => sortKey(a.name).localeCompare(sortKey(b.name))).map((t) => (
+              <option key={t.id} value={t.id}>{t.name}</option>
+            ))}
+            <option value={NEW_TYPE}>+ Crear tipo…</option>
+          </select>
+          {creatingType && (
+            <div className="mt-2 flex gap-2">
+              <input
+                type="text"
+                aria-label="Nombre del tipo"
+                placeholder="Nombre del tipo"
+                value={newTypeName}
+                maxLength={50}
+                onChange={(e) => setNewTypeName(e.target.value)}
+                className={inputCls}
+              />
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!newTypeName.trim()) { setTypeError("Escribe el nombre del tipo"); return; }
+                  try {
+                    const created = await onCreateType(newTypeName);
+                    setForm((f) => ({ ...f, category_id: created.id }));
+                    setCreatingType(false);
+                    setNewTypeName("");
+                    setTypeError("");
+                  } catch (e) {
+                    setTypeError(apiErrorMessage(e, "No se pudo crear el tipo"));
+                  }
+                }}
+                className="border border-linea text-negro text-xs tracking-widest uppercase font-medium px-4 hover:border-oro hover:text-oro transition-all shrink-0"
+              >
+                Crear
+              </button>
+            </div>
+          )}
+          {typeError && <p role="alert" className="text-peligro text-xs mt-1">{typeError}</p>}
         </div>
 
         <div>

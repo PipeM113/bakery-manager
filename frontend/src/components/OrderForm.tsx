@@ -1,4 +1,5 @@
 import { useState } from "react";
+import RecipeOptions from "./RecipeOptions";
 import api from "../services/api";
 import { orderService } from "../api/orderService";
 import Modal from "./Modal";
@@ -131,7 +132,7 @@ export default function OrderForm({ recipes, onClose, onCreated }: Props) {
               </div>
               <select value={l.recipe_id} onChange={(e) => chooseRecipe(l.key, e.target.value)} className={field} aria-label="Receta">
                 <option value="">Seleccionar receta...</option>
-                {recipes.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+                <RecipeOptions recipes={recipes} />
               </select>
               <div className="grid grid-cols-2 gap-2">
                 <div>

@@ -688,7 +688,7 @@ for (const w of FLOW_WIDTHS) {
     assert.equal(rename.body.name, "Hojarasca fina");
 
     await rows.filter({ hasText: "Merengue" }).getByRole("button", { name: "Eliminar" }).click();
-    await dialog.getByText(/2 recetas quedar\w+ sin tipo/).waitFor({ state: "visible" });
+    await dialog.getByText(/2 recetas quedar[aá]n sin tipo/).waitFor({ state: "visible" });
     await dialog.getByRole("button", { name: /S[ií], eliminar/ }).click();
     assert.ok(context.calls.some((c) => c.method === "DELETE" && /^\/recipe-categories\/[^/]+$/.test(c.path)), "the delete was not sent");
   }));
@@ -713,10 +713,8 @@ for (const w of FLOW_WIDTHS) {
   }));
 
   test(`U5 the selectors of Ventas, Pedidos and Cotización are grouped by type at ${w}px`, { timeout: 90000 }, flow(w, "/sales", {}, async (page) => {
-    await page.getByRole("button", { name: "Registrar Venta" }).click();
-    assert.deepEqual(await groupsIn(page.locator('[role="dialog"]').first()), GROUPS, "Registrar Venta");
-    await page.keyboard.press("Escape");
-    await page.reload({ waitUntil: "networkidle" });
+    // The sale form is part of the page (its button "Registrar Venta" is the submit), not a window.
+    assert.deepEqual(await groupsIn(page), GROUPS, "Registrar Venta");
     await page.getByRole("button", { name: "Nueva cotización" }).click();
     assert.deepEqual(await groupsIn(page.locator('[role="dialog"]').first()), GROUPS, "Nueva cotización");
     await page.reload({ waitUntil: "networkidle" });
