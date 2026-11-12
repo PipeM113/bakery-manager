@@ -33,6 +33,9 @@ export default function RecipesPage() {
     ])
       .then(([recs, ings, kinds]) => {
         setRecipes(recs);
+        // A filter whose chip is gone (its type was deleted, or only one type is left) is forgotten, so it cannot come back by itself.
+        const inUseNow = groupRecipes(recs).groups.filter((g) => g.id !== null);
+        setActiveType((current) => (inUseNow.length >= 2 && inUseNow.some((g) => g.id === current) ? current : null));
         setIngredients(ings);
         setTypes([...kinds].sort((a, b) => sortKey(a.name).localeCompare(sortKey(b.name))));
       })
@@ -89,7 +92,9 @@ export default function RecipesPage() {
 
   // The chips come from the types in use; the list shows what the search and the chip leave.
   const inUse = groupRecipes(recipes);
-  const chip = inUse.groups.some((g) => g.id === activeType && g.id !== null) ? activeType : null;
+  const typesInUse = inUse.groups.filter((g) => g.id !== null);
+  const chipsShown = typesInUse.length >= 2;
+  const chip = chipsShown && typesInUse.some((g) => g.id === activeType) ? activeType : null;
   const shown = groupRecipes(recipes.filter((r) => recipeMatches(r, search) && (chip === null || r.category_id === chip)));
 
   if (loading) {
@@ -137,7 +142,7 @@ export default function RecipesPage() {
                    placeholder-negro/70 focus:outline-none focus:border-oro transition-all"
       />
 
-      {inUse.groups.filter((g) => g.id !== null).length >= 2 && (
+      {chipsShown && (
         <div data-testid="type-chips" className="flex flex-wrap gap-2 mb-6">
           {[{ id: null as string | null, name: "Todos", count: recipes.length }, ...inUse.groups.filter((g) => g.id !== null).map((g) => ({ id: g.id, name: g.name, count: g.recipes.length }))].map((c) => (
             <button

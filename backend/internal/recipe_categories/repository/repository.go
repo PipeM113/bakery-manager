@@ -71,9 +71,17 @@ func (r *Repository) List(ctx context.Context) ([]Category, error) {
 	return out, nil
 }
 
+type querier interface {
+	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
+}
+
+// lockNames serializes the creation and the renaming of types: the accent-insensitive check below is made in
+// the application, so two requests at the same time must not both pass it.
+const lockNames = `SELECT pg_advisory_xact_lock(hashtext('recipe_categories.names'))`
+
 // taken says whether another type already has this name, without case or accents.
-func (r *Repository) taken(ctx context.Context, name, exceptID string) (bool, error) {
-	rows, err := r.db.Query(ctx, `SELECT id, name FROM recipe_categories`)
+func taken(ctx context.Context, db querier, name, exceptID string) (bool, error) {
+	rows, err := db.Query(ctx, `SELECT id, name FROM recipe_categories`)
 	if err != nil {
 		return false, fmt.Errorf("get recipe types: %w", err)
 	}
@@ -106,18 +114,29 @@ func (r *Repository) get(ctx context.Context, id string) (Category, error) {
 }
 
 func (r *Repository) Create(ctx context.Context, name string) (Category, error) {
-	if dup, err := r.taken(ctx, name, ""); err != nil {
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return Category{}, fmt.Errorf("begin tx: %w", err)
+	}
+	defer tx.Rollback(ctx)
+	if _, err := tx.Exec(ctx, lockNames); err != nil {
+		return Category{}, fmt.Errorf("lock recipe type names: %w", err)
+	}
+	if dup, err := taken(ctx, tx, name, ""); err != nil {
 		return Category{}, err
 	} else if dup {
 		return Category{}, ErrDuplicate
 	}
 	var id string
-	err := r.db.QueryRow(ctx, `INSERT INTO recipe_categories (name) VALUES ($1) RETURNING id`, name).Scan(&id)
+	err = tx.QueryRow(ctx, `INSERT INTO recipe_categories (name) VALUES ($1) RETURNING id`, name).Scan(&id)
 	if pgCode(err) == "23505" {
 		return Category{}, ErrDuplicate
 	}
 	if err != nil {
 		return Category{}, fmt.Errorf("create recipe type: %w", err)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return Category{}, fmt.Errorf("commit tx: %w", err)
 	}
 	return r.get(ctx, id)
 }
@@ -126,17 +145,28 @@ func (r *Repository) Rename(ctx context.Context, id, name string) (Category, err
 	if _, err := r.get(ctx, id); err != nil {
 		return Category{}, err
 	}
-	if dup, err := r.taken(ctx, name, id); err != nil {
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return Category{}, fmt.Errorf("begin tx: %w", err)
+	}
+	defer tx.Rollback(ctx)
+	if _, err := tx.Exec(ctx, lockNames); err != nil {
+		return Category{}, fmt.Errorf("lock recipe type names: %w", err)
+	}
+	if dup, err := taken(ctx, tx, name, id); err != nil {
 		return Category{}, err
 	} else if dup {
 		return Category{}, ErrDuplicate
 	}
-	_, err := r.db.Exec(ctx, `UPDATE recipe_categories SET name = $1, updated_at = NOW() WHERE id = $2`, name, id)
+	_, err = tx.Exec(ctx, `UPDATE recipe_categories SET name = $1, updated_at = NOW() WHERE id = $2`, name, id)
 	if pgCode(err) == "23505" {
 		return Category{}, ErrDuplicate
 	}
 	if err != nil {
 		return Category{}, fmt.Errorf("rename recipe type: %w", err)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return Category{}, fmt.Errorf("commit tx: %w", err)
 	}
 	return r.get(ctx, id)
 }

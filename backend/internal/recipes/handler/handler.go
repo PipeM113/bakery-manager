@@ -16,6 +16,7 @@ import (
 	"github.com/PipeM113/bakery-manager/pkg/httputil"
 	"github.com/PipeM113/bakery-manager/pkg/middleware"
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 // PhotoUploader stores a recipe photo and returns its public URL.
@@ -74,10 +75,31 @@ func (h *RecipeHandler) applyCategory(ctx context.Context, in recipeBody, recipe
 	if !recipeIDPattern.MatchString(*in.CategoryID.Value) {
 		return "el tipo no existe"
 	}
-	if ok, err := h.repo.CategoryExists(ctx, *in.CategoryID.Value); err != nil || !ok {
+	ok, err := h.repo.CategoryExists(ctx, *in.CategoryID.Value)
+	if err != nil {
+		log.Printf("[recipes] could not check the type: %v", err)
+		return categoryCheckFailed
+	}
+	if !ok {
 		return "el tipo no existe"
 	}
 	return ""
+}
+
+// categoryCheckFailed is the message when the database could not tell whether the type exists (a 500, not a 400).
+const categoryCheckFailed = "error revisando el tipo"
+
+// isMissingCategory reports the race where the type was deleted between its check and the write.
+func isMissingCategory(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == "23503" && pgErr.ConstraintName == "recipes_category_id_fkey"
+}
+
+func categoryStatus(msg string) int {
+	if msg == categoryCheckFailed {
+		return http.StatusInternalServerError
+	}
+	return http.StatusBadRequest
 }
 
 func (b recipeBody) validatePcts() error {
@@ -165,7 +187,7 @@ func (h *RecipeHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 	body := in.Recipe
 	if msg := h.applyCategory(r.Context(), in, &body); msg != "" {
-		httputil.JSONError(w, msg, http.StatusBadRequest)
+		httputil.JSONError(w, msg, categoryStatus(msg))
 		return
 	}
 
@@ -226,6 +248,10 @@ func (h *RecipeHandler) Create(w http.ResponseWriter, r *http.Request) {
 	log.Printf("[recipes] POST /recipes user=%s name=%q ingredients=%d", claims.ID, body.Name, len(body.Ingredients))
 
 	created, err := h.repo.Create(r.Context(), body)
+	if err != nil && isMissingCategory(err) {
+		httputil.JSONError(w, "el tipo no existe", http.StatusBadRequest)
+		return
+	}
 	if err != nil {
 		log.Printf("[recipes] Create error user=%s name=%q: %v", claims.ID, body.Name, err)
 		httputil.JSONError(w, "error creando receta", http.StatusInternalServerError)
@@ -386,7 +412,7 @@ func (h *RecipeHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	body := in.Recipe
 	if msg := h.applyCategory(r.Context(), in, &body); msg != "" {
-		httputil.JSONError(w, msg, http.StatusBadRequest)
+		httputil.JSONError(w, msg, categoryStatus(msg))
 		return
 	}
 	body.Name = strings.TrimSpace(body.Name)
@@ -438,6 +464,10 @@ func (h *RecipeHandler) Update(w http.ResponseWriter, r *http.Request) {
 	log.Printf("[recipes] PUT /recipes/%s user=%s name=%q", id, claims.ID, body.Name)
 
 	updated, err := h.repo.Update(r.Context(), id, body)
+	if err != nil && isMissingCategory(err) {
+		httputil.JSONError(w, "el tipo no existe", http.StatusBadRequest)
+		return
+	}
 	if err != nil {
 		log.Printf("[recipes] Update error id=%s user=%s: %v", id, claims.ID, err)
 		httputil.JSONError(w, "error actualizando receta", http.StatusInternalServerError)

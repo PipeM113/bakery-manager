@@ -207,14 +207,14 @@ func (s *CostService) PriceMany(ctx context.Context, in []PriceInput) (map[strin
 	for _, p := range in {
 		ids = append(ids, p.ID)
 	}
-	lines, _, err := recipeneeds.LoadMany(ctx, s.db, ids, 1)
+	lines, failed, err := recipeneeds.LoadMany(ctx, s.db, ids, 1)
 	if err != nil {
 		return nil, err
 	}
 	for _, p := range in {
-		recipeLines, ok := lines[p.ID]
-		if p.Yield <= 0 || !ok {
-			continue // without yield, or with a line that could not be converted (or no lines)
+		recipeLines := lines[p.ID] // a recipe without lines costs 0, as in the cost screen
+		if p.Yield <= 0 || failed[p.ID] != nil {
+			continue // without yield, or with a line that could not be converted
 		}
 		r := Recipe{ID: p.ID, Name: p.Name, Yield: p.Yield, YieldUnit: p.YieldUnit,
 			IndirectCostPct: p.IndirectCostPct, LaborCostPct: p.LaborCostPct, MarginPct: p.MarginPct}

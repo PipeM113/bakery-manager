@@ -744,3 +744,35 @@ for (const { w, h } of SCREENS) {
     }
   }));
 }
+
+// Support tests from the adversarial review of S16.
+for (const w of FLOW_WIDTHS) {
+  test(`U3 a new type that was named but not confirmed is created when the recipe is saved at ${w}px`, { timeout: 60000 }, flow(w, "/recipes", {
+    respond: (method, path) => (method === "POST" && path === "/recipe-categories" ? { status: 201, body: { id: "00000000-0000-4000-8000-0000000007f2", name: "Pascua", recipe_count: 0 } } : undefined),
+  }, async (page, context) => {
+    await cards(page).filter({ hasText: "Brownie" }).getByRole("button", { name: "Editar" }).click();
+    await page.getByRole("heading", { name: "Editar receta" }).waitFor({ state: "visible" });
+    await page.getByLabel("Tipo", { exact: true }).selectOption({ label: "+ Crear tipo…" });
+    await page.getByPlaceholder("Nombre del tipo").fill("Pascua");
+    await page.getByRole("button", { name: /^Guardar$/ }).first().click();
+    await page.waitForFunction(() => !document.body.innerText.includes("Editar receta"));
+    assert.ok(context.calls.some((c) => c.method === "POST" && c.path === "/recipe-categories" && c.body.name === "Pascua"), "the type was not created");
+    const saved = context.calls.find((c) => c.method === "PUT" && /^\/recipes\/[^/]+$/.test(c.path));
+    assert.equal(saved.body.category_id, "00000000-0000-4000-8000-0000000007f2");
+  }));
+
+  test(`U3 choosing "+ Crear tipo…" and saving without a name stops the save at ${w}px`, { timeout: 60000 }, flow(w, "/recipes", {}, async (page, context) => {
+    await cards(page).filter({ hasText: "Brownie" }).getByRole("button", { name: "Editar" }).click();
+    await page.getByRole("heading", { name: "Editar receta" }).waitFor({ state: "visible" });
+    await page.getByLabel("Tipo", { exact: true }).selectOption({ label: "+ Crear tipo…" });
+    await page.getByRole("button", { name: /^Guardar$/ }).first().click();
+    await page.getByRole("alert").filter({ hasText: /nombre del tipo/i }).waitFor({ state: "visible", timeout: 5000 });
+    assert.ok(!context.calls.some((c) => c.method === "PUT"), "the recipe was saved with a type left half done");
+  }));
+
+  test(`U1 the detail also opens from the keyboard at ${w}px`, { timeout: 60000 }, flow(w, "/recipes", {}, async (page) => {
+    await cards(page).filter({ hasText: "Brownie" }).getByRole("button", { name: "Brownie" }).focus();
+    await page.keyboard.press("Enter");
+    await page.getByRole("heading", { name: /Brownie/ }).waitFor({ state: "visible", timeout: 5000 });
+  }));
+}

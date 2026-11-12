@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Modal from "./Modal";
 import { recipeCategoryService } from "../api/recipeCategoryService";
 import type { IRecipeType } from "../types/recipe";
@@ -24,6 +24,7 @@ export default function RecipeCategoriesModal({ onClose, onChanged }: Props) {
   const [deleting, setDeleting] = useState<string | null>(null);
   const [error, setError]       = useState("");
   const [busy, setBusy]         = useState(false);
+  const working = useRef(false); // set at once, before the screen re-renders: a double Enter sends one request
 
   const reload = () =>
     recipeCategoryService.getAll()
@@ -34,6 +35,8 @@ export default function RecipeCategoriesModal({ onClose, onChanged }: Props) {
   useEffect(() => { reload(); }, []);
 
   const run = async (action: () => Promise<unknown>, fallback: string) => {
+    if (working.current) return false;
+    working.current = true;
     setError("");
     setBusy(true);
     try {
@@ -45,6 +48,7 @@ export default function RecipeCategoriesModal({ onClose, onChanged }: Props) {
       setError(apiErrorMessage(e, fallback));
       return false;
     } finally {
+      working.current = false;
       setBusy(false);
     }
   };

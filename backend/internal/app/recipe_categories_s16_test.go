@@ -351,3 +351,40 @@ func TestL2_TheListUsesTheSameNumberOfQueriesWhateverTheNumberOfRecipes(t *testi
 		t.Errorf("GET /recipes used %d queries with 2 recipes and %d with 12: it must not grow with the number of recipes", few, many)
 	}
 }
+
+// Support tests from the adversarial review of S16.
+func TestL1_ARecipeWithoutLinesIsPricedLikeTheCostScreen(t *testing.T) {
+	api := newAPIAt(t, "2026-03-10T15:00:00Z")
+	flour := ing(t, api.client, "Harina", "M", "", nil)
+	recipe := recipeOfType(t, api.client, "Pan", flour, "")
+	if _, err := api.db.Exec(t.Context(), `delete from recipe_ingredients where recipe_id = $1`, recipe); err != nil {
+		t.Fatal(err)
+	}
+	cost := getJSON(t, api.client, "/recipes/"+recipe+"/cost")
+	for _, r := range getList(t, api.client, "/recipes") {
+		if r["id"] != recipe {
+			continue
+		}
+		if r["total_cost"] == nil || number(t, r, "total_cost") != number(t, cost, "total_cost") || number(t, r, "suggested_price") != number(t, cost, "suggested_price") {
+			t.Errorf("list %v / %v, cost screen %v / %v: they must agree", r["total_cost"], r["suggested_price"], cost["total_cost"], cost["suggested_price"])
+		}
+	}
+}
+
+func TestT1_TwoCreationsAtTheSameTimeOfTheSameNameLeaveOne(t *testing.T) {
+	api, _ := newPricingAPI(t)
+	results := make(chan int, 2)
+	for _, name := range []string{"Café", "Cafe"} {
+		go func() {
+			status, _ := api.do("POST", "/recipe-categories", map[string]any{"name": name})
+			results <- status
+		}()
+	}
+	a, b := <-results, <-results
+	if !((a == http.StatusCreated && b == http.StatusConflict) || (a == http.StatusConflict && b == http.StatusCreated)) {
+		t.Errorf("statuses %d and %d, want one 201 and one 409", a, b)
+	}
+	if got := len(typeNames(t, api)); got != 1 {
+		t.Errorf("types = %d, want 1", got)
+	}
+}

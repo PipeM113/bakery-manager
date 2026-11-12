@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { IRecipe, IRecipeType, IIngredientOption, RecipeFormData } from "../types/recipe";
 import { emptyRecipeForm } from "../types/recipe";
 import RecipePhotoUpload from "./RecipePhotoUpload";
@@ -34,6 +34,38 @@ export default function RecipeForm({ editing, ingredients, types, onCreateType, 
   const [creatingType, setCreatingType] = useState(false);
   const [newTypeName, setNewTypeName] = useState("");
   const [typeError, setTypeError] = useState("");
+  const creatingNow = useRef(false); // a second click while the first is on its way must not send a second request
+
+  // Creates the type that is being named; gives back its id, or null (with the reason shown) when it could not be created.
+  const createTypeNow = async (): Promise<string | null> => {
+    if (creatingNow.current) return null;
+    if (!newTypeName.trim()) { setTypeError("Escribe el nombre del tipo"); return null; }
+    creatingNow.current = true;
+    try {
+      const created = await onCreateType(newTypeName);
+      setForm((f) => ({ ...f, category_id: created.id }));
+      setCreatingType(false);
+      setNewTypeName("");
+      setTypeError("");
+      return created.id;
+    } catch (e) {
+      setTypeError(apiErrorMessage(e, "No se pudo crear el tipo"));
+      return null;
+    } finally {
+      creatingNow.current = false;
+    }
+  };
+
+  // What the recipe is saved with: if a new type is still being named, it is created first (or the save is stopped).
+  const withTypeResolved = async (): Promise<RecipeFormData | null> => {
+    if (!creatingType) return form;
+    if (!newTypeName.trim()) {
+      setTypeError("Escribe el nombre del tipo nuevo o elige otro tipo");
+      return null;
+    }
+    const id = await createTypeNow();
+    return id === null ? null : { ...form, category_id: id };
+  };
 
   // Fix 2: dirty-state tracking
   const [isDirty, setIsDirty] = useState(false);
@@ -150,7 +182,9 @@ export default function RecipeForm({ editing, ingredients, types, onCreateType, 
     if (!validateForm()) return;
     setSaving(true);
     try {
-      await onSave(form);
+      const data = await withTypeResolved();
+      if (data === null) return;
+      await onSave(data);
     } catch (e) {
       setError(apiErrorMessage(e, "Error al guardar"));
     } finally {
@@ -172,7 +206,9 @@ export default function RecipeForm({ editing, ingredients, types, onCreateType, 
     setSavingAs(true);
     setVersionError("");
     try {
-      await onSaveAs!(form, name);
+      const data = await withTypeResolved();
+      if (data === null) { setShowVersionModal(false); return; }
+      await onSaveAs!(data, name);
       setShowVersionModal(false);
     } catch (e) {
       setVersionError(apiErrorMessage(e, "Error al crear versión"));
@@ -246,18 +282,7 @@ export default function RecipeForm({ editing, ingredients, types, onCreateType, 
               />
               <button
                 type="button"
-                onClick={async () => {
-                  if (!newTypeName.trim()) { setTypeError("Escribe el nombre del tipo"); return; }
-                  try {
-                    const created = await onCreateType(newTypeName);
-                    setForm((f) => ({ ...f, category_id: created.id }));
-                    setCreatingType(false);
-                    setNewTypeName("");
-                    setTypeError("");
-                  } catch (e) {
-                    setTypeError(apiErrorMessage(e, "No se pudo crear el tipo"));
-                  }
-                }}
+                onClick={() => { void createTypeNow(); }}
                 className="border border-linea text-negro text-xs tracking-widest uppercase font-medium px-4 hover:border-oro hover:text-oro transition-all shrink-0"
               >
                 Crear
