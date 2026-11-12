@@ -177,3 +177,55 @@ func (s *CostService) GetCostBreakdown(ctx context.Context, recipeID string, par
 	}
 	return recipe.Compute(params), nil
 }
+
+// Price is what the list of recipes shows for a recipe: the total cost and the suggested price, in whole
+// pesos, as the cost screen gives them with its default values.
+type Price struct {
+	TotalCost      float64
+	SuggestedPrice float64
+}
+
+// PriceInput is what PriceMany needs to know of a recipe besides its lines (the list already has it read).
+type PriceInput struct {
+	ID              string
+	Name            string
+	Yield           float64
+	YieldUnit       string
+	IndirectCostPct float64
+	LaborCostPct    float64
+	MarginPct       float64
+}
+
+// PriceMany prices several recipes with one query (their lines). A recipe that cannot be priced (a line
+// that cannot be converted, a yield that is not positive) is left out of the result.
+func (s *CostService) PriceMany(ctx context.Context, in []PriceInput) (map[string]Price, error) {
+	out := map[string]Price{}
+	if len(in) == 0 {
+		return out, nil
+	}
+	ids := make([]string, 0, len(in))
+	for _, p := range in {
+		ids = append(ids, p.ID)
+	}
+	lines, _, err := recipeneeds.LoadMany(ctx, s.db, ids, 1)
+	if err != nil {
+		return nil, err
+	}
+	for _, p := range in {
+		recipeLines, ok := lines[p.ID]
+		if p.Yield <= 0 || !ok {
+			continue // without yield, or with a line that could not be converted (or no lines)
+		}
+		r := Recipe{ID: p.ID, Name: p.Name, Yield: p.Yield, YieldUnit: p.YieldUnit,
+			IndirectCostPct: p.IndirectCostPct, LaborCostPct: p.LaborCostPct, MarginPct: p.MarginPct}
+		for _, l := range recipeLines {
+			r.ingredients = append(r.ingredients, domain.IngredientCost{
+				IngredientID: l.IngredientID, Name: l.Name, Kind: l.Kind, Quantity: l.Quantity, Unit: l.Unit,
+				PricePerUnit: l.PricePerUnit, PackagePrice: l.PackagePrice, PackageSize: l.PackageSize,
+			})
+		}
+		b := r.Compute(CostParams{})
+		out[p.ID] = Price{TotalCost: b.TotalCost, SuggestedPrice: b.SuggestedPrice}
+	}
+	return out, nil
+}
