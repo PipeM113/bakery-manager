@@ -3,7 +3,7 @@ updates:
   - package-ecosystem: "npm"
     directory: "/frontend"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
     open-pull-requests-limit: 3
     # One pull request per week with the minor and patch updates: separate ones all touch package-lock.json
     # and conflict with each other as soon as one is merged.
@@ -29,7 +29,7 @@ updates:
   - package-ecosystem: "gomod"
     directory: "/backend"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
     open-pull-requests-limit: 3
     groups:
       minor-and-patch:
