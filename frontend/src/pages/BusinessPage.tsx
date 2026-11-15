@@ -1,3 +1,4 @@
+import { FormSkeleton } from "../components/Skeleton";
 import { useEffect, useState } from "react";
 import { businessService, ACCOUNT_TYPES, type BusinessForm } from "../api/businessService";
 
@@ -12,6 +13,7 @@ export default function BusinessPage() {
   const [error, setError]     = useState("");
   const [saved, setSaved]     = useState(false);
   const [saving, setSaving]   = useState(false);
+  const [loaded, setLoaded]   = useState(false);
 
   useEffect(() => {
     businessService.get()
@@ -19,7 +21,8 @@ export default function BusinessPage() {
         setForm(rest);
         setEnvMissing(missing.filter((m) => m.startsWith("BIZ_")));
       })
-      .catch(() => setError("Error cargando los datos del negocio"));
+      .catch(() => setError("Error cargando los datos del negocio"))
+      .finally(() => setLoaded(true));
   }, []);
 
   const set = (key: keyof BusinessForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -55,6 +58,7 @@ export default function BusinessPage() {
         </p>
       </div>
 
+      {!loaded ? <FormSkeleton fields={5} label="Cargando los datos del negocio…" /> : (
       <form data-testid="business-form" onSubmit={handleSubmit} className="bg-white border border-linea p-6 space-y-4">
         <div>
           <label htmlFor="biz-phone" className={labelClass}>Teléfono</label>
@@ -109,6 +113,7 @@ export default function BusinessPage() {
           </button>
         </div>
       </form>
+      )}
     </div>
     </div>
   );

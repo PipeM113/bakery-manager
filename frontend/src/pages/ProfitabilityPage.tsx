@@ -1,3 +1,4 @@
+import { CardsSkeleton } from "../components/Skeleton";
 import { useEffect, useState, useMemo } from "react";
 import {
   analyticsService,
@@ -221,9 +222,7 @@ export default function ProfitabilityPage() {
       </div>
 
       {loading ? (
-        <div className="min-h-64 flex items-center justify-center">
-          <span className="text-oro text-sm tracking-widest uppercase font-light animate-pulse">Calculando...</span>
-        </div>
+        <CardsSkeleton bare cards={4} rows={3} label="Calculando…" />
       ) : (
         <>
           {/* KPI grid */}

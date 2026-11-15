@@ -1,3 +1,4 @@
+import { ListSkeleton } from "../components/Skeleton";
 import { useEffect, useState } from "react";
 import { recipeService } from "../api/recipeService";
 import { ingredientService } from "../api/ingredientService";
@@ -98,13 +99,7 @@ export default function RecipesPage() {
   const chip = chipsShown && typesInUse.some((g) => g.id === activeType) ? activeType : null;
   const shown = groupRecipes(recipes.filter((r) => recipeMatches(r, search) && (chip === null || r.category_id === chip)));
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <span className="text-oro text-sm tracking-widest uppercase animate-pulse">Cargando...</span>
-      </div>
-    );
-  }
+  if (loading) return <ListSkeleton label="Cargando recetas…" />;
 
   return (
     <div className="px-6 py-10 max-w-2xl mx-auto md:max-w-none md:px-10">

@@ -1,3 +1,4 @@
+import { RowsSkeleton } from "../components/Skeleton";
 import { useEffect, useRef, useState } from "react";
 import { expenseService } from "../api/expenseService";
 import { expenseCategoryService } from "../api/expenseCategoryService";
@@ -44,6 +45,8 @@ export default function ExpensesPage() {
     setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 4000);
   };
 
+  const [listLoading, setListLoading] = useState(true);
+
   const load = (month: number, year: number) => {
     expenseService
       .getByMonth(month, year)
@@ -54,7 +57,8 @@ export default function ExpensesPage() {
       .catch((err) => {
         console.error("Error loading expenses:", err);
         setError("Error cargando gastos");
-      });
+      })
+      .finally(() => setListLoading(false));
   };
 
   const loadCategories = () =>
@@ -429,7 +433,9 @@ export default function ExpensesPage() {
           </div>
         </div>
 
-        {expenses.length === 0 ? (
+        {listLoading && expenses.length === 0 ? (
+          <RowsSkeleton label="Cargando gastos…" />
+        ) : expenses.length === 0 ? (
           <p className="text-negro/70 text-sm font-light text-center py-10">
             No hay gastos registrados para este período
           </p>

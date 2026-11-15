@@ -1,3 +1,4 @@
+import { RowsSkeleton } from "../components/Skeleton";
 import { useEffect, useState } from "react";
 import { fixedCostService } from "../api/fixedCostService";
 import type { IFixedCost } from "../types/fixedCost";
@@ -16,8 +17,11 @@ export default function FixedCostsPage() {
   const [error, setError]         = useState("");
   const [loading, setLoading]     = useState(false);
 
-  const load = () =>
-    fixedCostService.getAll(month).then(setCosts).catch(() => setError("Error cargando costos fijos"));
+  const [listLoading, setListLoading] = useState(true);
+
+  const load = () => {
+    return fixedCostService.getAll(month).then(setCosts).catch(() => setError("Error cargando costos fijos")).finally(() => setListLoading(false));
+  };
 
   useEffect(() => { load(); }, [month]);
 
@@ -208,7 +212,9 @@ export default function FixedCostsPage() {
           )}
         </div>
 
-        {costs.length === 0 ? (
+        {listLoading && costs.length === 0 ? (
+          <RowsSkeleton label="Cargando costos fijos…" />
+        ) : costs.length === 0 ? (
           <p className="text-negro/70 text-sm font-light text-center py-10">
             No hay costos fijos en este mes
           </p>

@@ -1,3 +1,4 @@
+import { ListSkeleton } from "../components/Skeleton";
 import { useEffect, useRef, useState } from "react";
 import IngredientImportModal from "../components/IngredientImportModal";
 import StockAdjustmentModal from "../components/StockAdjustmentModal";
@@ -177,11 +178,7 @@ export default function IngredientsPage() {
     }
   };
 
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center">
-      <span className="text-oro text-sm tracking-widest uppercase animate-pulse">Cargando...</span>
-    </div>
-  );
+  if (loading) return <ListSkeleton label="Cargando ingredientes…" />;
 
   const numericFields = [
     { label: "Tamaño del paquete",  key: "package_size",    placeholder: "ej. 1000 (gr/ml) · 1 (kg/lt)" },

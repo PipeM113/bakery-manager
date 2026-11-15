@@ -85,3 +85,15 @@ export function FormSkeleton({ fields = 5, label = "Cargando…" }: { fields?: n
     </div>
   );
 }
+
+/** Rows inside a card or table area that is still loading, instead of "No hay ..." for a moment. */
+export function RowsSkeleton({ rows = 4, label = "Cargando…" }: { rows?: number; label?: string }) {
+  return (
+    <div role="status" aria-busy="true" aria-live="polite" data-testid="skeleton" className="px-6 py-4 space-y-3">
+      <span className="sr-only">{label}</span>
+      {Array.from({ length: rows }, (_, i) => (
+        <SkeletonBlock key={i} className="h-10 w-full" />
+      ))}
+    </div>
+  );
+}
