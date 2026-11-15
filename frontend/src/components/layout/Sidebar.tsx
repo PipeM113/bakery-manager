@@ -32,20 +32,20 @@ export default function Sidebar() {
         zIndex: 100,
       }}
     >
-      <div className="flex-shrink-0 px-8 py-10 border-b border-linea">
-        <img src={logo} alt="Angeles Bakery" className="h-14 w-auto" />
-        <p className="text-negro/70 text-xs tracking-[0.25em] uppercase mt-3 font-light">
+      <div className="flex-shrink-0 px-8 py-10 [@media(max-height:760px)]:py-5 border-b border-linea">
+        <img src={logo} alt="Angeles Bakery" className="h-14 [@media(max-height:760px)]:h-11 w-auto" />
+        <p className="text-negro/70 text-xs tracking-[0.25em] uppercase mt-3 [@media(max-height:760px)]:mt-2 font-light">
           Gestión
         </p>
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-4 py-8 space-y-1">
+      <nav className="flex-1 overflow-y-auto px-4 py-8 [@media(max-height:760px)]:py-3 space-y-1 [@media(max-height:760px)]:space-y-0.5">
         {links.map(({ to, icon, label }) => (
           <NavLink
             key={to}
             to={to}
             className={({ isActive }) =>
-              `flex items-center gap-3 px-4 py-3 transition-all duration-200 text-sm tracking-wider ${
+              `flex items-center gap-3 px-4 py-3 [@media(max-height:760px)]:py-2 focus-visible:outline-offset-[-2px] transition-all duration-200 text-sm tracking-wider ${
                 isActive
                   ? "bg-crema text-oro border-l-2 border-oro"
                   : "text-negro/70 hover:text-negro hover:bg-lino"
@@ -58,7 +58,7 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      <div className="flex-shrink-0 px-8 py-6 border-t border-linea">
+      <div className="flex-shrink-0 px-8 py-6 [@media(max-height:760px)]:py-4 border-t border-linea">
         <button
           onClick={logout}
           className="text-xs text-negro/70 hover:text-oro tracking-widest uppercase transition-colors"

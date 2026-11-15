@@ -71,7 +71,7 @@ export default function BusinessPage() {
           </div>
           <div>
             <label htmlFor="biz-type" className={labelClass}>Tipo de cuenta</label>
-            <select id="biz-type" className={fieldClass} value={form.account_type} onChange={set("account_type")}>
+            <select id="biz-type" className={`${fieldClass} select-field`} value={form.account_type} onChange={set("account_type")}>
               <option value="">Elige…</option>
               {ACCOUNT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
