@@ -1,3 +1,4 @@
+import { CardsSkeleton } from "../components/Skeleton";
 import { useEffect, useState } from "react";
 import { ingredientService } from "../api/ingredientService";
 import { recipeService } from "../api/recipeService";
@@ -22,11 +23,7 @@ export default function DashboardPage() {
   const words     = userName.split(" ");
   const firstName = words.length > 2 ? words.slice(0, -2).join(" ") : words[0] ?? "";
 
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center">
-      <span className="text-oro text-sm tracking-widest uppercase font-light animate-pulse">Cargando...</span>
-    </div>
-  );
+  if (loading) return <CardsSkeleton label="Cargando el panel…" />;
 
   return (
     <div className="px-6 py-10 max-w-2xl mx-auto md:max-w-none md:px-10">

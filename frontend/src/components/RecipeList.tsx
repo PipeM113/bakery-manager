@@ -64,13 +64,13 @@ function RecipeRow({ r, onView, onEdit, onDelete }: { r: IRecipe } & Pick<Props,
               </p>
             )}
           </div>
-          <div className="flex items-center gap-3 mt-2 md:mt-0 md:ml-4 shrink-0">
+          <div className="flex items-center gap-6 mt-2 md:mt-0 md:ml-4 shrink-0">
             <button onClick={(e) => { e.stopPropagation(); onEdit(r); }}
               className="text-xs text-negro/70 hover:text-oro tracking-wider transition-colors">
               Editar
             </button>
             <button onClick={(e) => { e.stopPropagation(); onDelete(r.id); }}
-              className="text-xs text-negro/70 hover:text-peligro tracking-wider transition-colors">
+              className="text-xs text-peligro/90 hover:text-peligro hover:underline tracking-wider transition-colors">
               Eliminar
             </button>
           </div>

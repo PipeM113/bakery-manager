@@ -1,3 +1,4 @@
+import { FormSkeleton } from "../components/Skeleton";
 import { useEffect, useState } from "react";
 import { businessService, ACCOUNT_TYPES, type BusinessForm } from "../api/businessService";
 
@@ -12,6 +13,7 @@ export default function BusinessPage() {
   const [error, setError]     = useState("");
   const [saved, setSaved]     = useState(false);
   const [saving, setSaving]   = useState(false);
+  const [loaded, setLoaded]   = useState(false);
 
   useEffect(() => {
     businessService.get()
@@ -19,7 +21,8 @@ export default function BusinessPage() {
         setForm(rest);
         setEnvMissing(missing.filter((m) => m.startsWith("BIZ_")));
       })
-      .catch(() => setError("Error cargando los datos del negocio"));
+      .catch(() => setError("Error cargando los datos del negocio"))
+      .finally(() => setLoaded(true));
   }, []);
 
   const set = (key: keyof BusinessForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -46,6 +49,7 @@ export default function BusinessPage() {
   };
 
   return (
+    <div className="px-6 py-10 md:px-10">
     <div className="max-w-2xl">
       <div className="mb-8">
         <h1 className="font-display text-3xl text-negro">Datos del negocio</h1>
@@ -54,6 +58,7 @@ export default function BusinessPage() {
         </p>
       </div>
 
+      {!loaded ? <FormSkeleton fields={5} label="Cargando los datos del negocio…" /> : (
       <form data-testid="business-form" onSubmit={handleSubmit} className="bg-white border border-linea p-6 space-y-4">
         <div>
           <label htmlFor="biz-phone" className={labelClass}>Teléfono</label>
@@ -71,7 +76,7 @@ export default function BusinessPage() {
           </div>
           <div>
             <label htmlFor="biz-type" className={labelClass}>Tipo de cuenta</label>
-            <select id="biz-type" className={`${fieldClass} select-field`} value={form.account_type} onChange={set("account_type")}>
+            <select id="biz-type" className={fieldClass} value={form.account_type} onChange={set("account_type")}>
               <option value="">Elige…</option>
               {ACCOUNT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
@@ -108,6 +113,8 @@ export default function BusinessPage() {
           </button>
         </div>
       </form>
+      )}
+    </div>
     </div>
   );
 }

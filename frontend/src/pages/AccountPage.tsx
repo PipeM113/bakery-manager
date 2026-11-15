@@ -37,6 +37,7 @@ export default function AccountPage() {
   };
 
   return (
+    <div className="px-6 py-10 md:px-10">
     <div className="max-w-xl">
       <div className="mb-8">
         <h1 className="font-display text-3xl text-negro">Mi cuenta</h1>
@@ -74,6 +75,7 @@ export default function AccountPage() {
           </button>
         </div>
       </form>
+    </div>
     </div>
   );
 }

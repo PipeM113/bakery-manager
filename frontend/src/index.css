@@ -40,16 +40,6 @@
   .gold-border {
     border: 1px solid theme('colors.oro');
   }
-  /* A select that looks like the text fields beside it: same height, own chevron. */
-  .select-field {
-    appearance: none;
-    -webkit-appearance: none;
-    border-radius: 0;
-    padding-right: 2.25rem;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none' stroke='%231C1C1C' stroke-width='1.5'%3E%3Cpath d='M1 1.5l5 5 5-5'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 0.875rem center;
-  }
   .ornament::before,
   .ornament::after {
     content: '◆';
@@ -76,4 +66,16 @@
   textarea {
     font-size: 16px !important;
   }
+}
+
+/* Every select looks like the text fields beside it: same border and height, own chevron.
+   Outside the layers so the padding wins over the utility classes on each select. */
+select:not([multiple]) {
+  appearance: none;
+  -webkit-appearance: none;
+  border-radius: 0;
+  padding-right: 2.25rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none' stroke='%231C1C1C' stroke-width='1.5'%3E%3Cpath d='M1 1.5l5 5 5-5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.875rem center;
 }

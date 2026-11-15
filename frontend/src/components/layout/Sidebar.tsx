@@ -1,18 +1,19 @@
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../../context/useAuth";
+import { Icon, type IconName } from "./icons";
 import logo from "../../assets/brand/logo-color.svg";
 
-const links = [
-  { to: "/dashboard",   icon: "◉", label: "Dashboard"    },
-  { to: "/ingredients", icon: "⚗", label: "Ingredientes"  },
-  { to: "/recipes",     icon: "✦", label: "Recetas"      },
-  { to: "/costs",       icon: "◈", label: "Costos"       },
-  { to: "/fixed-costs", icon: "⊟", label: "Costos Fijos" },
-  { to: "/sales",       icon: "⊕", label: "Ventas"        },
-  { to: "/expenses",       icon: "◷", label: "Gastos"        },
-  { to: "/profitability",  icon: "◈", label: "Rentabilidad"  },
-  { to: "/business",       icon: "⌂", label: "Datos del negocio" },
-  { to: "/account",        icon: "☺", label: "Mi cuenta" },
+const links: { to: string; icon: IconName; label: string }[] = [
+  { to: "/dashboard",   icon: "dashboard", label: "Dashboard"    },
+  { to: "/ingredients", icon: "ingredients", label: "Ingredientes"  },
+  { to: "/recipes",     icon: "recipes", label: "Recetas"      },
+  { to: "/costs",       icon: "costs", label: "Costos"       },
+  { to: "/fixed-costs", icon: "fixed", label: "Costos Fijos" },
+  { to: "/sales",       icon: "sales", label: "Ventas"        },
+  { to: "/expenses",       icon: "expenses", label: "Gastos"        },
+  { to: "/profitability",  icon: "profit", label: "Rentabilidad"  },
+  { to: "/business",       icon: "business", label: "Datos del negocio" },
+  { to: "/account",        icon: "account", label: "Mi cuenta" },
 ];
 
 export default function Sidebar() {
@@ -52,7 +53,7 @@ export default function Sidebar() {
               }`
             }
           >
-            <span className="text-base">{icon}</span>
+            <Icon name={icon} />
             <span className="font-light">{label}</span>
           </NavLink>
         ))}

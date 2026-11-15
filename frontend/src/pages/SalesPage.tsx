@@ -1,3 +1,4 @@
+import { RowsSkeleton } from "../components/Skeleton";
 import { useIsPhone } from "../hooks/useIsPhone";
 import RecipeOptions from "../components/RecipeOptions";
 import { useEffect, useRef, useState } from "react";
@@ -94,10 +95,14 @@ export default function SalesPage() {
     successTimer.current = setTimeout(() => setSuccessMsg(""), 8000);
   };
 
+  const [salesLoaded, setSalesLoaded] = useState(false);
+  const [quotationsLoaded, setQuotationsLoaded] = useState(false);
+
   const loadSales = (from = filterFrom, to = filterTo) =>
     saleService.getAll(from || undefined, to || undefined)
       .then(setSales)
-      .catch(() => setError("Error cargando ventas"));
+      .catch(() => setError("Error cargando ventas"))
+      .finally(() => setSalesLoaded(true));
 
   const loadOrders = () =>
     orderService.getAll()
@@ -134,7 +139,8 @@ export default function SalesPage() {
   const loadQuotations = (status: QuotationStatusFilter = quotationFilter) =>
     quotationService.getAll(status || undefined)
       .then(setQuotations)
-      .catch(() => setError("Error cargando cotizaciones"));
+      .catch(() => setError("Error cargando cotizaciones"))
+      .finally(() => setQuotationsLoaded(true));
 
   useEffect(() => {
     recipeService.getAll().then(setRecipes).catch(() => setError("Error cargando recetas"));
@@ -631,7 +637,9 @@ export default function SalesPage() {
           )}
           {quoteMessage && <p role="alert" className="px-6 py-3 text-sm text-peligro border-b border-linea">{quoteMessage}</p>}
 
-          {displayedQuotations.length === 0 ? (
+          {!quotationsLoaded ? (
+            <RowsSkeleton label="Cargando cotizaciones…" />
+          ) : displayedQuotations.length === 0 ? (
             <p className="text-negro/70 text-sm font-light text-center py-10">
               No hay cotizaciones
             </p>
@@ -705,8 +713,8 @@ export default function SalesPage() {
                           {STATUS_LABEL[q.status]}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-right whitespace-nowrap">
-                        <div className="flex gap-2 justify-end">
+                      <td className="px-4 py-4 text-right">
+                        <div className="flex flex-wrap gap-2 justify-end">
                         <button data-testid="quote-download" onClick={() => handleDownloadQuotation(q)}
                           className="text-xs tracking-widest uppercase font-medium px-3 py-1.5 border border-oro text-oro hover:bg-lino transition-all">
                           Descargar PDF
@@ -790,7 +798,9 @@ export default function SalesPage() {
             )}
           </div>
 
-          {sales.length === 0 ? (
+          {!salesLoaded ? (
+            <RowsSkeleton label="Cargando ventas…" />
+          ) : sales.length === 0 ? (
             <p className="text-negro/70 text-sm font-light text-center py-10">
               No hay ventas registradas
             </p>
