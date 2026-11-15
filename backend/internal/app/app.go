@@ -37,6 +37,8 @@ import (
 	expRepo "github.com/PipeM113/bakery-manager/internal/operational_expenses/repository"
 	expSvc "github.com/PipeM113/bakery-manager/internal/operational_expenses/service"
 	quoteHand "github.com/PipeM113/bakery-manager/internal/quotations/handler"
+	rcHand "github.com/PipeM113/bakery-manager/internal/recipe_categories/handler"
+	rcRepo "github.com/PipeM113/bakery-manager/internal/recipe_categories/repository"
 	recHand "github.com/PipeM113/bakery-manager/internal/recipes/handler"
 	recRepo "github.com/PipeM113/bakery-manager/internal/recipes/repository"
 	saleHand "github.com/PipeM113/bakery-manager/internal/sales/handler"
@@ -103,8 +105,8 @@ func NewWithClock(cfg config.Config, db *pgxpool.Pool, photos PhotoUploader, clk
 	ingredientHandler := ingHand.NewIngredientHandler(ingredientRepo, ingredientImportSvc, clk)
 
 	recipeRepo := recRepo.NewRecipeRepository(db)
-	recipeHandler := recHand.NewRecipeHandler(recipeRepo, photos)
 	costSvc := costService.NewCostService(db)
+	recipeHandler := recHand.NewRecipeHandler(recipeRepo, photos, costSvc)
 	costHandler := costHandler.NewCostHandler(costSvc, recipeRepo)
 	stockAdjustmentHandler := saHand.New(saRepo.New(db), clk)
 	fixedCostRepo := fcRepo.NewFixedCostRepository(db)
@@ -169,6 +171,11 @@ func NewWithClock(cfg config.Config, db *pgxpool.Pool, photos PhotoUploader, clk
 		expenseService := expSvc.NewExpenseService(expenseRepository)
 		expenseHandler := expHand.NewExpenseHandler(expenseService, clk)
 		categoryHandler := catHand.NewCategoryHandler(catRepo.NewCategoryRepository(db))
+		recipeTypeHandler := rcHand.New(rcRepo.New(db))
+		r.Get("/recipe-categories", recipeTypeHandler.List)
+		r.Post("/recipe-categories", recipeTypeHandler.Create)
+		r.Put("/recipe-categories/{id}", recipeTypeHandler.Rename)
+		r.Delete("/recipe-categories/{id}", recipeTypeHandler.Delete)
 		r.Get("/expense-categories", categoryHandler.List)
 		r.Post("/expense-categories", categoryHandler.Create)
 		r.Put("/expense-categories/{id}", categoryHandler.Rename)

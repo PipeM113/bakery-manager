@@ -20,6 +20,12 @@ export interface IRecipe {
   yield: number;
   yield_unit: string;
   photo_url: string | null;
+  /** The type of the recipe (optional): its id and its name, empty when it has none. */
+  category_id: string | null;
+  category: string;
+  /** Whole pesos; null when the recipe cannot be priced (for example, an equivalence is missing). */
+  total_cost: number | null;
+  suggested_price: number | null;
   is_base: boolean;
   scale_factor: number;
   indirect_cost_pct: number;
@@ -43,8 +49,17 @@ export interface IIngredientOption {
   grams_per_unit?: number;
 }
 
+/** A type of recipe, with how many recipes have it. */
+export interface IRecipeType {
+  id: string;
+  name: string;
+  recipe_count: number;
+}
+
 export type RecipeFormData = {
   name: string;
+  /** The type of the recipe; null when it has none. */
+  category_id: string | null;
   description: string;
   yield: number | "";
   yield_unit: string;
@@ -53,6 +68,7 @@ export type RecipeFormData = {
 
 export const emptyRecipeForm: RecipeFormData = {
   name: "",
+  category_id: null,
   description: "",
   yield: "",
   yield_unit: "porciones",

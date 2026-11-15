@@ -31,12 +31,22 @@ const recipeLine = (recipeId, ing, quantity, unit) => ({
   kind: ing.kind, quantity, unit,
 });
 
-const recipe = (n, name, yieldN) => {
+// Sprint 16: a recipe may have a type (category) and carries its cost and suggested price (null when it cannot be priced).
+export const recipeTypes = [
+  { id: "00000000-0000-4000-8000-0000000007a1", name: "Tortas bizcocho" },
+  { id: "00000000-0000-4000-8000-0000000007a2", name: "Hojarasca" },
+  { id: "00000000-0000-4000-8000-0000000007a3", name: "Merengue" },
+];
+const typeOf = (name) => recipeTypes.find((t) => t.name === name);
+
+const recipe = (n, name, yieldN, typeName = null, prices = [12000, 18500]) => {
   const id = `00000000-0000-4000-8000-0000000003${String(n).padStart(2, "0")}`;
+  const type = typeName ? typeOf(typeName) : null;
   return {
     id, user_id: "u1", parent_id: null, name, description: "Bizcocho húmedo relleno y cubierto, con decoración.",
     yield: yieldN, yield_unit: "porciones", photo_url: null, is_base: true, scale_factor: 1,
     indirect_cost_pct: 0.3, labor_cost_pct: 0.3, margin_pct: 0.3, extra_charge: 0, delivery_cost: 0,
+    category_id: type?.id ?? null, category: type?.name ?? "", total_cost: prices[0], suggested_price: prices[1],
     ingredients: [
       recipeLine(id, ingredients[0], 200, "gr"), recipeLine(id, ingredients[1], 0.5, "kg"),
       recipeLine(id, ingredients[3], 250, "gr"), recipeLine(id, ingredients[12], 1, "und"),
@@ -46,8 +56,13 @@ const recipe = (n, name, yieldN) => {
 };
 
 export const recipes = [
-  recipe(1, "Torta de milhojas con manjar y nueces", 20), recipe(2, "Pie de limón", 8), recipe(3, "Brownie", 12),
+  recipe(1, "Torta de milhojas con manjar y nueces", 20, "Tortas bizcocho"), recipe(2, "Pie de limón", 8, "Tortas bizcocho"), recipe(3, "Brownie", 12),
+  recipe(4, "Alfajor de hojarasca", 24, "Hojarasca", [8000, 11000]), recipe(5, "Hojarasca con manjar", 16, "Hojarasca", [9500, 13500]),
+  recipe(6, "Pavlova de frutillas", 10, "Merengue", [15000, 21000]), recipe(7, "Merengue italiano", 6, "Merengue", [4000, 6000]),
+  recipe(8, "Pan de pascua", 14, null, [null, null]),
 ];
+
+export const typesWithCount = () => recipeTypes.map((t) => ({ ...t, recipe_count: recipes.filter((r) => r.category_id === t.id).length }));
 
 export const cost = (r) => ({
   recipe_id: r.id, recipe_name: r.name, yield: r.yield, yield_unit: r.yield_unit,
@@ -141,6 +156,7 @@ export function answer(method, pathname) {
   if (pathname === "/ingredients") return { body: ingredients };
   if (m(/^\/ingredients\/[^/]+\/(history|stock-adjustments)$/)) return { body: [] };
   if (pathname === "/recipes") return { body: recipes };
+  if (pathname === "/recipe-categories") return { body: typesWithCount() };
   if (m(/^\/recipes\/[^/]+\/cost$/)) return { body: cost(recipes.find((r) => pathname.includes(r.id)) ?? recipes[0]) };
   if (m(/^\/recipes\/[^/]+$/)) return { body: recipes.find((r) => pathname.endsWith(r.id)) ?? recipes[0] };
   if (pathname === "/quotations") return { body: quotations };

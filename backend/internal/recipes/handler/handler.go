@@ -16,6 +16,7 @@ import (
 	"github.com/PipeM113/bakery-manager/pkg/httputil"
 	"github.com/PipeM113/bakery-manager/pkg/middleware"
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 // PhotoUploader stores a recipe photo and returns its public URL.
@@ -45,11 +46,60 @@ func (h *RecipeHandler) removePhoto(ctx context.Context, url, recipeID string) {
 
 // recipeBody is a recipe as the client sends it. The three percentages are pointers so that
 // "not sent" can be told apart from a real 0%.
+// optionalID tells an absent field from a null one: a PUT without category_id keeps the type, with null clears it.
+type optionalID struct {
+	Set   bool
+	Value *string
+}
+
+func (o *optionalID) UnmarshalJSON(b []byte) error {
+	o.Set = true
+	return json.Unmarshal(b, &o.Value)
+}
+
 type recipeBody struct {
 	repository.Recipe
-	IndirectCostPct *float64 `json:"indirect_cost_pct"`
-	LaborCostPct    *float64 `json:"labor_cost_pct"`
-	MarginPct       *float64 `json:"margin_pct"`
+	CategoryID      optionalID `json:"category_id"`
+	IndirectCostPct *float64   `json:"indirect_cost_pct"`
+	LaborCostPct    *float64   `json:"labor_cost_pct"`
+	MarginPct       *float64   `json:"margin_pct"`
+}
+
+// applyCategory copies the type of the body into the recipe and checks that it exists. It answers what is wrong, or "".
+func (h *RecipeHandler) applyCategory(ctx context.Context, in recipeBody, recipe *repository.Recipe) string {
+	recipe.CategorySet = in.CategoryID.Set
+	recipe.CategoryID = in.CategoryID.Value
+	if in.CategoryID.Value == nil {
+		return ""
+	}
+	if !recipeIDPattern.MatchString(*in.CategoryID.Value) {
+		return "el tipo no existe"
+	}
+	ok, err := h.repo.CategoryExists(ctx, *in.CategoryID.Value)
+	if err != nil {
+		log.Printf("[recipes] could not check the type: %v", err)
+		return categoryCheckFailed
+	}
+	if !ok {
+		return "el tipo no existe"
+	}
+	return ""
+}
+
+// categoryCheckFailed is the message when the database could not tell whether the type exists (a 500, not a 400).
+const categoryCheckFailed = "error revisando el tipo"
+
+// isMissingCategory reports the race where the type was deleted between its check and the write.
+func isMissingCategory(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == "23503" && pgErr.ConstraintName == "recipes_category_id_fkey"
+}
+
+func categoryStatus(msg string) int {
+	if msg == categoryCheckFailed {
+		return http.StatusInternalServerError
+	}
+	return http.StatusBadRequest
 }
 
 func (b recipeBody) validatePcts() error {
@@ -61,10 +111,18 @@ func (b recipeBody) validatePcts() error {
 type RecipeHandler struct {
 	repo   *repository.RecipeRepository
 	photos PhotoUploader
+	costs  *costs.CostService
 }
 
-func NewRecipeHandler(repo *repository.RecipeRepository, photos PhotoUploader) *RecipeHandler {
-	return &RecipeHandler{repo: repo, photos: photos}
+func NewRecipeHandler(repo *repository.RecipeRepository, photos PhotoUploader, cs *costs.CostService) *RecipeHandler {
+	return &RecipeHandler{repo: repo, photos: photos, costs: cs}
+}
+
+// listedRecipe is a recipe of the list: with its total cost and suggested price (null when it cannot be priced).
+type listedRecipe struct {
+	repository.Recipe
+	TotalCost      *float64 `json:"total_cost"`
+	SuggestedPrice *float64 `json:"suggested_price"`
 }
 
 func (h *RecipeHandler) GetAll(w http.ResponseWriter, r *http.Request) {
@@ -73,11 +131,27 @@ func (h *RecipeHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 		httputil.JSONError(w, "error obteniendo recetas", http.StatusInternalServerError)
 		return
 	}
-	if recipes == nil {
-		recipes = []repository.Recipe{}
+	inputs := make([]costs.PriceInput, 0, len(recipes))
+	for _, rec := range recipes {
+		inputs = append(inputs, costs.PriceInput{ID: rec.ID, Name: rec.Name, Yield: rec.Yield, YieldUnit: rec.YieldUnit,
+			IndirectCostPct: rec.IndirectCostPct, LaborCostPct: rec.LaborCostPct, MarginPct: rec.MarginPct})
+	}
+	prices, err := h.costs.PriceMany(r.Context(), inputs)
+	if err != nil { // the list is still useful without the prices
+		log.Printf("[recipes] GET /recipes: could not price the recipes: %v", err)
+		prices = nil
+	}
+	out := make([]listedRecipe, 0, len(recipes))
+	for _, rec := range recipes {
+		item := listedRecipe{Recipe: rec}
+		if p, ok := prices[rec.ID]; ok {
+			total, suggested := p.TotalCost, p.SuggestedPrice
+			item.TotalCost, item.SuggestedPrice = &total, &suggested
+		}
+		out = append(out, item)
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(recipes)
+	json.NewEncoder(w).Encode(out)
 }
 
 func (h *RecipeHandler) GetByID(w http.ResponseWriter, r *http.Request) {
@@ -112,6 +186,10 @@ func (h *RecipeHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	body := in.Recipe
+	if msg := h.applyCategory(r.Context(), in, &body); msg != "" {
+		httputil.JSONError(w, msg, categoryStatus(msg))
+		return
+	}
 
 	body.Name = strings.TrimSpace(body.Name)
 	if body.Name == "" {
@@ -170,6 +248,10 @@ func (h *RecipeHandler) Create(w http.ResponseWriter, r *http.Request) {
 	log.Printf("[recipes] POST /recipes user=%s name=%q ingredients=%d", claims.ID, body.Name, len(body.Ingredients))
 
 	created, err := h.repo.Create(r.Context(), body)
+	if err != nil && isMissingCategory(err) {
+		httputil.JSONError(w, "el tipo no existe", http.StatusBadRequest)
+		return
+	}
 	if err != nil {
 		log.Printf("[recipes] Create error user=%s name=%q: %v", claims.ID, body.Name, err)
 		httputil.JSONError(w, "error creando receta", http.StatusInternalServerError)
@@ -329,6 +411,10 @@ func (h *RecipeHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	body := in.Recipe
+	if msg := h.applyCategory(r.Context(), in, &body); msg != "" {
+		httputil.JSONError(w, msg, categoryStatus(msg))
+		return
+	}
 	body.Name = strings.TrimSpace(body.Name)
 	if body.Name == "" {
 		httputil.JSONError(w, "el nombre es requerido", http.StatusBadRequest)
@@ -378,6 +464,10 @@ func (h *RecipeHandler) Update(w http.ResponseWriter, r *http.Request) {
 	log.Printf("[recipes] PUT /recipes/%s user=%s name=%q", id, claims.ID, body.Name)
 
 	updated, err := h.repo.Update(r.Context(), id, body)
+	if err != nil && isMissingCategory(err) {
+		httputil.JSONError(w, "el tipo no existe", http.StatusBadRequest)
+		return
+	}
 	if err != nil {
 		log.Printf("[recipes] Update error id=%s user=%s: %v", id, claims.ID, err)
 		httputil.JSONError(w, "error actualizando receta", http.StatusInternalServerError)

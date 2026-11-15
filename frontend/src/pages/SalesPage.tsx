@@ -1,4 +1,5 @@
 import { useIsPhone } from "../hooks/useIsPhone";
+import RecipeOptions from "../components/RecipeOptions";
 import { useEffect, useRef, useState } from "react";
 import { saleService } from "../api/saleService";
 import { recipeService } from "../api/recipeService";
@@ -436,9 +437,7 @@ export default function SalesPage() {
                          px-4 py-2.5 text-sm font-light focus:outline-none focus:border-oro transition-all"
             >
               <option value="">Seleccionar receta...</option>
-              {recipes.map((r) => (
-                <option key={r.id} value={r.id}>{r.name}</option>
-              ))}
+              <RecipeOptions recipes={recipes} />
             </select>
           </div>
 

@@ -26,6 +26,7 @@ var expectedTables = []string{
 	"orders",
 	"quotation_lines",
 	"quotations",
+	"recipe_categories",
 	"recipe_ingredients",
 	"recipes",
 	"sale_ingredients",

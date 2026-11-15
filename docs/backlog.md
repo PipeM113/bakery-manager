@@ -21,6 +21,7 @@ Cada sprint sigue el mismo método: contrato, reglas de aceptación aprobadas, t
 | 13 | Calidad y detalles | Hecho | Pendiente | `docs/acceso.md`, `docs/despliegue.md` |
 | 14 | Ingredientes: proveedor, orden, stock rápido y equivalencias entre unidades | Hecho (migración 28) | Pendiente | `docs/ingredientes.md` |
 | 15 | Borrados con motivo, origen de las fotos, una sola regla de necesidades de receta, pruebas de flujos | Hecho | Pendiente | `docs/ingredientes.md` |
+| 16 | Tipos de receta (opcionales), buscador y costo en la lista de recetas | Hecho (migración 29) | Pendiente | `docs/recetario.md` |
 
 Los sprints 0 a 4 usan la numeración antigua y son anteriores al registro de aceptación (por eso "—"). El antiguo "sprint 5, acceso y roles" es hoy el sprint 11, y el antiguo "sprint 6, calidad", el 13. La paleta y las tipografías de la marca están en `docs/diseno.md`. Las casillas viejas de este archivo se reemplazaron por esta tabla.
 
