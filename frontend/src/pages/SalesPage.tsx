@@ -705,8 +705,8 @@ export default function SalesPage() {
                           {STATUS_LABEL[q.status]}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-right whitespace-nowrap">
-                        <div className="flex gap-2 justify-end">
+                      <td className="px-4 py-4 text-right">
+                        <div className="flex flex-wrap gap-2 justify-end">
                         <button data-testid="quote-download" onClick={() => handleDownloadQuotation(q)}
                           className="text-xs tracking-widest uppercase font-medium px-3 py-1.5 border border-oro text-oro hover:bg-lino transition-all">
                           Descargar PDF

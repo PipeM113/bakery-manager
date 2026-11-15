@@ -46,6 +46,7 @@ export default function BusinessPage() {
   };
 
   return (
+    <div className="px-6 py-10 md:px-10">
     <div className="max-w-2xl">
       <div className="mb-8">
         <h1 className="font-display text-3xl text-negro">Datos del negocio</h1>
@@ -71,7 +72,7 @@ export default function BusinessPage() {
           </div>
           <div>
             <label htmlFor="biz-type" className={labelClass}>Tipo de cuenta</label>
-            <select id="biz-type" className={`${fieldClass} select-field`} value={form.account_type} onChange={set("account_type")}>
+            <select id="biz-type" className={fieldClass} value={form.account_type} onChange={set("account_type")}>
               <option value="">Elige…</option>
               {ACCOUNT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
@@ -108,6 +109,7 @@ export default function BusinessPage() {
           </button>
         </div>
       </form>
+    </div>
     </div>
   );
 }

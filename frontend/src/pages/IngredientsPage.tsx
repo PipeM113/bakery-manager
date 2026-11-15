@@ -164,7 +164,8 @@ export default function IngredientsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("¿Eliminar este elemento?")) return;
+    const name = ingredients.find((i) => i.id === id)?.name;
+    if (!confirm(name ? `¿Eliminar "${name}"?` : "¿Eliminar este elemento?")) return;
     setDeleteError("");
     try {
       await ingredientService.delete(id);
@@ -319,7 +320,7 @@ export default function IngredientsPage() {
               <thead>
                 <tr className="border-b border-linea text-left">
                   {["Nombre", "Marca", "Proveedor", "Envase", "Precio por unidad", "Stock", ""].map((h) => (
-                    <th key={h} className="px-4 py-3 text-xs tracking-widest uppercase text-negro/70 font-light">{h}</th>
+                    <th key={h} className="px-3 py-3 text-xs tracking-widest uppercase text-negro/70 font-light">{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -328,19 +329,19 @@ export default function IngredientsPage() {
                   const lowStock = i.alert_threshold > 0 && i.stock_quantity < i.alert_threshold;
                   return (
                     <tr key={i.id} className="border-b border-linea last:border-0 hover:bg-lino transition-colors">
-                      <td className="px-4 py-3 text-negro font-light">
+                      <td className="px-3 py-3 text-negro font-light min-w-[9rem]">
                         {i.name}
                         {lowStock && <span className="ml-2 text-peligro text-xs">◆ Stock bajo</span>}
                       </td>
-                      <td className="px-4 py-3 text-negro/70 font-light">{i.brand}</td>
-                      <td className="px-4 py-3 text-negro/70 font-light">{i.supplier}</td>
-                      <td className="px-4 py-3 text-negro/70 font-light whitespace-nowrap">{i.package_size} {i.default_unit} · {formatCLP(i.package_price)}</td>
-                      <td className="px-4 py-3"><PriceDisplay price={i.price_per_unit} unit={i.default_unit} /></td>
-                      <td className={`px-4 py-3 whitespace-nowrap font-light ${lowStock ? "text-peligro" : "text-negro/70"}`}>
+                      <td className="px-3 py-3 text-negro/70 font-light">{i.brand}</td>
+                      <td className="px-3 py-3 text-negro/70 font-light">{i.supplier}</td>
+                      <td className="px-3 py-3 text-negro/70 font-light whitespace-nowrap">{i.package_size} {i.default_unit} · {formatCLP(i.package_price)}</td>
+                      <td className="px-3 py-3"><PriceDisplay price={i.price_per_unit} unit={i.default_unit} /></td>
+                      <td className={`px-3 py-3 whitespace-nowrap font-light ${lowStock ? "text-peligro" : "text-negro/70"}`}>
                         {Number.isInteger(i.stock_quantity) ? i.stock_quantity : i.stock_quantity.toFixed(3)} {i.default_unit}
                       </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3 justify-end whitespace-nowrap">
+                      <td className="px-3 py-3">
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 justify-end min-w-[8.5rem]">
                           <button onClick={() => setQuickStock(i)} data-testid="stock-quick"
                             className="text-xs text-negro hover:text-oro tracking-wider transition-colors">+ Stock</button>
                           <button onClick={() => setAdjusting(i)}
@@ -348,7 +349,7 @@ export default function IngredientsPage() {
                           <button onClick={() => openEdit(i)}
                             className="text-xs text-negro/70 hover:text-oro tracking-wider transition-colors">Editar</button>
                           <button onClick={() => handleDelete(i.id)}
-                            className="text-xs text-negro/70 hover:text-peligro tracking-wider transition-colors">Eliminar</button>
+                            className="text-xs text-peligro/90 hover:text-peligro hover:underline tracking-wider transition-colors">Eliminar</button>
                         </div>
                       </td>
                     </tr>

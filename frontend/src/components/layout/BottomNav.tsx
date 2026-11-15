@@ -1,21 +1,22 @@
 import { useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/useAuth";
+import { Icon, type IconName } from "./icons";
 
 // Four sections fit in the bar at 360 px; the rest are one tap away in "Más".
-const main = [
-  { to: "/dashboard",   icon: "◉", label: "Dashboard"    },
-  { to: "/ingredients", icon: "⚗", label: "Ingredientes" },
-  { to: "/recipes",     icon: "✦", label: "Recetas"      },
-  { to: "/sales",       icon: "⊕", label: "Ventas"       },
+const main: { to: string; icon: IconName; label: string }[] = [
+  { to: "/dashboard",   icon: "dashboard", label: "Dashboard"    },
+  { to: "/ingredients", icon: "ingredients", label: "Ingredientes" },
+  { to: "/recipes",     icon: "recipes", label: "Recetas"      },
+  { to: "/sales",       icon: "sales", label: "Ventas"       },
 ];
-const more = [
-  { to: "/costs",         icon: "◈", label: "Costos"       },
-  { to: "/fixed-costs",   icon: "⊟", label: "Costos fijos" },
-  { to: "/expenses",      icon: "◷", label: "Gastos"       },
-  { to: "/profitability", icon: "◈", label: "Rentabilidad" },
-  { to: "/business",      icon: "⌂", label: "Datos del negocio" },
-  { to: "/account",       icon: "☺", label: "Mi cuenta" },
+const more: { to: string; icon: IconName; label: string }[] = [
+  { to: "/costs",         icon: "costs", label: "Costos"       },
+  { to: "/fixed-costs",   icon: "fixed", label: "Costos fijos" },
+  { to: "/expenses",      icon: "expenses", label: "Gastos"       },
+  { to: "/profitability", icon: "profit", label: "Rentabilidad" },
+  { to: "/business",      icon: "business", label: "Datos del negocio" },
+  { to: "/account",       icon: "account", label: "Mi cuenta" },
 ];
 
 const item = (active: boolean) =>
@@ -42,7 +43,7 @@ export default function BottomNav() {
                 `flex items-center gap-3 px-6 min-h-[48px] text-sm tracking-wider ${isActive ? "text-oro" : "text-negro/70"}`
               }
             >
-              <span className="text-lg leading-none">{icon}</span>
+              <Icon name={icon} />
               <span className="font-light">{label}</span>
             </NavLink>
           ))}
@@ -52,7 +53,7 @@ export default function BottomNav() {
             onClick={logout}
             className="flex items-center gap-3 px-6 min-h-[48px] w-full text-left text-sm tracking-wider text-negro/70 border-t border-linea"
           >
-            <span className="text-lg leading-none">⎋</span>
+            <Icon name="logout" />
             <span className="font-light">Cerrar sesión</span>
           </button>
         </div>
@@ -60,8 +61,8 @@ export default function BottomNav() {
       <div className="flex items-stretch h-16">
         {main.map(({ to, icon, label }) => (
           <NavLink key={to} to={to} onClick={() => setOpen(false)} className={({ isActive }) => item(isActive)}>
-            <span className="text-lg leading-none">{icon}</span>
-            <span className="text-[10px] font-light tracking-wider uppercase truncate max-w-full">{label}</span>
+            <Icon name={icon} />
+            <span className="text-[11px] font-normal tracking-wide truncate max-w-full">{label}</span>
           </NavLink>
         ))}
         <button
@@ -71,8 +72,8 @@ export default function BottomNav() {
           onClick={() => setOpen((o) => !o)}
           className={item(open || moreActive)}
         >
-          <span className="text-lg leading-none">⋯</span>
-          <span className="text-[10px] font-light tracking-wider uppercase">Más</span>
+          <Icon name="more" />
+          <span className="text-[11px] font-normal tracking-wide">Más</span>
         </button>
       </div>
     </nav>

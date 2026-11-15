@@ -78,7 +78,8 @@ export default function RecipesPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("¿Eliminar esta receta?")) return;
+    const name = recipes.find((r) => r.id === id)?.name;
+    if (!confirm(name ? `¿Eliminar la receta "${name}"?` : "¿Eliminar esta receta?")) return;
     setDeleteError("");
     try {
       await recipeService.delete(id);
