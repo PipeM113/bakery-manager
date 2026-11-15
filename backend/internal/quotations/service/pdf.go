@@ -345,7 +345,9 @@ func fetchPhotos(lines []QuoteLine, base string) []*photo {
 		url := *l.PhotoURL
 		mu.Lock()
 		_, seen := unique[url]
-		unique[url] = nil
+		if !seen {
+			unique[url] = nil // reserved; a repeat of the address must not erase the result of its download
+		}
 		mu.Unlock()
 		if seen {
 			continue
