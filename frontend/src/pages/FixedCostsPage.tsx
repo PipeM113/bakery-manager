@@ -1,4 +1,6 @@
 import { RowsSkeleton } from "../components/Skeleton";
+import { useToast } from "../hooks/useToast";
+import { useConfirm } from "../hooks/useConfirm";
 import { useEffect, useState } from "react";
 import { fixedCostService } from "../api/fixedCostService";
 import type { IFixedCost } from "../types/fixedCost";
@@ -15,6 +17,8 @@ export default function FixedCostsPage() {
   const [form, setForm]           = useState(() => emptyForm(thisMonth()));
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError]         = useState("");
+  const toast = useToast();
+  const ask = useConfirm();
   const [loading, setLoading]     = useState(false);
 
   const [listLoading, setListLoading] = useState(true);
@@ -59,6 +63,7 @@ export default function FixedCostsPage() {
           is_active: existing.is_active,
           effective_from: form.from || month,
         });
+        toast.success("Costo fijo actualizado", form.name.trim());
         cancelEdit();
         await load();
       } else {
@@ -67,23 +72,33 @@ export default function FixedCostsPage() {
           monthly_amount: amount,
           valid_from: form.from || month,
         });
+        toast.success("Costo fijo agregado", form.name.trim());
         setForm(emptyForm(month));
         await load();
       }
     } catch {
       setError("Error guardando costo fijo");
+      toast.error("No se pudo guardar el costo fijo");
     } finally {
       setLoading(false);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("¿Terminar este costo fijo desde este mes? Los meses anteriores no cambian.")) return;
+    const name = costs.find((c) => c.id === id)?.name ?? "este costo fijo";
+    const ok = await ask({
+      title: "Terminar costo fijo",
+      message: `¿Terminar "${name}" desde este mes? Los meses anteriores no cambian.`,
+      confirmLabel: "Terminar costo fijo",
+      danger: true,
+    });
+    if (!ok) return;
     try {
       await fixedCostService.delete(id);
+      toast.success("Costo fijo terminado", name);
       await load();
     } catch {
-      setError("Error eliminando costo fijo");
+      toast.error("No se pudo terminar el costo fijo", name);
     }
   };
 
@@ -97,7 +112,7 @@ export default function FixedCostsPage() {
       });
       await load();
     } catch {
-      setError("Error actualizando estado");
+      toast.error("No se pudo actualizar el estado del costo fijo");
     }
   };
 

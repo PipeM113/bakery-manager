@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/PipeM113/bakery-manager/internal/shared/kernel"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -218,6 +219,31 @@ func (r *QuotationRepository) UpdateStatus(ctx context.Context, id, status strin
 		return errNotFound
 	}
 	return nil
+}
+
+// Delete removes a pending or cancelled quotation with its lines (they go with it, by cascade). A confirmed
+// one is refused with an InUseError: it is cancelled first, so that deleting it is never an accident.
+func (r *QuotationRepository) Delete(ctx context.Context, id string) error {
+	tag, err := r.db.Exec(ctx, `DELETE FROM quotations WHERE id = $1 AND status <> 'confirmed'`, id)
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && pgErr.Code == "22P02" {
+		return errNotFound
+	}
+	if err != nil {
+		return fmt.Errorf("delete quotation: %w", err)
+	}
+	if tag.RowsAffected() == 1 {
+		return nil
+	}
+	var status string
+	err = r.db.QueryRow(ctx, `SELECT status FROM quotations WHERE id = $1`, id).Scan(&status)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return errNotFound
+	}
+	if err != nil {
+		return fmt.Errorf("read quotation: %w", err)
+	}
+	return &kernel.InUseError{Message: "No se puede eliminar: la cotización está confirmada. Cancélala primero."}
 }
 
 var errNotFound = &notFoundError{}

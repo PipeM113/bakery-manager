@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"regexp"
 	"strings"
@@ -15,6 +16,7 @@ import (
 	quoteRepo "github.com/PipeM113/bakery-manager/internal/quotations/repository"
 	quoteSvc "github.com/PipeM113/bakery-manager/internal/quotations/service"
 	"github.com/PipeM113/bakery-manager/internal/shared/clock"
+	"github.com/PipeM113/bakery-manager/internal/shared/kernel"
 	"github.com/PipeM113/bakery-manager/pkg/httputil"
 	mid "github.com/PipeM113/bakery-manager/pkg/middleware"
 	"github.com/PipeM113/bakery-manager/pkg/money"
@@ -344,4 +346,22 @@ func (h *QuotationHandler) Confirm(w http.ResponseWriter, r *http.Request) {
 
 func (h *QuotationHandler) Cancel(w http.ResponseWriter, r *http.Request) {
 	h.setStatus(w, r, "cancelled", "error cancelando cotización")
+}
+
+// Delete removes a pending or cancelled quotation; a confirmed one answers 409 with the reason.
+func (h *QuotationHandler) Delete(w http.ResponseWriter, r *http.Request) {
+	if err := h.repo.Delete(r.Context(), chi.URLParam(r, "id")); err != nil {
+		var inUse *kernel.InUseError
+		switch {
+		case quoteRepo.IsNotFound(err):
+			httputil.JSONError(w, "cotización no encontrada", http.StatusNotFound)
+		case errors.As(err, &inUse):
+			httputil.JSONError(w, inUse.Message, http.StatusConflict)
+		default:
+			log.Printf("[quotations] delete id=%s: %v", chi.URLParam(r, "id"), err)
+			httputil.JSONError(w, "error eliminando cotización", http.StatusInternalServerError)
+		}
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }

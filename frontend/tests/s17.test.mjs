@@ -61,6 +61,7 @@ test("N6 the app mounts the notices and the confirmations once, for every page",
 
 test("N7 no screen builds its own notice any more", () => {
   for (const [f, s] of sources) {
+    if (f === "components/Toasts.tsx") continue; // the one that owns the queue
     assert.doesNotMatch(s, /setToasts?\(/, `${f} keeps its own toast state`);
     assert.doesNotMatch(s, /useState<ToastState/, `${f} keeps its own toast state`);
   }
@@ -124,5 +125,5 @@ test("Q2 a confirmed quotation does not offer Eliminar (it is cancelled first)",
 });
 
 test("Q3 the components exist", () => {
-  for (const f of ["components/Toasts.tsx", "components/ConfirmDialog.tsx", "utils/toasts.ts"]) assert.ok(existsSync(new URL(`../src/${f}`, import.meta.url)), f);
+  for (const f of ["components/Toasts.tsx", "components/ConfirmDialog.tsx", "utils/toasts.ts", "hooks/useToast.ts", "hooks/useConfirm.ts"]) assert.ok(existsSync(new URL(`../src/${f}`, import.meta.url)), f);
 });

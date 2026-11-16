@@ -560,8 +560,8 @@ for (const w of FLOW_WIDTHS) {
   test(`D5 a refused delete of an ingredient shows the reason at ${w}px`, { timeout: 60000 }, flow(w, "/ingredients", {
     respond: (method, path) => (method === "DELETE" && path.startsWith("/ingredients/") ? { status: 409, body: { error: "No se puede eliminar: se usa en las recetas Pan y Torta" } } : undefined),
   }, async (page) => {
-    page.on("dialog", (d) => d.accept());
     await page.getByRole("button", { name: "Eliminar" }).first().click();
+    await page.locator('[data-testid="confirm-yes"]').click();
     const alert = page.getByRole("alert").filter({ hasText: "se usa en las recetas Pan y Torta" });
     await alert.waitFor({ state: "visible", timeout: 5000 });
   }));
@@ -569,8 +569,8 @@ for (const w of FLOW_WIDTHS) {
   test(`D5 a refused delete of a recipe shows the reason at ${w}px`, { timeout: 60000 }, flow(w, "/recipes", {
     respond: (method, path) => (method === "DELETE" && path.startsWith("/recipes/") ? { status: 409, body: { error: "No se puede eliminar: tiene 2 ventas registradas" } } : undefined),
   }, async (page) => {
-    page.on("dialog", (d) => d.accept());
     await page.getByRole("button", { name: "Eliminar" }).first().click();
+    await page.locator('[data-testid="confirm-yes"]').click();
     const alert = page.getByRole("alert").filter({ hasText: "tiene 2 ventas registradas" });
     await alert.waitFor({ state: "visible", timeout: 5000 });
   }));
@@ -774,5 +774,77 @@ for (const w of FLOW_WIDTHS) {
     await cards(page).filter({ hasText: "Brownie" }).getByRole("button", { name: "Brownie" }).focus();
     await page.keyboard.press("Enter");
     await page.getByRole("heading", { name: /Brownie/ }).waitFor({ state: "visible", timeout: 5000 });
+  }));
+}
+
+
+// ---- Sprint 17: notices and confirmations of the app, quotations can be deleted (N, D, Q) ----
+// Contract: [data-testid="toasts"] holds the notices ([data-toast="success|error|info"]), fixed at the top right;
+// a delete asks with role="alertdialog" naming the thing, with [data-testid="confirm-yes"] and "Cancelar";
+// a quotation that is not confirmed has [data-testid="quote-delete"].
+const toastBox = async (page) => page.locator('[data-testid="toasts"] [data-toast]').first().boundingBox();
+
+for (const w of FLOW_WIDTHS) {
+  test(`D1 deleting a recipe asks in the app, naming it, and Cancelar deletes nothing at ${w}px`, { timeout: 60000 }, flow(w, "/recipes", {}, async (page, context) => {
+    await page.getByRole("button", { name: "Eliminar" }).first().click();
+    const ask = page.getByRole("alertdialog");
+    await ask.waitFor({ state: "visible", timeout: 5000 });
+    assert.match(await ask.innerText(), /Eliminar la receta "/);
+    assert.ok(inViewport(await ask.boundingBox(), w, (await page.viewportSize()).height), "the question does not fit the screen");
+    await ask.getByRole("button", { name: "Cancelar" }).click();
+    await ask.waitFor({ state: "hidden" });
+    assert.equal(context.calls.filter((c) => c.method === "DELETE").length, 0, "Cancelar still deleted");
+  }));
+
+  test(`N1 a delete shows a success notice at the top right that can be closed at ${w}px`, { timeout: 60000 }, flow(w, "/recipes", {}, async (page, context) => {
+    await page.getByRole("button", { name: "Eliminar" }).first().click();
+    await page.locator('[data-testid="confirm-yes"]').click();
+    const toast = page.locator('[data-toast="success"]').filter({ hasText: "Receta eliminada" });
+    await toast.waitFor({ state: "visible", timeout: 5000 });
+    assert.equal(context.calls.filter((c) => c.method === "DELETE").length, 1);
+    const box = await toast.boundingBox();
+    const vp = await page.viewportSize();
+    assert.ok(box.y <= 24, `the notice is not at the top (y=${box.y})`);
+    assert.ok(box.x + box.width >= vp.width - 24, "the notice is not at the right");
+    if (w >= 1280) assert.ok(box.width <= 380, `the notice is too wide (${box.width}px)`);
+    await toast.getByRole("button", { name: "Cerrar aviso" }).click();
+    await toast.waitFor({ state: "hidden" });
+  }));
+
+  test(`N2 notices pile up without covering the screen and stay long enough at ${w}px`, { timeout: 60000 }, flow(w, "/recipes", {
+    respond: (method, path) => (method === "DELETE" && path.startsWith("/recipes/") ? { status: 409, body: { error: "No se puede eliminar: tiene 1 cotización registrada" } } : undefined),
+  }, async (page) => {
+    for (let i = 0; i < 3; i++) {
+      await page.getByRole("button", { name: "Eliminar" }).nth(i).click();
+      await page.locator('[data-testid="confirm-yes"]').click();
+      await page.locator('[data-testid="confirm-yes"]').waitFor({ state: "detached" });
+    }
+    const errors = page.locator('[data-toast="error"]');
+    await errors.nth(2).waitFor({ state: "visible", timeout: 5000 });
+    assert.equal(await errors.count(), 3, "the notices did not pile up");
+    const first = await errors.nth(0).boundingBox();
+    const last = await errors.nth(2).boundingBox();
+    assert.ok(first.y < last.y, "the newest must be on top");
+    const vp = await page.viewportSize();
+    assert.ok(last.y + last.height < vp.height / 2, "the notices cover too much of the screen");
+    // They stay: still there after 3 seconds.
+    await page.waitForTimeout(3000);
+    assert.equal(await errors.count(), 3, "the notices vanished before they could be read");
+    assert.match(await errors.nth(0).innerText(), /tiene 1 cotización registrada/);
+  }));
+
+  test(`Q1 a quotation that is not confirmed can be deleted, a confirmed one cannot at ${w}px`, { timeout: 60000 }, flow(w, "/sales", {}, async (page, context) => {
+    const deletes = page.locator('[data-testid="quote-delete"]');
+    await deletes.first().waitFor({ state: "visible", timeout: 5000 });
+    assert.equal(await deletes.count(), 6, "6 of the 8 quotations are pending or cancelled; the 2 confirmed ones have no Eliminar");
+    await deletes.first().click();
+    const ask = page.getByRole("alertdialog");
+    await ask.waitFor({ state: "visible" });
+    assert.match(await ask.innerText(), /Eliminar cotización/);
+    await page.locator('[data-testid="confirm-yes"]').click();
+    const done = page.locator('[data-toast="success"]').filter({ hasText: "Cotización eliminada" });
+    await done.waitFor({ state: "visible", timeout: 5000 });
+    assert.equal(context.calls.filter((c) => c.method === "DELETE" && /^\/quotations\/[^/]+$/.test(c.path)).length, 1);
+    assert.equal(await deletes.count(), 5);
   }));
 }

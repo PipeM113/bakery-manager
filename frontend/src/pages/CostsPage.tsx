@@ -2,19 +2,14 @@ import { useEffect, useState } from "react";
 import RecipeOptions from "../components/RecipeOptions";
 import { recipeService } from "../api/recipeService";
 import type { IRecipe } from "../types/recipe";
+import { useToast } from "../hooks/useToast";
 import QuotationGenerator from "../components/QuotationGenerator";
-
-type ToastState = { msg: string; ok: boolean } | null;
 
 export default function CostsPage() {
   const [recipes, setRecipes]   = useState<IRecipe[]>([]);
   const [selected, setSelected] = useState<string>("");
-  const [toast, setToast]       = useState<ToastState>(null);
+  const toast = useToast();
 
-  const showToast = (msg: string, ok: boolean) => {
-    setToast({ msg, ok });
-    setTimeout(() => setToast(null), ok ? 1500 : 4000);
-  };
 
   useEffect(() => { recipeService.getAll().then(setRecipes); }, []);
 
@@ -23,12 +18,7 @@ export default function CostsPage() {
   return (
     <div className="px-6 py-10 max-w-2xl mx-auto md:max-w-none md:px-10">
 
-      {toast && (
-        <div className={`fixed top-4 right-4 z-50 px-4 py-2 text-xs tracking-widest uppercase font-medium text-crema transition-all
-          ${toast.ok ? "bg-negro" : "bg-peligro"}`}>
-          {toast.msg}
-        </div>
-      )}
+
 
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
@@ -63,7 +53,7 @@ export default function CostsPage() {
             key={recipe.id}
             recipe={recipe}
             deferredSave
-            onDeferredSaveDone={(ok) => showToast(ok ? "Costos guardados" : "Error al guardar costos", ok)}
+            onDeferredSaveDone={(ok) => (ok ? toast.success("Costos guardados") : toast.error("No se pudieron guardar los costos"))}
           />
         </div>
       )}
