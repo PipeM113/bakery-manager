@@ -3,6 +3,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync, existsSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { MAX_VISIBLE, durationFor, pushToast, dismissToast } from "../src/utils/toasts.ts";
 
 const src = (p) => readFileSync(new URL(`../src/${p}`, import.meta.url), "utf8");
@@ -126,4 +127,10 @@ test("Q2 a confirmed quotation does not offer Eliminar (it is cancelled first)",
 
 test("Q3 the components exist", () => {
   for (const f of ["components/Toasts.tsx", "components/ConfirmDialog.tsx", "utils/toasts.ts", "hooks/useToast.ts", "hooks/useConfirm.ts"]) assert.ok(existsSync(new URL(`../src/${f}`, import.meta.url)), f);
+});
+
+// The CI builds with `tsc -b`; `tsc -p .` alone does not look at src, so a leftover name slipped through once
+// (showSuccess in the order handler) and the browser tests did not notice because they do not type-check.
+test("the whole project type-checks like the CI build does (tsc -b)", () => {
+  execFileSync("npx", ["tsc", "-b"], { cwd: new URL("..", import.meta.url), stdio: "pipe" });
 });

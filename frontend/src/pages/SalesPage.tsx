@@ -109,9 +109,9 @@ export default function SalesPage() {
     setShowOrderForm(false);
     if (order.stock_shortfalls?.length) {
       const list = order.stock_shortfalls.map((f) => `${f.missing} ${f.unit} de ${f.ingredient}`).join(", ");
-      showSuccess(`⚠️ Pedido registrado, pero faltaron: ${list}. El stock quedó en 0.`);
+      toast.info("Pedido registrado, pero faltó stock", `Faltaron: ${list}. El stock quedó en 0.`);
     } else {
-      showSuccess("✅ Pedido registrado");
+      toast.success("Pedido registrado");
     }
     loadOrders();
     loadSales();
