@@ -12,13 +12,15 @@ const read = (p) => {
   return readFileSync(path, "utf8");
 };
 
-test("D5: the ingredient and recipe screens show a refused delete in an alert", () => {
+test("D5: the ingredient and recipe screens show a refused delete in an error notice with the reason of the server", () => {
+  // Sprint 17: the refusal is an error notice of the app (role="alert", 10 s) instead of a banner of each page.
   for (const page of ["src/pages/IngredientsPage.tsx", "src/pages/RecipesPage.tsx"]) {
     const s = read(page);
-    assert.match(s, /role="alert"/, `${page} has no role="alert" for the refusal`);
+    assert.match(s, /toast\.error\(/, `${page} does not show the refusal`);
     assert.match(s, /apiErrorMessage/, `${page} does not read the message of the error`);
     assert.doesNotMatch(s, /await (ingredientService|recipeService)\.delete\([^)]*\);\s*\n\s*load\(\);/, `${page} still ignores a failed delete`);
   }
+  assert.match(read("src/components/Toasts.tsx"), /role=\{t\.kind === "error" \? "alert" : "status"\}/);
 });
 
 test("F3: the ingredient and the unit of a recipe line have a label", () => {

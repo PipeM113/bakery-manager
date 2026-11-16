@@ -1,7 +1,10 @@
 import { RowsSkeleton } from "../components/Skeleton";
 import { useIsPhone } from "../hooks/useIsPhone";
 import RecipeOptions from "../components/RecipeOptions";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
+import { useToast } from "../hooks/useToast";
+import { useConfirm } from "../hooks/useConfirm";
+import { apiErrorMessage } from "../utils/apiError";
 import { saleService } from "../api/saleService";
 import { recipeService } from "../api/recipeService";
 import { ingredientService } from "../api/ingredientService";
@@ -51,7 +54,6 @@ export default function SalesPage() {
   const [recipes, setRecipes]       = useState<IRecipe[]>([]);
   const [ingredients, setIngredients] = useState<IIngredient[]>([]);
   const [loading, setLoading]       = useState(false);
-  const [error, setError]           = useState("");
 
   // Form state
   const [recipeId, setRecipeId]     = useState("");
@@ -76,24 +78,18 @@ export default function SalesPage() {
   const [filterFrom, setFilterFrom] = useState("");
   const [filterTo, setFilterTo]     = useState("");
 
-  const [successMsg, setSuccessMsg] = useState("");
-  const successTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const toast = useToast();
+  const ask = useConfirm();
 
   // Quotations
   const [quotations, setQuotations]       = useState<IQuotation[]>([]);
   const [orders, setOrders]               = useState<IOrder[]>([]);
   const [showOrderForm, setShowOrderForm]   = useState(false);
   const [showNewQuote, setShowNewQuote]   = useState(false);
-  const [quoteMessage, setQuoteMessage]   = useState("");
   const [businessMissing, setBusinessMissing] = useState<string[]>([]);
   const [quotationFilter, setQuotationFilter] = useState<QuotationStatusFilter>("");
   const [quotationTab, setQuotationTab]   = useState<"quotations" | "orders" | "sales">("quotations");
 
-  const showSuccess = (msg: string) => {
-    setSuccessMsg(msg);
-    if (successTimer.current) clearTimeout(successTimer.current);
-    successTimer.current = setTimeout(() => setSuccessMsg(""), 8000);
-  };
 
   const [salesLoaded, setSalesLoaded] = useState(false);
   const [quotationsLoaded, setQuotationsLoaded] = useState(false);
@@ -101,21 +97,21 @@ export default function SalesPage() {
   const loadSales = (from = filterFrom, to = filterTo) =>
     saleService.getAll(from || undefined, to || undefined)
       .then(setSales)
-      .catch(() => setError("Error cargando ventas"))
+      .catch(() => toast.error("Error cargando ventas"))
       .finally(() => setSalesLoaded(true));
 
   const loadOrders = () =>
     orderService.getAll()
       .then(setOrders)
-      .catch(() => setError("Error cargando pedidos"));
+      .catch(() => toast.error("Error cargando pedidos"));
 
   const handleOrderCreated = (order: IOrder) => {
     setShowOrderForm(false);
     if (order.stock_shortfalls?.length) {
       const list = order.stock_shortfalls.map((f) => `${f.missing} ${f.unit} de ${f.ingredient}`).join(", ");
-      showSuccess(`⚠️ Pedido registrado, pero faltaron: ${list}. El stock quedó en 0.`);
+      toast.info("Pedido registrado, pero faltó stock", `Faltaron: ${list}. El stock quedó en 0.`);
     } else {
-      showSuccess("✅ Pedido registrado");
+      toast.success("Pedido registrado");
     }
     loadOrders();
     loadSales();
@@ -124,26 +120,32 @@ export default function SalesPage() {
   };
 
   const handleCancelOrder = async (order: IOrder) => {
-    if (!confirm("¿Anular este pedido completo y devolver el stock?")) return;
+    const ok = await ask({
+      title: "Anular pedido",
+      message: "¿Anular este pedido completo? El stock de sus productos se devuelve.",
+      confirmLabel: "Anular pedido",
+      danger: true,
+    });
+    if (!ok) return;
     try {
       await orderService.delete(order.id);
-      showSuccess("Pedido anulado");
+      toast.success("Pedido anulado");
       loadOrders();
       loadSales();
       ingredientService.getAll().then(setIngredients).catch(() => {});
     } catch {
-      setError("Error anulando el pedido");
+      toast.error("No se pudo anular el pedido");
     }
   };
 
   const loadQuotations = (status: QuotationStatusFilter = quotationFilter) =>
     quotationService.getAll(status || undefined)
       .then(setQuotations)
-      .catch(() => setError("Error cargando cotizaciones"))
+      .catch(() => toast.error("Error cargando cotizaciones"))
       .finally(() => setQuotationsLoaded(true));
 
   useEffect(() => {
-    recipeService.getAll().then(setRecipes).catch(() => setError("Error cargando recetas"));
+    recipeService.getAll().then(setRecipes).catch(() => toast.error("Error cargando recetas"));
     ingredientService.getAll().then(setIngredients).catch(() => {});
     loadSales();
     loadQuotations();
@@ -249,9 +251,9 @@ export default function SalesPage() {
       ingredientService.getAll().then(setIngredients).catch(() => {});
       if (sale.stock_shortfalls?.length) {
         const list = sale.stock_shortfalls.map((f) => `${f.missing} ${f.unit} de ${f.ingredient}`).join(", ");
-        showSuccess(`⚠️ Venta registrada, pero faltaron: ${list}. El stock quedó en 0.`);
+        toast.info("Venta registrada, pero faltó stock", `Faltaron: ${list}. El stock quedó en 0.`);
       } else {
-        showSuccess("✅ Venta registrada");
+        toast.success("Venta registrada", sale.recipe_name);
       }
       setRecipeId("");
       setQuantity("");
@@ -277,13 +279,21 @@ export default function SalesPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("¿Eliminar esta venta y revertir el stock?")) return;
+    const sale = sales.find((x) => x.id === id);
+    const ok = await ask({
+      title: "Eliminar venta",
+      message: `¿Eliminar la venta${sale?.recipe_name ? ` de "${sale.recipe_name}"` : ""}? El stock vuelve a lo que era antes.`,
+      confirmLabel: "Eliminar venta",
+      danger: true,
+    });
+    if (!ok) return;
     try {
       await saleService.delete(id);
+      toast.success("Venta eliminada", sale?.recipe_name);
       setSales((prev) => prev.filter((s) => s.id !== id));
       ingredientService.getAll().then(setIngredients).catch(() => {});
     } catch {
-      setError("Error eliminando venta");
+      toast.error("No se pudo eliminar la venta");
     }
   };
 
@@ -293,21 +303,47 @@ export default function SalesPage() {
       setQuotations((prev) =>
         prev.map((q) => q.id === id ? { ...q, status: "confirmed" } : q)
       );
-      showSuccess("✅ Cotización confirmada");
+      toast.success("Cotización confirmada", quotations.find((q) => q.id === id)?.client_name);
     } catch {
-      setError("Error confirmando cotización");
+      toast.error("No se pudo confirmar la cotización");
     }
   };
 
   const handleCancelQuotation = async (id: string) => {
+    const client = quotations.find((q) => q.id === id)?.client_name ?? "este cliente";
+    const ok = await ask({
+      title: "Cancelar cotización",
+      message: `¿Cancelar la cotización de "${client}"? Queda guardada como cancelada.`,
+      confirmLabel: "Cancelar cotización",
+      danger: true,
+    });
+    if (!ok) return;
     try {
       await quotationService.cancel(id);
       setQuotations((prev) =>
         prev.map((q) => q.id === id ? { ...q, status: "cancelled" } : q)
       );
-      showSuccess("Cotización cancelada");
+      toast.success("Cotización cancelada", client);
     } catch {
-      setError("Error cancelando cotización");
+      toast.error("No se pudo cancelar la cotización");
+    }
+  };
+
+  const handleDeleteQuotation = async (id: string) => {
+    const client = quotations.find((q) => q.id === id)?.client_name ?? "este cliente";
+    const ok = await ask({
+      title: "Eliminar cotización",
+      message: `¿Eliminar la cotización de "${client}"? Se borra del todo y no se puede deshacer.`,
+      confirmLabel: "Eliminar cotización",
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await quotationService.delete(id);
+      setQuotations((prev) => prev.filter((q) => q.id !== id));
+      toast.success("Cotización eliminada", client);
+    } catch (e) {
+      toast.error(`No se pudo eliminar la cotización de "${client}"`, apiErrorMessage(e, "Inténtalo de nuevo"));
     }
   };
 
@@ -315,11 +351,10 @@ export default function SalesPage() {
   const hasStockIssue = stockIssues.length > 0;
 
   const handleDownloadQuotation = async (q: IQuotation) => {
-    setQuoteMessage("");
     try {
       await quotationService.downloadPDF(q);
     } catch (e) {
-      setQuoteMessage((e as Error).message);
+      toast.error("No se pudo generar el PDF", (e as Error).message);
     }
   };
 
@@ -347,15 +382,6 @@ export default function SalesPage() {
           Nuevo pedido
         </button>
       </div>
-
-      {error && <p className="text-peligro text-xs mb-4">{error}</p>}
-
-      {/* Success toast */}
-      {successMsg && (
-        <div className="fixed top-4 right-4 z-50 bg-white border border-salvia text-negro px-4 py-3 text-sm font-light shadow-md">
-          {successMsg}
-        </div>
-      )}
 
       {showNewQuote && (
         <NewQuotationModal onClose={() => setShowNewQuote(false)} onCreated={() => loadQuotations()} />
@@ -635,8 +661,6 @@ export default function SalesPage() {
               <Link to="/business" className="underline">Ir a Datos del negocio</Link>
             </p>
           )}
-          {quoteMessage && <p role="alert" className="px-6 py-3 text-sm text-peligro border-b border-linea">{quoteMessage}</p>}
-
           {!quotationsLoaded ? (
             <RowsSkeleton label="Cargando cotizaciones…" />
           ) : displayedQuotations.length === 0 ? (
@@ -676,6 +700,12 @@ export default function SalesPage() {
                           Cancelar
                         </button>
                       </div>
+                    )}
+                    {q.status !== "confirmed" && (
+                      <button data-testid="quote-delete" onClick={() => handleDeleteQuotation(q.id)}
+                        className="w-full text-xs tracking-widest uppercase font-medium text-peligro hover:underline transition-all">
+                        Eliminar
+                      </button>
                     )}
                   </div>
                 ))}
@@ -736,6 +766,12 @@ export default function SalesPage() {
                               Cancelar
                             </button>
                           </>
+                        )}
+                        {q.status !== "confirmed" && (
+                          <button data-testid="quote-delete" onClick={() => handleDeleteQuotation(q.id)}
+                            className="text-xs tracking-widest uppercase font-medium px-3 py-1.5 text-peligro hover:underline transition-all">
+                            Eliminar
+                          </button>
                         )}
                         </div>
                       </td>

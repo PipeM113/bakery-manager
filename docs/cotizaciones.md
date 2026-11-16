@@ -36,6 +36,10 @@ $500:
 - Otras rutas: `GET /quotations?status=`, `GET /quotations/{id}`, `PUT /quotations/{id}/confirm` y
   `/cancel`. Confirmar o cancelar solo cambia el estado; no crea pedido ni toca el stock (el pedido se
   ingresa a mano con los precios cotizados).
+- `DELETE /quotations/{id}` (sprint 17) borra de verdad una cotización pendiente o cancelada, con sus líneas
+  (204). Una confirmada responde 409 ("está confirmada, cancélala primero"): así borrar nunca es un
+  accidente. Una cotización cancelada sigue guardada y mantiene protegida la receta que usa (no se puede
+  eliminar la receta hasta eliminar esa cotización).
 - `POST /quotations/generate` (el PDF de una sola receta en un paso) ya no existe.
 
 ## El PDF

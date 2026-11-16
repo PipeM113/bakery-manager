@@ -114,6 +114,11 @@ export const quotationService = {
     await api.put(`/quotations/${id}/confirm`);
   },
 
+  /** Deletes a pending or cancelled quotation; a confirmed one answers 409 with the reason. */
+  async delete(id: string): Promise<void> {
+    await api.delete(`/quotations/${id}`);
+  },
+
   async cancel(id: string): Promise<void> {
     await api.put(`/quotations/${id}/cancel`);
   },

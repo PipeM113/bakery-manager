@@ -1,3 +1,4 @@
+import { useToast } from "../hooks/useToast";
 import { FormSkeleton } from "../components/Skeleton";
 import { useEffect, useState } from "react";
 import { businessService, ACCOUNT_TYPES, type BusinessForm } from "../api/businessService";
@@ -11,7 +12,7 @@ export default function BusinessPage() {
   const [form, setForm]       = useState<BusinessForm>(empty);
   const [envMissing, setEnvMissing] = useState<string[]>([]);
   const [error, setError]     = useState("");
-  const [saved, setSaved]     = useState(false);
+  const toast = useToast();
   const [saving, setSaving]   = useState(false);
   const [loaded, setLoaded]   = useState(false);
 
@@ -27,7 +28,6 @@ export default function BusinessPage() {
 
   const set = (key: keyof BusinessForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm((f) => ({ ...f, [key]: e.target.value }));
-    setSaved(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -38,11 +38,11 @@ export default function BusinessPage() {
       const { missing, ...rest } = await businessService.save(form);
       setForm(rest);
       setEnvMissing(missing.filter((m) => m.startsWith("BIZ_")));
-      setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
+      toast.success("Datos guardados", "El PDF de las cotizaciones usará estos datos.");
     } catch (err) {
       const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
       setError(msg ?? "Error guardando los datos del negocio");
+      toast.error("No se pudieron guardar los datos", msg);
     } finally {
       setSaving(false);
     }
@@ -101,7 +101,6 @@ export default function BusinessPage() {
           </p>
         )}
         {error && <p role="alert" className="text-peligro text-xs">{error}</p>}
-        {saved && <p role="status" className="text-negro text-sm bg-salvia/40 border border-salvia px-3 py-2">Datos guardados</p>}
 
         <div className="pt-2">
           <button

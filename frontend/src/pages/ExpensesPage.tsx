@@ -1,5 +1,7 @@
 import { RowsSkeleton } from "../components/Skeleton";
-import { useEffect, useRef, useState } from "react";
+import { useToast } from "../hooks/useToast";
+import { useConfirm } from "../hooks/useConfirm";
+import { useEffect, useState } from "react";
 import { expenseService } from "../api/expenseService";
 import { expenseCategoryService } from "../api/expenseCategoryService";
 import type { IExpense, IExpenseCategory, ExpenseFormData } from "../types/expense";
@@ -21,7 +23,6 @@ const MONTHS = [
   "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre",
 ];
 
-type Toast = { id: number; type: "success" | "error"; message: string };
 
 export default function ExpensesPage() {
   const now = currentMonthYear();
@@ -32,18 +33,13 @@ export default function ExpensesPage() {
   const [loading, setLoading]   = useState(false);
   const [filterMonth, setFilterMonth] = useState(now.month);
   const [filterYear, setFilterYear]   = useState(now.year);
-  const [toasts, setToasts]     = useState<Toast[]>([]);
+  const toast = useToast();
+  const ask = useConfirm();
   const [categories, setCategories] = useState<IExpenseCategory[]>([]);
   const [newCategory, setNewCategory] = useState("");
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
-  const toastCounter            = useRef(0);
 
-  const addToast = (type: Toast["type"], message: string) => {
-    const id = ++toastCounter.current;
-    setToasts((prev) => [...prev, { id, type, message }]);
-    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 4000);
-  };
 
   const [listLoading, setListLoading] = useState(true);
 
@@ -106,14 +102,21 @@ export default function ExpensesPage() {
   };
 
   const handleDeleteCategory = async (c: IExpenseCategory) => {
-    if (!window.confirm(`¿Borrar la categoría "${c.name}"?`)) return;
+    const ok = await ask({
+      title: "Eliminar categoría",
+      message: `¿Eliminar la categoría "${c.name}"?`,
+      confirmLabel: "Eliminar categoría",
+      danger: true,
+    });
+    if (!ok) return;
     try {
       await expenseCategoryService.remove(c.id);
       setCategories((prev) => prev.filter((x) => x.id !== c.id));
       setForm((f) => (f.category_id === c.id ? { ...f, category_id: "" } : f));
       setError("");
+      toast.success("Categoría eliminada", c.name);
     } catch (err) {
-      setError(apiMessage(err, "Error borrando la categoría"));
+      toast.error(`No se pudo eliminar "${c.name}"`, apiMessage(err, "Inténtalo de nuevo"));
     }
   };
 
@@ -164,7 +167,7 @@ export default function ExpensesPage() {
         const updated = await expenseService.update(editingId, payload);
         console.log("API response (update):", updated);
         setExpenses((prev) => prev.map((e) => (e.id === editingId ? updated : e)));
-        addToast("success", "✅ Gasto actualizado");
+        toast.success("Gasto actualizado", payload.description || undefined);
         cancelEdit();
       } else {
         const created = await expenseService.create(payload);
@@ -174,7 +177,7 @@ export default function ExpensesPage() {
         if (cm === filterMonth && cy === filterYear) {
           setExpenses((prev) => [created, ...prev]);
         }
-        addToast("success", "✅ Gasto registrado");
+        toast.success("Gasto registrado", payload.description || undefined);
         setForm(emptyForm);
       }
     } catch (err: unknown) {
@@ -182,8 +185,8 @@ export default function ExpensesPage() {
         (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
       const msg = apiMsg ?? "Error desconocido al guardar";
       console.error("Error saving expense:", err);
-      setError(`❌ No se pudo guardar el gasto: ${msg}`);
-      addToast("error", `❌ No se pudo guardar el gasto: ${msg}`);
+      setError(`No se pudo guardar el gasto: ${msg}`);
+      toast.error("No se pudo guardar el gasto", msg);
       // form is NOT cleared so the user can retry
     } finally {
       setLoading(false);
@@ -191,15 +194,22 @@ export default function ExpensesPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("¿Eliminar este gasto?")) return;
+    const item = expenses.find((e) => e.id === id);
+    const what = item ? `${item.description || item.category || "gasto"} (${formatCLP(item.amount)})` : "este gasto";
+    const ok = await ask({
+      title: "Eliminar gasto",
+      message: `¿Eliminar ${what}? Esto no se puede deshacer.`,
+      confirmLabel: "Eliminar gasto",
+      danger: true,
+    });
+    if (!ok) return;
     try {
       await expenseService.delete(id);
       setExpenses((prev) => prev.filter((e) => e.id !== id));
-      addToast("success", "✅ Gasto eliminado");
+      toast.success("Gasto eliminado", what);
     } catch (err) {
       console.error("Error deleting expense:", err);
-      setError("Error eliminando gasto");
-      addToast("error", "❌ Error eliminando gasto");
+      toast.error("No se pudo eliminar el gasto", apiMessage(err, "Inténtalo de nuevo"));
     }
   };
 
@@ -209,23 +219,6 @@ export default function ExpensesPage() {
 
   return (
     <div className="px-6 py-10 max-w-2xl mx-auto md:max-w-none md:px-10">
-
-      {/* Toast notifications */}
-      {toasts.length > 0 && (
-        <div className="fixed top-4 right-4 z-50 flex flex-col gap-2">
-          {toasts.map((t) => (
-            <div
-              key={t.id}
-              className={`px-4 py-3 text-sm font-light shadow-md transition-all
-                ${t.type === "success"
-                  ? "bg-white border border-salvia text-negro"
-                  : "bg-white border border-peligro text-peligro"}`}
-            >
-              {t.message}
-            </div>
-          ))}
-        </div>
-      )}
 
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">

@@ -1,3 +1,4 @@
+import { useToast } from "../hooks/useToast";
 import { useEffect, useRef, useState } from "react";
 import api from "../services/api";
 import { quotationService } from "../api/quotationService";
@@ -36,7 +37,6 @@ interface CostBreakdown {
   suggested_price: number; // rounded up to the next $500 by the backend
 }
 
-type ToastState = { msg: string; ok: boolean } | null;
 
 
 export default function QuotationGenerator({ recipe, deferredSave = false, onDeferredSaveDone }: Props) {
@@ -51,7 +51,7 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
   const [clientName, setClientName]   = useState("");
   const [downloading, setDownloading] = useState(false);
   const [clientError, setClientError] = useState(false);
-  const [toast, setToast]             = useState<ToastState>(null);
+  const toast = useToast();
 
   // Save-as modal state
   const [showSaveModal, setShowSaveModal] = useState(false);
@@ -100,10 +100,7 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
 
   const portionsChanged = breakdown && portionsNum !== Math.round(recipe.yield);
 
-  const showToast = (msg: string, ok: boolean) => {
-    setToast({ msg, ok });
-    setTimeout(() => setToast(null), 2500);
-  };
+  const showToast = (msg: string, ok: boolean) => (ok ? toast.success(msg) : toast.error(msg));
 
   const saveCosts = (indirect: number, labor: number, marginVal: number, extra: number, delivery: number) => {
     api.put(`/recipes/${recipe.id}/costs`, {
@@ -290,13 +287,7 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
   return (
     <div className="space-y-6">
 
-      {/* Toast */}
-      {toast && (
-        <div className={`fixed top-4 right-4 z-50 px-4 py-2 text-xs tracking-widest uppercase font-medium text-crema transition-all
-          ${toast.ok ? "bg-negro" : "bg-peligro"}`}>
-          {toast.msg}
-        </div>
-      )}
+
 
       {/* Save-as modal – Fix 3: no backdrop click */}
       {showSaveModal && (

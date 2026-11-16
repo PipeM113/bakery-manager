@@ -39,6 +39,22 @@ anterior.
 Playfair Display para títulos y DM Sans Light para el texto, las mismas de la web, instaladas con
 `@fontsource` (versión 5.3.0) para que no se pidan a un servidor externo.
 
+## Avisos y confirmaciones
+
+La app no usa los cuadros del navegador (`alert`, `confirm`); tiene los suyos, con los colores de la marca.
+
+- **Avisos** (`components/Toasts.tsx`, se usan con `useToast()`): arriba a la derecha, uno bajo otro con el
+  más nuevo arriba, máximo 5 a la vez. Éxito en fondo `salvia`, error en `rosa` con texto `peligro`, e ícono en
+  ambos (no solo color). Duran 6 s (éxito e info) y 10 s (error); el tiempo se detiene mientras el mouse o el
+  teclado están sobre el aviso, y cada uno se cierra con la ×. Los errores se anuncian a lectores de pantalla
+  (`role="alert"`). Crear, editar, eliminar, cancelar y confirmar muestran uno, con el nombre de lo afectado
+  ("Receta eliminada · Manjarcito"). Si el servidor rechaza una eliminación (409), el aviso trae su motivo.
+- **Confirmaciones** (`components/ConfirmDialog.tsx`, `useConfirm()`): una ventana que nombra lo que se va a
+  eliminar y cuyo botón dice la acción ("Eliminar receta", en rojo `peligro`). El foco empieza en "Cancelar" y
+  Esc cancela, para que un Enter sin querer no borre nada.
+- Las pantallas que cargan muestran su forma con *skeletons* (`components/Skeleton.tsx`) en vez de un texto
+  "Cargando…".
+
 ## Elementos
 
 - Botones principales: fondo `negro`, letras `crema`, mayúsculas con espacio entre letras.

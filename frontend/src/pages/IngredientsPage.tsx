@@ -1,5 +1,5 @@
 import { ListSkeleton } from "../components/Skeleton";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import IngredientImportModal from "../components/IngredientImportModal";
 import StockAdjustmentModal from "../components/StockAdjustmentModal";
 import QuickStockModal from "../components/QuickStockModal";
@@ -12,6 +12,8 @@ import type { IngredientKind } from "../types/ingredient";
 import { todayInSantiago } from "../utils/businessDate";
 import { formatCLP } from "../utils/money";
 import { apiErrorMessage } from "../utils/apiError";
+import { useToast } from "../hooks/useToast";
+import { useConfirm } from "../hooks/useConfirm";
 import { UNITS } from "../utils/units";
 import { compareIngredients, ingredientLabel, sortKey } from "../utils/ingredients";
 
@@ -59,11 +61,10 @@ export default function IngredientsPage() {
   const [quickStock, setQuickStock]   = useState<IIngredient | null>(null);
   const [sortBy, setSortBy]           = useState<SortBy>("name");
   const [showEq, setShowEq]           = useState(false);
-  const [deleteError, setDeleteError] = useState("");
+  const toast = useToast();
+  const ask = useConfirm();
   const phone = useIsPhone();
   const [exporting, setExporting]     = useState(false);
-  const [successMsg, setSuccessMsg]   = useState("");
-  const successTimer                  = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const load = () => {
     ingredientService.getAll()
@@ -74,11 +75,6 @@ export default function IngredientsPage() {
   useEffect(() => { load(); }, []);
 
 
-  const showSuccess = (msg: string) => {
-    setSuccessMsg(msg);
-    if (successTimer.current) clearTimeout(successTimer.current);
-    successTimer.current = setTimeout(() => setSuccessMsg(""), 3000);
-  };
 
   const query = sortKey(search);
   const filtered = ingredients
@@ -129,10 +125,10 @@ export default function IngredientsPage() {
     try {
       if (editing) {
         await ingredientService.update(editing.id, form);
-        showSuccess(`✅ ${form.kind === "supply" ? "Insumo" : "Ingrediente"} actualizado`);
+        toast.success(`${form.kind === "supply" ? "Insumo actualizado" : "Ingrediente actualizado"}`, form.name);
       } else {
         await ingredientService.create(form);
-        showSuccess(`✅ ${form.kind === "supply" ? "Insumo" : "Ingrediente"} creado`);
+        toast.success(`${form.kind === "supply" ? "Insumo creado" : "Ingrediente creado"}`, form.name);
       }
       setShowForm(false);
       load();
@@ -165,16 +161,23 @@ export default function IngredientsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    const name = ingredients.find((i) => i.id === id)?.name;
-    if (!confirm(name ? `¿Eliminar "${name}"?` : "¿Eliminar este elemento?")) return;
-    setDeleteError("");
+    const found = ingredients.find((i) => i.id === id);
+    const name = found?.name ?? "este elemento";
+    const noun = found?.kind === "supply" ? "insumo" : "ingrediente";
+    const ok = await ask({
+      title: `Eliminar ${noun}`,
+      message: `¿Eliminar "${name}"? Esto no se puede deshacer.`,
+      confirmLabel: `Eliminar ${noun}`,
+      danger: true,
+    });
+    if (!ok) return;
     try {
       await ingredientService.delete(id);
-      setDeleteError("");
+      toast.success(`${noun === "insumo" ? "Insumo eliminado" : "Ingrediente eliminado"}`, name);
       load();
     } catch (e) {
       // 409: it is in a recipe or in the sales history; the message says which.
-      setDeleteError(apiErrorMessage(e, "No se pudo eliminar"));
+      toast.error(`No se pudo eliminar "${name}"`, apiErrorMessage(e, "Inténtalo de nuevo"));
     }
   };
 
@@ -189,20 +192,6 @@ export default function IngredientsPage() {
 
   return (
     <div className="px-6 py-10 max-w-2xl mx-auto md:max-w-none md:px-10">
-
-      {/* Success toast */}
-      {successMsg && (
-        <div className="fixed top-4 right-4 z-50 bg-white border border-salvia text-negro px-4 py-3 text-sm font-light shadow-md">
-          {successMsg}
-        </div>
-      )}
-
-      {deleteError && (
-        <div role="alert" className="mb-4 bg-rosa text-negro px-4 py-3 text-sm font-light flex items-start justify-between gap-3">
-          <span>{deleteError}</span>
-          <button onClick={() => setDeleteError("")} aria-label="Cerrar aviso" className="text-negro/70 hover:text-negro shrink-0">×</button>
-        </div>
-      )}
 
       {/* Header */}
       <div className="flex flex-col gap-4 mb-8 md:flex-row md:items-end md:justify-between">
@@ -363,7 +352,7 @@ export default function IngredientsPage() {
         <QuickStockModal
           ingredient={ingredients.find((x) => x.id === quickStock.id) ?? quickStock}
           onClose={() => setQuickStock(null)}
-          onSaved={load}
+          onSaved={() => { toast.success("Stock actualizado", quickStock.name); load(); }}
         />
       )}
 
@@ -372,7 +361,7 @@ export default function IngredientsPage() {
         <StockAdjustmentModal
           ingredient={ingredients.find((x) => x.id === adjusting.id) ?? adjusting}
           onClose={() => setAdjusting(null)}
-          onSaved={load}
+          onSaved={() => { toast.success("Stock ajustado", adjusting.name); load(); }}
         />
       )}
 
@@ -380,7 +369,7 @@ export default function IngredientsPage() {
       {showImport && (
         <IngredientImportModal
           onClose={() => setShowImport(false)}
-          onSuccess={() => { setShowImport(false); load(); }}
+          onSuccess={() => { setShowImport(false); toast.success("Ingredientes importados"); load(); }}
         />
       )}
 

@@ -154,6 +154,7 @@ func NewWithClock(cfg config.Config, db *pgxpool.Pool, photos PhotoUploader, clk
 		r.Get("/quotations/{id}/pdf", quotationHandler.PDF)
 		r.Put("/quotations/{id}/confirm", quotationHandler.Confirm)
 		r.Put("/quotations/{id}/cancel", quotationHandler.Cancel)
+		r.Delete("/quotations/{id}", quotationHandler.Delete)
 
 		saleRepository := saleRepo.NewSaleRepository(db)
 		saleService := saleSvc.NewSaleService(saleRepository)

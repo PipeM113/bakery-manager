@@ -11,6 +11,8 @@ import { recipeCategoryService } from "../api/recipeCategoryService";
 import { groupRecipes, recipeMatches } from "../utils/recipes";
 import { sortKey } from "../utils/ingredients";
 import { apiErrorMessage } from "../utils/apiError";
+import { useToast } from "../hooks/useToast";
+import { useConfirm } from "../hooks/useConfirm";
 
 export default function RecipesPage() {
   const [recipes, setRecipes]         = useState<IRecipe[]>([]);
@@ -19,7 +21,8 @@ export default function RecipesPage() {
   const [showForm, setShowForm]       = useState(false);
   const [editing, setEditing]         = useState<IRecipe | null>(null);
   const [detail, setDetail]           = useState<IRecipe | null>(null);
-  const [deleteError, setDeleteError] = useState("");
+  const toast = useToast();
+  const ask = useConfirm();
   const [types, setTypes]             = useState<IRecipeType[]>([]);
   const [showTypes, setShowTypes]     = useState(false);
   const [search, setSearch]           = useState("");
@@ -59,8 +62,10 @@ export default function RecipesPage() {
   const handleSave = async (data: RecipeFormData) => {
     if (editing) {
       await recipeService.update(editing.id, data);
+      toast.success("Receta actualizada", data.name);
     } else {
       await recipeService.create(data);
+      toast.success("Receta creada", data.name);
     }
     setShowForm(false);
     load();
@@ -74,21 +79,27 @@ export default function RecipesPage() {
 
   const handleSaveAs = async (data: RecipeFormData, versionName: string) => {
     await recipeService.createVersion(editing!.id, versionName, data);
+    toast.success("Versión creada", versionName);
     setShowForm(false);
     load();
   };
 
   const handleDelete = async (id: string) => {
-    const name = recipes.find((r) => r.id === id)?.name;
-    if (!confirm(name ? `¿Eliminar la receta "${name}"?` : "¿Eliminar esta receta?")) return;
-    setDeleteError("");
+    const name = recipes.find((r) => r.id === id)?.name ?? "esta receta";
+    const ok = await ask({
+      title: "Eliminar receta",
+      message: `¿Eliminar la receta "${name}"? Esto no se puede deshacer.`,
+      confirmLabel: "Eliminar receta",
+      danger: true,
+    });
+    if (!ok) return;
     try {
       await recipeService.delete(id);
-      setDeleteError("");
+      toast.success("Receta eliminada", name);
       load();
     } catch (e) {
       // 409: it has sales or quotations; the message says how many.
-      setDeleteError(apiErrorMessage(e, "No se pudo eliminar"));
+      toast.error(`No se pudo eliminar "${name}"`, apiErrorMessage(e, "Inténtalo de nuevo"));
     }
   };
 
@@ -151,13 +162,6 @@ export default function RecipesPage() {
               {c.name} <span className="opacity-70">{c.count}</span>
             </button>
           ))}
-        </div>
-      )}
-
-      {deleteError && (
-        <div role="alert" className="mb-4 bg-rosa text-negro px-4 py-3 text-sm font-light flex items-start justify-between gap-3">
-          <span>{deleteError}</span>
-          <button onClick={() => setDeleteError("")} aria-label="Cerrar aviso" className="text-negro/70 hover:text-negro shrink-0">×</button>
         </div>
       )}
 

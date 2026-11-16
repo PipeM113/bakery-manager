@@ -1,3 +1,4 @@
+import { useToast } from "../hooks/useToast";
 import { useState } from "react";
 import { authService } from "../api/authService";
 import { apiErrorMessage } from "../utils/apiError";
@@ -14,12 +15,11 @@ export default function AccountPage() {
   const [next, setNext]       = useState("");
   const [repeat, setRepeat]   = useState("");
   const [error, setError]     = useState("");
-  const [done, setDone]       = useState(false);
+  const toast = useToast();
   const [saving, setSaving]   = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setDone(false);
     if (!current) { setError("Escribe tu contraseña actual"); return; }
     if ([...next].length < MIN_CHARS) { setError(`La contraseña nueva debe tener al menos ${MIN_CHARS} caracteres`); return; }
     if (next !== repeat) { setError("Las contraseñas nuevas no coinciden"); return; }
@@ -28,9 +28,10 @@ export default function AccountPage() {
     try {
       await authService.changePassword(current, next);
       setCurrent(""); setNext(""); setRepeat("");
-      setDone(true);
+      toast.success("Contraseña cambiada", "Úsala la próxima vez que ingreses.");
     } catch (err) {
       setError(apiErrorMessage(err, "No se pudo cambiar la contraseña"));
+      toast.error("No se pudo cambiar la contraseña", apiErrorMessage(err, ""));
     } finally {
       setSaving(false);
     }
@@ -51,22 +52,21 @@ export default function AccountPage() {
         <div>
           <label htmlFor="pw-current" className={labelClass}>Contraseña actual</label>
           <input id="pw-current" type="password" autoComplete="current-password" className={fieldClass}
-            value={current} onChange={(e) => { setCurrent(e.target.value); setDone(false); }} />
+            value={current} onChange={(e) => { setCurrent(e.target.value); }} />
         </div>
         <div>
           <label htmlFor="pw-new" className={labelClass}>Nueva contraseña</label>
           <input id="pw-new" type="password" autoComplete="new-password" className={fieldClass}
-            value={next} onChange={(e) => { setNext(e.target.value); setDone(false); }} />
+            value={next} onChange={(e) => { setNext(e.target.value); }} />
           <p className="text-negro/70 text-xs font-light mt-1">Al menos 10 caracteres y distinta de la actual.</p>
         </div>
         <div>
           <label htmlFor="pw-repeat" className={labelClass}>Repite la nueva contraseña</label>
           <input id="pw-repeat" type="password" autoComplete="new-password" className={fieldClass}
-            value={repeat} onChange={(e) => { setRepeat(e.target.value); setDone(false); }} />
+            value={repeat} onChange={(e) => { setRepeat(e.target.value); }} />
         </div>
 
         {error && <p role="alert" className="text-peligro text-xs">{error}</p>}
-        {done && <p role="status" className="text-negro text-sm bg-salvia/40 border border-salvia px-3 py-2">Contraseña cambiada</p>}
 
         <div className="pt-2">
           <button type="submit" disabled={saving}
