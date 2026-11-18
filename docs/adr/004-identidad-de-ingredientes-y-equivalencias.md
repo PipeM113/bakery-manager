@@ -1,6 +1,6 @@
 # ADR-004: un ingrediente es nombre + marca + proveedor, y las equivalencias entre unidades las pone la dueña
 
-- **Estado:** Propuesto (borrador de Claude, 2026-11-01; recoge lo decidido por Felipe en el sprint 14)
+- **Estado:** Propuesto (borrador de Claude, 2026-11-01; recoge lo decidido por Felipe en el sprint 14). La decisión de **llave** (nombre + marca + proveedor) fue reemplazada por el ADR-005 (2026-11-18); las equivalencias entre unidades siguen vigentes.
 - **Fecha:** 2026-11-01
 
 ## Contexto
