@@ -1,6 +1,6 @@
 # ADR-005: un ingrediente es nombre + marca; el proveedor, el tamaño del paquete y el precio pagado viven en cada compra, y el costo usa el último precio pagado
 
-- **Estado:** Propuesto (borrador de Claude, 2026-11-18; recoge lo decidido por Felipe el 2026-11-18). Reemplaza la decisión de **llave** del ADR-004; el resto del ADR-004 (equivalencias entre unidades) sigue vigente.
+- **Estado:** Aceptado (2026-11-19, aprobado por Felipe; borrador de Claude del 2026-11-18). Reemplaza la decisión de **llave** del ADR-004; el resto del ADR-004 (equivalencias entre unidades) sigue vigente.
 - **Fecha:** 2026-11-18
 
 ## Contexto
@@ -23,15 +23,15 @@ Para el costo de la receta se compararon tres políticas: último precio pagado 
 
 ## Decisión
 
-- **Llave del ingrediente:** `lower(name)` + `lower(coalesce(brand, ''))`, índice único (migración 30). Repetir ambos responde 409 con un mensaje que los nombra. Marca vacía cuenta como un valor más.
+- **Llave del ingrediente:** `lower(name)` + `lower(coalesce(brand, ''))`, índice único (migración 31). Repetir ambos responde 409 con un mensaje que los nombra. Marca vacía cuenta como un valor más.
 - **La compra se guarda en `stock_adjustments`** con el motivo `compra` que ya existe, más tres columnas opcionales: `supplier`, `package_size` y `package_price`. Una compra lleva proveedor (puede ir vacío), cantidad, tamaño del paquete y precio pagado por ese paquete. El tamaño va en la compra porque cambia con el lugar.
 - **Último precio pagado:** al registrar una compra con fecha igual o posterior a la de la última compra registrada, el ingrediente pasa a tener el tamaño de paquete, el precio del paquete, el precio por unidad y el proveedor de esa compra, y se agrega una fila a `ingredient_price_history`. Una compra con fecha anterior a la última se guarda y entra al historial, pero no cambia el precio vigente. Una merma, una corrección o un ajuste "otro" no cambian el precio.
 - **El stock es una sola fila por ingrediente:** la compra suma cantidad, como hoy.
 - **Costos, ventas y `recipeneeds` no cambian:** siguen leyendo `ingredients.price_per_unit`.
 - **La columna `ingredients.supplier` se conserva** y pasa a significar "proveedor de la última compra" (informativo; ya no es parte de la llave).
 - **Equivalencias (ADR-004):** `grams_per_liter` y `grams_per_unit` siguen en el ingrediente; ahora valen para todos sus proveedores.
-- **Migración 30, fusión de duplicados** (mismo nombre + marca, distinto proveedor): conserva la fila con el precio más reciente; suma el stock; repunta `recipe_ingredients`, `sale_ingredients`, `stock_adjustments` e `ingredient_price_history` a la fila que queda; el `alert_threshold` es el mayor de los dos; las equivalencias son las de la fila que queda, o las de la otra si aquella tiene 0. **Si las filas difieren en unidad, en tipo (ingrediente/insumo) o en una equivalencia distinta de 0, la migración se detiene con un mensaje que nombra el ingrediente** y no cambia nada: lo resuelve una persona.
-- **El `down` de la migración 30 no puede deshacer una fusión:** restaura el índice de tres campos y quita las columnas nuevas, pero las filas fusionadas siguen fusionadas. Antes de aplicarla en producción hay un respaldo.
+- **Migración 31, fusión de duplicados** (mismo nombre + marca, distinto proveedor): conserva la fila con el precio más reciente; suma el stock; repunta `recipe_ingredients`, `sale_ingredients`, `stock_adjustments` e `ingredient_price_history` a la fila que queda; el `alert_threshold` es el mayor de los dos; las equivalencias son las de la fila que queda, o las de la otra si aquella tiene 0. **Si las filas difieren en unidad, en tipo (ingrediente/insumo) o en una equivalencia distinta de 0, la migración se detiene con un mensaje que nombra el ingrediente** y no cambia nada: lo resuelve una persona.
+- **El `down` de la migración 31 no puede deshacer una fusión:** restaura el índice de tres campos y quita las columnas nuevas, pero las filas fusionadas siguen fusionadas. Antes de aplicarla en producción hay un respaldo.
 
 ## Razón
 
