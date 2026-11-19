@@ -125,11 +125,13 @@ func TestB7_InvalidPurchaseDataIsRefusedAndNothingIsWritten(t *testing.T) {
 	api, _ := newPricingAPI(t)
 	id := flour(t, api)
 	cases := map[string]map[string]any{
-		"size 0":            {"quantity": 1, "package_size": 0, "package_price": 100},
-		"negative size":     {"quantity": 1, "package_size": -5, "package_price": 100},
-		"price 0":           {"quantity": 1, "package_size": 1, "package_price": 0},
-		"negative price":    {"quantity": 1, "package_size": 1, "package_price": -1},
-		"supplier too long": {"quantity": 1, "package_size": 1, "package_price": 100, "supplier": strings.Repeat("a", 101)},
+		"size 0":                  {"quantity": 1, "package_size": 0, "package_price": 100},
+		"negative size":           {"quantity": 1, "package_size": -5, "package_price": 100},
+		"price 0":                 {"quantity": 1, "package_size": 1, "package_price": 0},
+		"negative price":          {"quantity": 1, "package_size": 1, "package_price": -1},
+		"supplier too long":       {"quantity": 1, "package_size": 1, "package_price": 100, "supplier": strings.Repeat("a", 101)},
+		"size beyond the column":  {"quantity": 1, "package_size": 1e12, "package_price": 100},
+		"price beyond the column": {"quantity": 1, "package_size": 1, "package_price": 1e12},
 		"a unit of another family without equivalence": {"quantity": 1, "package_size": 1, "package_unit": "lt", "package_price": 100},
 	}
 	for name, body := range cases {
@@ -194,6 +196,19 @@ func TestB10_TheCostOfARecipeFollowsTheLastPricePaidAndTheHistoryKeepsTheDetail(
 	}
 }
 
+func TestB11_AnOmittedSupplierLeavesTheSupplierAndAnEmptyOneClearsIt(t *testing.T) {
+	api, _ := newPricingAPI(t)
+	id := ing(t, api, "Harina", "Selecta", "Mayorista", map[string]any{"package_size": 1000, "package_price": 1000})
+	buy(t, api, id, map[string]any{"quantity": 1, "package_size": 1000, "package_price": 1100, "adjusted_on": "2026-03-01"})
+	if got := ingredientBody(t, api, id)["supplier"]; got != "Mayorista" {
+		t.Errorf("supplier = %v, want Mayorista (not given: it stays)", got)
+	}
+	buy(t, api, id, map[string]any{"quantity": 1, "package_size": 1000, "package_price": 1200, "supplier": "", "adjusted_on": "2026-03-02"})
+	if got := ingredientBody(t, api, id)["supplier"]; got != "" {
+		t.Errorf("supplier = %v, want empty (given empty: it clears)", got)
+	}
+}
+
 // --- A: the key is name + brand ---
 
 func TestA1_TheSameNameAndBrandWithAnotherSupplierIsTheSameIngredient(t *testing.T) {
@@ -213,17 +228,14 @@ func TestA1_TheSameNameAndBrandWithAnotherSupplierIsTheSameIngredient(t *testing
 	}
 }
 
-func TestA2_AnotherBrandOrNoBrandIsAnotherIngredient(t *testing.T) {
+// (The API asks for a brand, so "no brand" is not a case of the key here; the database does allow it, see M1.)
+func TestA2_AnotherBrandIsAnotherIngredient(t *testing.T) {
 	api, _ := newPricingAPI(t)
 	ing(t, api, "Mantequilla", "Soprole", "La Vega", nil)
 	ing(t, api, "Mantequilla", "Colún", "La Vega", nil)
-	ing(t, api, "Mantequilla", "", "", nil)
+	ing(t, api, "Mantequilla", "Mantecol", "", nil)
 	if got := len(getList(t, api, "/ingredients")); got != 3 {
 		t.Errorf("ingredients = %d, want 3", got)
-	}
-	if status, _ := api.do("POST", "/ingredients", map[string]any{"name": "Mantequilla", "brand": "", "supplier": "Líder",
-		"default_unit": "gr", "package_size": 1000, "package_price": 1}); status != http.StatusConflict {
-		t.Errorf("two without brand: status = %d, want 409", status)
 	}
 }
 

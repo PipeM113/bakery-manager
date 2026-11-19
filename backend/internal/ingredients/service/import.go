@@ -154,14 +154,14 @@ func (s *IngredientImportService) Import(ctx context.Context, rows []IngredientI
 	}
 
 	// Validate row by row. A rejected row is reported with its reason; the rest are imported.
-	seenKeys := map[string]int{} // lowercase name|brand|supplier -> first row number
+	seenKeys := map[string]int{} // lowercase name|brand -> first row number
 	valid := make([]IngredientImportRow, 0, len(rows))
 
 	for _, row := range rows {
 		reject := func(reason string) {
 			result.Errors = append(result.Errors, ImportRowError{Row: row.RowNum, Reason: reason})
 		}
-		key := strings.ToLower(row.Name) + "|" + strings.ToLower(row.Brand) + "|" + strings.ToLower(row.Supplier)
+		key := strings.ToLower(row.Name) + "|" + strings.ToLower(row.Brand)
 
 		if row.ParseError != "" {
 			reject(row.ParseError)
@@ -172,7 +172,7 @@ func (s *IngredientImportService) Import(ctx context.Context, rows []IngredientI
 			continue
 		}
 		if firstRow, seen := seenKeys[key]; seen {
-			reject(fmt.Sprintf("nombre, marca y proveedor repetidos en el archivo (primera aparición: fila %d)", firstRow))
+			reject(fmt.Sprintf("nombre y marca repetidos en el archivo (primera aparición: fila %d)", firstRow))
 			continue
 		}
 		seenKeys[key] = row.RowNum
@@ -198,13 +198,13 @@ func (s *IngredientImportService) Import(ctx context.Context, rows []IngredientI
 	for _, row := range rows {
 		pricePerUnit := row.PackagePrice / row.PackageSize
 
-		// Check if ingredient already exists (same name, brand and supplier, case-insensitive)
+		// Check if ingredient already exists (same name and brand, case-insensitive; the supplier is not part of the key)
 		var existingID string
 		var oldPricePerUnit float64
 		err := tx.QueryRow(ctx,
 			`SELECT id, price_per_unit FROM ingredients
-			 WHERE LOWER(name) = LOWER($1) AND LOWER(COALESCE(brand, '')) = LOWER($2) AND LOWER(supplier) = LOWER($3)`,
-			row.Name, row.Brand, row.Supplier,
+			 WHERE LOWER(name) = LOWER($1) AND LOWER(COALESCE(brand, '')) = LOWER($2)`,
+			row.Name, row.Brand,
 		).Scan(&existingID, &oldPricePerUnit)
 
 		if err == nil {
@@ -212,10 +212,10 @@ func (s *IngredientImportService) Import(ctx context.Context, rows []IngredientI
 			_, err = tx.Exec(ctx, `
 				UPDATE ingredients
 				SET name=$1, default_unit=$2, package_size=$3, package_price=$4,
-				    price_per_unit=$5, brand=$6, updated_at=NOW()
+				    price_per_unit=$5, brand=$6, supplier=COALESCE(NULLIF($8, ''), supplier), updated_at=NOW()
 				WHERE id=$7`,
 				row.Name, row.DefaultUnit, row.PackageSize, row.PackagePrice,
-				pricePerUnit, row.Brand, existingID,
+				pricePerUnit, row.Brand, existingID, row.Supplier,
 			)
 			if err != nil {
 				return result, fmt.Errorf("actualizando fila %d: %w", row.RowNum, err)

@@ -5,14 +5,17 @@ ver `docs/despliegue.md`).
 
 ## Reglas
 
-- **E1. La llave es nombre + marca + proveedor**, sin distinguir mayúsculas ni espacios al borde. La misma
-  mantequilla Soprole en La Vega y en Líder (a distinto precio) son dos ingredientes. Repetir los tres da
-  409 y el mensaje los nombra. Renombrar sobre otro existente también es 409 (antes era un error 500).
-- **E2. El proveedor es opcional**, se recorta y llega hasta 100 caracteres.
-- **E3. Excel.** Importar reconoce el ingrediente por nombre + marca + proveedor; la columna se llama
-  "Proveedor" y, si el archivo no la trae, el proveedor queda vacío. El archivo exportado la escribe en la
-  columna F (el precio unitario, informativo, pasó a la G). Al importar, el nombre, la marca y el proveedor
-  que ya existen conservan cómo estaban escritos.
+- **E1. La llave es nombre + marca** (ADR-005, sprint 19; antes incluía el proveedor), sin distinguir
+  mayúsculas ni espacios al borde. La misma mantequilla Soprole comprada en La Vega y en Líder es **un**
+  ingrediente con un stock: el proveedor y el precio se registran en cada compra (ver «Compras» abajo).
+  Repetir nombre y marca da 409. Renombrar sobre otro existente también es 409. Cambiar el proveedor es libre.
+- **E2. El proveedor es opcional**, se recorta y llega hasta 100 caracteres. Desde el ADR-005 es el
+  **proveedor de la última compra** (informativo; no es parte de la llave).
+- **E3. Excel.** Importar reconoce el ingrediente por nombre + marca; la columna se llama "Proveedor" y, si el
+  archivo no la trae o viene vacía, el proveedor del ingrediente no cambia. Dos filas del archivo con el mismo
+  nombre y marca se reportan como repetidas. El archivo exportado la escribe en la columna F (el precio
+  unitario, informativo, pasó a la G). Al importar, el nombre y la marca que ya existen se escriben como los
+  trae el archivo.
 - **E4. Orden alfabético** sin distinguir mayúsculas ni tildes, en ingredientes y recetas (después, marca y
   proveedor). En Ingredientes hay un selector "Ordenar por" (nombre, marca, proveedor, stock más bajo).
 - **E5. Marca y proveedor al elegir productos.** Las líneas de una receta traen `brand` y `supplier`, y los
@@ -73,3 +76,28 @@ historial) queda como idea en `docs/backlog.md`.
 N1. `internal/recipeneeds` lee las líneas de una receta y las convierte a la unidad de cada ingrediente con sus
 equivalencias. Costos (y, por lo tanto, cotizaciones) y ventas la usan; antes cada uno tenía su copia. Un test de
 higiene (`internal/hygiene/recipeneeds_s15_test.go`) limita desde qué archivos se llama a `kernel.Convert`.
+
+## Compras (ADR-005, sprint 19)
+
+El costo de una receta usa el **último precio pagado** del ingrediente. Se registra con «+ Compra» (la ventana
+«Registrar compra»): cantidad comprada, tamaño del paquete, precio pagado por el paquete y proveedor.
+
+- La compra es un ajuste de stock con el motivo `compra` y los datos `supplier`, `package_size` (en la unidad del
+  ingrediente) y `package_price` (ver `docs/ajustes-de-stock.md`). El stock sigue siendo **una sola fila** por
+  ingrediente: la compra suma la cantidad.
+- Con el paquete y el precio, el ingrediente pasa a tener ese tamaño, ese precio, su precio por unidad y ese
+  proveedor, y se agrega una fila a `ingredient_price_history`. Costos, ventas y la regla de «cuánto necesita
+  una receta» no cambian: siguen leyendo el precio por unidad del ingrediente.
+- Una compra con **fecha anterior a la última compra con precio** se guarda y entra al historial, pero no mueve
+  el precio vigente (sirve para anotar una compra atrasada). Con la misma fecha gana la última registrada.
+- El tamaño y el precio van juntos o ninguno (sin ellos la compra solo suma stock, como antes).
+- Las equivalencias (peso de 1 litro y de 1 unidad) son del ingrediente y valen para todos sus proveedores.
+
+### Migración 31 (se aplica antes del deploy)
+
+Fusiona los ingredientes que el índice anterior mantenía separados (mismo nombre y marca, distinto
+proveedor): queda la fila con el precio más reciente; se suma el stock; se repuntan las líneas de receta,
+las ventas, los ajustes y el historial de precios; el umbral de alerta es el mayor; las equivalencias son las
+de la fila que queda o, si faltan, las de la otra. **Se detiene sin cambiar nada** (con un mensaje que nombra
+el ingrediente) si las filas difieren en unidad, en tipo (ingrediente o insumo) o en una equivalencia distinta
+de 0. **El `down` no puede deshacer una fusión.** Con los datos del 2026-11-18 no había nada que fusionar.

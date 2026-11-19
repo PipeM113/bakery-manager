@@ -11,6 +11,11 @@ Todo cambio del stock que no es una venta deja un registro con su motivo (tabla
 | `correccion` | Contaste el stock real. Deja el stock en `counted_quantity` y guarda la diferencia (positiva o negativa). | No |
 | `otro` | Regalo, muestra u otro caso. Sube o baja el stock en `quantity_delta` (con signo). **Exige una nota.** | No |
 
+- **`compra` con precio (ADR-005).** Además de `quantity` y `unit`, una compra puede traer `package_size`,
+  `package_unit` (la del ingrediente si falta), `package_price` y `supplier`. El tamaño y el precio van juntos
+  (400 si viene uno solo), son mayores a 0 y solo valen para `compra` (en otro motivo, 400). Deja el precio del
+  ingrediente en el último pagado (salvo una compra más antigua que la última con precio) y una fila en
+  `ingredient_price_history`. Detalle en `docs/ingredientes.md`, «Compras».
 - La cantidad puede venir en otra unidad de la misma clase (kg↔gr, lt↔ml) con `unit`; se convierte
   a la unidad del ingrediente. Unidades incompatibles responden 400.
 - Una merma mayor al stock disponible responde 400 (para corregir primero se usa una

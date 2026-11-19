@@ -95,3 +95,16 @@ Los sprints 0 a 4 usan la numeración antigua y son anteriores al registro de ac
 - [ ] Aceptar en la app real (crear una de cada tipo y revisar los PDF).
 - Ideas: razón social y RUT del cliente en las de empresa; IVA (neto, IVA y total) si la pastelería emite
   factura; poder editar el tipo y las condiciones de una cotización ya guardada.
+
+
+## Sprint 19, compras y llave nombre + marca (ADR-005; cerrado en código)
+
+- [x] La llave del ingrediente es nombre + marca; el proveedor, el tamaño del paquete y el precio pagado van en
+  cada compra; el costo usa el último precio pagado. Migración 31.
+- [x] «+ Stock» pasa a «+ Compra» / «Registrar compra».
+- [ ] Antes de aplicar la migración 31 en producción: `pg_dump` completo con `infra/backup/backup.sh` (hay un
+  respaldo de datos del 2026-11-18) y revisar que no haya duplicados que necesiten decisión.
+- [ ] Aceptar en la app real: registrar una compra con otro tamaño y otro proveedor y ver el costo de la receta.
+- Ideas: mostrar junto al último precio el más alto de los últimos 90 días y avisar cuando la última compra fue
+  una oferta (el costo de reponer sería mayor); costo por proveedor en una receta si la dueña lo pide; poder
+  corregir una compra mal anotada.

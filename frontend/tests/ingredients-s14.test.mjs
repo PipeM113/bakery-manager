@@ -52,13 +52,14 @@ test("the ingredient screen has the supplier and the two equivalences", () => {
   assert.match(s, /data-testid="ingredient-sort"/);
 });
 
-test("the list has a quick stock button that opens a window with Agregar and Contar", () => {
+// ADR-005 (sprint 18): "+ Stock" became "+ Compra" and the window registers a purchase ("Compra" / "Contar"); approved by Felipe.
+test("the list has a quick purchase button that opens a window with Compra and Contar", () => {
   const s = src("pages/IngredientsPage.tsx");
   assert.match(s, /data-testid="stock-quick"/);
-  assert.ok(s.includes("+ Stock"));
+  assert.ok(s.includes("+ Compra"));
   const files = ["components/QuickStockModal.tsx", "components/StockAdjustmentModal.tsx", "pages/IngredientsPage.tsx"].filter((f) => existsSync(join(root, "src", f)));
   const all = files.map((f) => readFileSync(join(root, "src", f), "utf8")).join("\n");
-  assert.ok(all.includes("Agregar") && all.includes("Contar"));
+  assert.ok(all.includes("Compra") && all.includes("Contar"));
   assert.match(all, /compra/, "the quick add records the reason compra");
 });
 

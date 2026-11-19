@@ -505,14 +505,14 @@ const FLOW_WIDTHS = [390, 1280];
 const field = (scope, labelText, tag) => scope.locator("label", { hasText: labelText }).locator("..").locator(tag);
 
 for (const w of FLOW_WIDTHS) {
-  // F1: "+ Stock" adds a purchase without going through the edit window.
-  test(`F1 quick stock sends a purchase at ${w}px`, { timeout: 60000 }, flow(w, "/ingredients", {}, async (page, context) => {
+  // F1: "+ Compra" registers a purchase without going through the edit window.
+  // (ADR-005, sprint 18: the window is "Registrar compra"; the buttons were renamed, approved by Felipe.)
+  test(`F1 quick purchase sends a purchase at ${w}px`, { timeout: 60000 }, flow(w, "/ingredients", {}, async (page, context) => {
     await page.locator('[data-testid="stock-quick"]').first().click();
     const dialog = page.locator('[role="dialog"]').first();
     await dialog.waitFor({ state: "visible" });
-    await dialog.getByRole("button", { name: "Agregar", exact: true }).click();
-    await dialog.locator("input[type=number]").fill("500");
-    await dialog.getByRole("button", { name: /Agregar al stock/ }).click();
+    await dialog.locator('[data-testid="purchase-quantity"]').fill("500");
+    await dialog.getByRole("button", { name: "Registrar compra" }).click();
     await dialog.waitFor({ state: "hidden" });
     const call = context.calls.find((c) => c.method === "POST" && /^\/ingredients\/[^/]+\/stock-adjustments$/.test(c.path));
     assert.ok(call, "no stock adjustment was sent");
@@ -903,5 +903,54 @@ for (const w of FLOW_WIDTHS) {
     const tags = page.locator('[data-testid="quote-kind"]');
     await tags.first().waitFor({ state: "visible", timeout: 5000 });
     assert.equal(await tags.count(), 2, "2 of the 8 quotations of the mock are for a company");
+  }));
+}
+
+
+// ---- ADR-005: "Registrar compra" carries the package, the price paid and the supplier (R1-R3) ----
+for (const w of FLOW_WIDTHS) {
+  const openPurchase = async (page) => {
+    await page.locator('[data-testid="stock-quick"]').first().click();
+    const dialog = page.locator('[role="dialog"]').first();
+    await dialog.waitFor({ state: "visible" });
+    return dialog;
+  };
+
+  test(`R1 the purchase window starts with the package and the supplier the ingredient has at ${w}px`, { timeout: 60000 }, flow(w, "/ingredients", {}, async (page) => {
+    const dialog = await openPurchase(page);
+    assert.notEqual(await dialog.locator('[data-testid="purchase-package-size"]').inputValue(), "", "the package size starts empty");
+    assert.notEqual(await dialog.locator('[data-testid="purchase-package-price"]').inputValue(), "", "the price starts empty");
+    assert.ok(inViewport(await dialog.boundingBox(), w, (await page.viewportSize()).height), "the window does not fit the screen");
+  }));
+
+  test(`R2 a purchase sends the package, the price and the supplier, and shows the new price per unit at ${w}px`, { timeout: 60000 }, flow(w, "/ingredients", {}, async (page, context) => {
+    const dialog = await openPurchase(page);
+    await dialog.locator('[data-testid="purchase-quantity"]').fill("50");
+    await dialog.locator('[data-testid="purchase-package-size"]').fill("25");
+    await dialog.getByLabel("Unidad del paquete").selectOption("kg");
+    await dialog.locator('[data-testid="purchase-package-price"]').fill("20000");
+    await dialog.locator('[data-testid="purchase-supplier"]').fill("Mayorista");
+    const preview = dialog.locator('[data-testid="purchase-price-preview"]');
+    await preview.waitFor({ state: "visible" });
+    assert.match(await preview.innerText(), /antes .* ahora/);
+    await dialog.getByRole("button", { name: "Registrar compra" }).click();
+    await dialog.waitFor({ state: "hidden" });
+    const call = context.calls.find((c) => c.method === "POST" && /^\/ingredients\/[^/]+\/stock-adjustments$/.test(c.path));
+    assert.ok(call, "no purchase was sent");
+    assert.equal(call.body.reason, "compra");
+    assert.equal(call.body.package_size, 25);
+    assert.equal(call.body.package_unit, "kg");
+    assert.equal(call.body.package_price, 20000);
+    assert.equal(call.body.supplier, "Mayorista");
+    await page.locator('[data-toast="success"]').filter({ hasText: "Compra registrada" }).waitFor({ state: "visible", timeout: 5000 });
+  }));
+
+  test(`R3 the size of the package and its price go together at ${w}px`, { timeout: 60000 }, flow(w, "/ingredients", {}, async (page, context) => {
+    const dialog = await openPurchase(page);
+    await dialog.locator('[data-testid="purchase-quantity"]').fill("50");
+    await dialog.locator('[data-testid="purchase-package-price"]').fill("");
+    await dialog.getByRole("button", { name: "Registrar compra" }).click();
+    await dialog.getByText(/van juntos/).waitFor({ state: "visible", timeout: 5000 });
+    assert.equal(context.calls.filter((c) => c.method === "POST" && /stock-adjustments$/.test(c.path)).length, 0);
   }));
 }

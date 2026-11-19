@@ -25,7 +25,7 @@ var allowedUnits = map[string]bool{
 }
 
 const (
-	duplicateMessage = "ya existe un insumo con ese nombre, marca y proveedor"
+	duplicateMessage = "ya existe un insumo con ese nombre y marca"
 	maxSupplier      = 100
 	maxGramsPerLiter = 20000
 	maxGramsPerUnit  = 100000

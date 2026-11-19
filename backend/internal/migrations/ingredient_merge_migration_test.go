@@ -158,8 +158,8 @@ func TestM3_TwoRowsOfTheSameNameAndBrandBecomeOneWithTheirStockAndHistory(t *tes
 
 func TestM4_TheEquivalencesOfTheKeptRowWinAndTheOtherFillsWhatIsMissing(t *testing.T) {
 	pool := stage(t)
-	a := butter(t, pool, "La Vega", 0, 0, ", grams_per_liter")
-	b := butter(t, pool, "Líder", 0, 0, ", grams_per_unit")
+	a := butter(t, pool, "La Vega", 0, 0, "")
+	b := butter(t, pool, "Líder", 0, 0, "")
 	exec(t, pool, `update ingredients set grams_per_liter = 920 where id = $1`, a)
 	exec(t, pool, `update ingredients set grams_per_unit = 250 where id = $1`, b)
 	exec(t, pool, `insert into ingredient_price_history (ingredient_id, price_per_unit, unit, effective_date) values ($1, 4, 'gr', '2026-01-01'), ($2, 5, 'gr', '2026-02-01')`, a, b)

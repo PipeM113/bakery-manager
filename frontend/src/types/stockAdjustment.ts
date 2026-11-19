@@ -14,6 +14,10 @@ export interface IStockAdjustment {
   loss_amount: number;
   note: string;
   adjusted_on: string;
+  /** Only a purchase: where it was bought and the package paid for (size in the unit of the ingredient). */
+  supplier?: string;
+  package_size?: number;
+  package_price?: number;
   /** Who registered it; empty if that user was deleted. */
   created_by: string | null;
   created_at: string;
@@ -28,4 +32,9 @@ export interface StockAdjustmentForm {
   unit?: string;
   note?: string;
   adjusted_on?: string;
+  /** Purchase only: the package size and its price come together; the supplier is free text. */
+  supplier?: string;
+  package_size?: number;
+  package_unit?: string;
+  package_price?: number;
 }

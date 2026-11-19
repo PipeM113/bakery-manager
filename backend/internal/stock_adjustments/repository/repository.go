@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/PipeM113/bakery-manager/internal/shared/kernel"
 	"github.com/jackc/pgx/v5"
@@ -46,6 +47,10 @@ type Adjustment struct {
 	AdjustedOn     string    `json:"adjusted_on"`
 	CreatedBy      *string   `json:"created_by"`
 	CreatedAt      time.Time `json:"created_at"`
+	// The detail of a purchase (ADR-005): where it was bought and the package paid for, in the unit of the ingredient.
+	Supplier     *string  `json:"supplier,omitempty"`
+	PackageSize  *float64 `json:"package_size,omitempty"`
+	PackagePrice *float64 `json:"package_price,omitempty"`
 }
 
 // Input of an adjustment: Quantity (merma), CountedQuantity (correccion) or QuantityDelta (otro).
@@ -59,7 +64,24 @@ type Input struct {
 	Unit            string
 	Note            string
 	AdjustedOn      string // YYYY-MM-DD, already checked by the caller
+
+	// Only for a purchase (ADR-005). The size and the price come together; with them the price of the ingredient
+	// becomes the last one paid. PackageUnit is the unit of the size (the ingredient's unit when empty). A nil
+	// Supplier leaves the supplier of the ingredient as it is; an empty one clears it.
+	Supplier     *string
+	PackageSize  *float64
+	PackageUnit  string
+	PackagePrice *float64
 }
+
+// maxSupplier is the longest name of a supplier (the same limit as the ingredient's).
+const maxSupplier = 100
+
+// What the columns can hold (numeric(12,4) and numeric(12,2)): more would be a database error, not a refusal.
+const (
+	maxPackageSize  = 99_999_999
+	maxPackagePrice = 9_999_999_999
+)
 
 type Repository struct {
 	db *pgxpool.Pool
@@ -90,12 +112,14 @@ func lossOf(quantity float64, price *big.Rat) int64 {
 }
 
 const columns = `a.id, a.ingredient_id, i.name, a.reason, a.quantity_delta, a.unit, a.stock_before, a.stock_after,
-	a.loss_amount, a.note, to_char(a.adjusted_on, 'YYYY-MM-DD'), a.created_by, a.created_at`
+	a.loss_amount, a.note, to_char(a.adjusted_on, 'YYYY-MM-DD'), a.created_by, a.created_at,
+	a.supplier, a.package_size::float8, a.package_price::float8`
 
 func scan(row pgx.Row) (Adjustment, error) {
 	var a Adjustment
 	err := row.Scan(&a.ID, &a.IngredientID, &a.IngredientName, &a.Reason, &a.QuantityDelta, &a.Unit,
-		&a.StockBefore, &a.StockAfter, &a.LossAmount, &a.Note, &a.AdjustedOn, &a.CreatedBy, &a.CreatedAt)
+		&a.StockBefore, &a.StockAfter, &a.LossAmount, &a.Note, &a.AdjustedOn, &a.CreatedBy, &a.CreatedAt,
+		&a.Supplier, &a.PackageSize, &a.PackagePrice)
 	return a, err
 }
 
@@ -139,6 +163,45 @@ func (r *Repository) Record(ctx context.Context, in Input) (Adjustment, error) {
 	}
 
 	note := strings.TrimSpace(in.Note)
+	hasDetail := in.Supplier != nil || in.PackageSize != nil || in.PackagePrice != nil || in.PackageUnit != ""
+	if hasDetail && in.Reason != ReasonPurchase {
+		return Adjustment{}, &ValidationError{"el proveedor y los datos del paquete son solo para compras"}
+	}
+	var supplier *string
+	var pkgSize, pkgPrice *float64 // the size in the unit of the ingredient
+	if in.Reason == ReasonPurchase {
+		if (in.PackageSize == nil) != (in.PackagePrice == nil) {
+			return Adjustment{}, &ValidationError{"el tamaño del paquete y su precio van juntos: indica los dos o ninguno"}
+		}
+		if in.Supplier != nil {
+			s := strings.TrimSpace(*in.Supplier)
+			if utf8.RuneCountInString(s) > maxSupplier {
+				return Adjustment{}, &ValidationError{fmt.Sprintf("el proveedor no puede pasar de %d caracteres", maxSupplier)}
+			}
+			supplier = &s
+		}
+		if in.PackageSize != nil {
+			if *in.PackageSize <= 0 || *in.PackagePrice <= 0 {
+				return Adjustment{}, &ValidationError{"el tamaño del paquete y su precio deben ser mayores a 0"}
+			}
+			if *in.PackageSize > maxPackageSize || *in.PackagePrice > maxPackagePrice {
+				return Adjustment{}, &ValidationError{"el tamaño del paquete o su precio es demasiado grande"}
+			}
+			from := in.PackageUnit
+			if from == "" {
+				from = unit
+			}
+			v, cerr := kernel.Convert(*in.PackageSize, from, unit, eq)
+			if cerr != nil {
+				return Adjustment{}, &ValidationError{cerr.Error()}
+			}
+			v = math.Round(v*10000) / 10000
+			if v <= 0 {
+				return Adjustment{}, &ValidationError{"el tamaño del paquete es demasiado pequeño"}
+			}
+			pkgSize, pkgPrice = &v, in.PackagePrice
+		}
+	}
 	var after float64
 	var loss int64
 	switch in.Reason {
@@ -196,11 +259,37 @@ func (r *Repository) Record(ctx context.Context, in Input) (Adjustment, error) {
 	if _, err := tx.Exec(ctx, `UPDATE ingredients SET stock_quantity = $1, updated_at = NOW() WHERE id = $2`, after, in.IngredientID); err != nil {
 		return Adjustment{}, fmt.Errorf("update stock: %w", err)
 	}
+	if pkgSize != nil {
+		// The price of the ingredient becomes the last one paid, unless this purchase is older than the last priced one
+		// (a late entry): that one enters the history but does not move the price. The same day: the last registered wins.
+		var newest *string
+		if err := tx.QueryRow(ctx, `
+			SELECT to_char(max(adjusted_on), 'YYYY-MM-DD') FROM stock_adjustments
+			WHERE ingredient_id = $1 AND reason = 'compra' AND package_price IS NOT NULL`, in.IngredientID).Scan(&newest); err != nil {
+			return Adjustment{}, fmt.Errorf("read last purchase: %w", err)
+		}
+		perUnit := *pkgPrice / *pkgSize
+		if newest == nil || in.AdjustedOn >= *newest {
+			if _, err := tx.Exec(ctx, `
+				UPDATE ingredients SET package_size = $1, package_price = $2, price_per_unit = $3,
+				       supplier = COALESCE($4, supplier), updated_at = NOW()
+				WHERE id = $5`, *pkgSize, *pkgPrice, perUnit, supplier, in.IngredientID); err != nil {
+				return Adjustment{}, fmt.Errorf("update price: %w", err)
+			}
+		}
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO ingredient_price_history (ingredient_id, price_per_unit, unit, effective_date)
+			VALUES ($1, $2, $3, $4::date)`, in.IngredientID, perUnit, unit, in.AdjustedOn); err != nil {
+			return Adjustment{}, fmt.Errorf("record price history: %w", err)
+		}
+	}
 	var id string
 	if err := tx.QueryRow(ctx, `
-		INSERT INTO stock_adjustments (created_by, ingredient_id, reason, quantity_delta, unit, stock_before, stock_after, loss_amount, note, adjusted_on)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::date) RETURNING id`,
+		INSERT INTO stock_adjustments (created_by, ingredient_id, reason, quantity_delta, unit, stock_before, stock_after, loss_amount, note, adjusted_on,
+		                               supplier, package_size, package_price)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::date, $11, $12, $13) RETURNING id`,
 		in.CreatedBy, in.IngredientID, in.Reason, round3(after-stock), unit, stock, after, loss, note, in.AdjustedOn,
+		supplier, pkgSize, pkgPrice,
 	).Scan(&id); err != nil {
 		return Adjustment{}, fmt.Errorf("insert adjustment: %w", err)
 	}
