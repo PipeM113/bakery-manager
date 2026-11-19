@@ -32,12 +32,17 @@ type Line struct {
 }
 
 type Quotation struct {
-	ID           string    `json:"id"`
-	CreatedBy    *string   `json:"created_by"`
-	ClientName   string    `json:"client_name"`
-	DeliveryCost int64     `json:"delivery_cost"`
-	Total        int64     `json:"total"`
-	Status       string    `json:"status"`
+	ID           string  `json:"id"`
+	CreatedBy    *string `json:"created_by"`
+	ClientName   string  `json:"client_name"`
+	DeliveryCost int64   `json:"delivery_cost"`
+	Total        int64   `json:"total"`
+	Status       string  `json:"status"`
+	// Kind is "person" or "company"; the conditions below are the company ones (nil / empty for a person).
+	Kind         string    `json:"kind"`
+	DeliveryDate *string   `json:"delivery_date"`
+	PaymentTerms string    `json:"payment_terms"`
+	ValidDays    *int      `json:"valid_days"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
 	Lines        []Line    `json:"lines"`
@@ -62,6 +67,10 @@ type SaveInput struct {
 	CreatedBy    string
 	ClientName   string
 	DeliveryCost int64
+	Kind         string    // "person" or "company"
+	DeliveryDate *string   // YYYY-MM-DD, company only
+	PaymentTerms string    // company only
+	ValidDays    *int      // company only
 	CreatedAt    time.Time // from the business clock
 	Lines        []LineInput
 }
@@ -74,11 +83,12 @@ func NewQuotationRepository(db *pgxpool.Pool) *QuotationRepository {
 	return &QuotationRepository{db: db}
 }
 
-const quotationColumns = `id, created_by, client_name, delivery_cost, final_price, status, created_at, updated_at`
+const quotationColumns = `id, created_by, client_name, delivery_cost, final_price, status, kind,
+	to_char(delivery_date, 'YYYY-MM-DD'), payment_terms, valid_days::int, created_at, updated_at`
 
 func scanQuotation(row pgx.Row) (Quotation, error) {
 	var q Quotation
-	err := row.Scan(&q.ID, &q.CreatedBy, &q.ClientName, &q.DeliveryCost, &q.Total, &q.Status, &q.CreatedAt, &q.UpdatedAt)
+	err := row.Scan(&q.ID, &q.CreatedBy, &q.ClientName, &q.DeliveryCost, &q.Total, &q.Status, &q.Kind, &q.DeliveryDate, &q.PaymentTerms, &q.ValidDays, &q.CreatedAt, &q.UpdatedAt)
 	q.Lines = []Line{}
 	return q, err
 }
@@ -97,9 +107,9 @@ func (r *QuotationRepository) Save(ctx context.Context, in SaveInput) (Quotation
 		total += l.LineTotal
 	}
 	q, err := scanQuotation(tx.QueryRow(ctx, `
-		INSERT INTO quotations (created_by, client_name, delivery_cost, final_price, created_at, updated_at)
-		VALUES (NULLIF($1, '')::uuid, $2, $3, $4, $5, $5)
-		RETURNING `+quotationColumns, in.CreatedBy, in.ClientName, in.DeliveryCost, total, in.CreatedAt))
+		INSERT INTO quotations (created_by, client_name, delivery_cost, final_price, kind, delivery_date, payment_terms, valid_days, created_at, updated_at)
+		VALUES (NULLIF($1, '')::uuid, $2, $3, $4, $5, $6::date, $7, $8, $9, $9)
+		RETURNING `+quotationColumns, in.CreatedBy, in.ClientName, in.DeliveryCost, total, in.Kind, in.DeliveryDate, in.PaymentTerms, in.ValidDays, in.CreatedAt))
 	if err != nil {
 		return Quotation{}, fmt.Errorf("insert quotation: %w", err)
 	}

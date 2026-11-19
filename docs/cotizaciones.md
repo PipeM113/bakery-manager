@@ -104,3 +104,24 @@ aviso con un enlace a "Datos del negocio". Crear cotizaciones funciona igual.
 
 El PDF solo descarga las fotos que están en el bucket público del proyecto (ver `docs/ingredientes.md`, P2) y no
 sigue redirecciones. Una foto con otra dirección no se descarga: la línea sale sin foto.
+
+## Dos versiones: persona y empresa (sprint 18)
+
+Una cotización es **para una persona** (por defecto) o **para una empresa**. Se elige al crearla (selector
+«Para» del formulario), queda guardada (`quotations.kind`, migración 30) y el PDF sale siempre según lo guardado.
+
+| | Persona | Empresa |
+|---|---|---|
+| Un solo producto | Su nombre (con «× cantidad» si son varios), el envío y el total. Sin precios por producto | El detalle completo |
+| Varios productos | Cada uno con su cantidad y su **precio final**, luego el envío y el total. Sin precio unitario ni subtotal, para no contar de más | Cantidad, precio unitario y subtotal por producto, subtotal, envío y total |
+| Envío | Siempre aparece: el monto o «Sin costo» | Aparece (con el subtotal) si cuesta algo |
+| Condiciones | No lleva | Bloque «CONDICIONES»: fecha de entrega y forma de pago (solo si se indicaron) y validez (siempre) |
+| Aviso final | «Debe confirmarse dentro de 48 horas» | «Es válida hasta el dd/mm/aaaa» (según los días de validez) |
+
+- **Condiciones de empresa** (`delivery_date`, `payment_terms`, `valid_days`): fecha real y no pasada (hora de
+  Santiago), forma de pago hasta 120 caracteres, validez de 1 a 90 días (7 si no se indica). En una cotización
+  de persona se rechazan (400).
+- Los datos de transferencia y el contacto salen en ambas. Una cotización sin tipo (de antes de este sprint)
+  conserva el detalle completo en el PDF.
+- Se probó la forma de los tres PDFs (`quotations/service/pdf_kind_test.go`), la API (`app/quotation_kind_test.go`)
+  y el formulario (`tests/s18-quotations.test.mjs` y los flujos F1 a F4 de la suite responsive).

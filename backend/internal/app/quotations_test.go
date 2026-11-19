@@ -396,7 +396,10 @@ func TestQ5_ThePDFKeepsTheSnapshotToo(t *testing.T) {
 func TestQ6_DownloadThePDFOfAnyQuotationAgain(t *testing.T) {
 	api, _ := newReadyAPI(t)
 	_, cake, pie := bakery(t, api)
-	q := createQuote(t, api, quote("Ana Pérez", 500, ql(cake, 2, ""), ql(pie, 1, "")))
+	// Sprint 18: the detail (unit prices and the subtotal this test looks for) is the quotation for a company.
+	body := quote("Ana Pérez", 500, ql(cake, 2, ""), ql(pie, 1, ""))
+	body["kind"] = "company"
+	q := createQuote(t, api, body)
 	id := q["id"].(string)
 
 	download := func() []byte {

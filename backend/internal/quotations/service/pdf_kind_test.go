@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-// Sprint 18 (P1-P6): the PDF for a person shows only final prices; the one for a company shows the detail
+// Sprint 18 (P1-P8): the PDF for a person shows only final prices; the one for a company shows the detail
 // and the conditions of the order. The final prices are the same in both: only what is shown changes.
 
 func forPerson(lines ...QuoteLine) QuoteData {

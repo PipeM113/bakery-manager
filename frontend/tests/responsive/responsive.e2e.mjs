@@ -848,3 +848,60 @@ for (const w of FLOW_WIDTHS) {
     assert.equal(await deletes.count(), 5);
   }));
 }
+
+// ---- Sprint 18: quotations for a person or for a company (F1-F4) ----
+for (const w of FLOW_WIDTHS) {
+  const openNew = async (page) => {
+    await page.getByRole("button", { name: "Nueva cotización" }).first().click();
+    const dialog = page.getByRole("dialog");
+    await dialog.waitFor({ state: "visible" });
+    await dialog.getByPlaceholder("Nombre del cliente").fill("Banco del Sur Ltda.");
+    await dialog.locator('[data-testid="quote-add-line"]').waitFor({ state: "visible" });
+    await dialog.getByLabel("Producto", { exact: true }).first().selectOption({ index: 1 });
+    return dialog;
+  };
+
+  test(`F1 a quotation is for a person by default and asks no conditions at ${w}px`, { timeout: 60000 }, flow(w, "/sales", {}, async (page, context) => {
+    const dialog = await openNew(page);
+    assert.equal(await dialog.getByLabel("Para").inputValue(), "person");
+    assert.equal(await dialog.locator('[data-testid="quote-valid-days"]').count(), 0, "a person is asked for conditions");
+    await dialog.locator("[data-primary-action]").click();
+    await page.waitForTimeout(500);
+    const post = context.calls.find((c) => c.method === "POST" && c.path === "/quotations");
+    assert.ok(post, "the quotation was not sent");
+    assert.equal(post.body.kind, "person");
+    for (const f of ["delivery_date", "payment_terms", "valid_days"]) assert.ok(!(f in post.body), `${f} sent for a person`);
+  }));
+
+  test(`F2 a company quotation asks and sends its conditions at ${w}px`, { timeout: 60000 }, flow(w, "/sales", {}, async (page, context) => {
+    const dialog = await openNew(page);
+    await dialog.getByLabel("Para").selectOption("company");
+    await dialog.locator('[data-testid="quote-delivery-date"]').fill("2099-12-24");
+    await dialog.locator('[data-testid="quote-payment-terms"]').fill("Transferencia a 30 días");
+    await dialog.locator('[data-testid="quote-valid-days"]').fill("10");
+    assert.ok(inViewport(await dialog.boundingBox(), w, (await page.viewportSize()).height), "the window does not fit the screen");
+    await dialog.locator("[data-primary-action]").click();
+    await page.waitForTimeout(500);
+    const post = context.calls.find((c) => c.method === "POST" && c.path === "/quotations");
+    assert.ok(post, "the quotation was not sent");
+    assert.equal(post.body.kind, "company");
+    assert.equal(post.body.delivery_date, "2099-12-24");
+    assert.equal(post.body.payment_terms, "Transferencia a 30 días");
+    assert.equal(post.body.valid_days, 10);
+  }));
+
+  test(`F3 the days of validity are checked before sending at ${w}px`, { timeout: 60000 }, flow(w, "/sales", {}, async (page, context) => {
+    const dialog = await openNew(page);
+    await dialog.getByLabel("Para").selectOption("company");
+    await dialog.locator('[data-testid="quote-valid-days"]').fill("120");
+    await dialog.locator("[data-primary-action]").click();
+    await dialog.getByText(/entre 1 y 90 días/).waitFor({ state: "visible", timeout: 5000 });
+    assert.equal(context.calls.filter((c) => c.method === "POST" && c.path === "/quotations").length, 0);
+  }));
+
+  test(`F4 the list marks the quotations for a company at ${w}px`, { timeout: 60000 }, flow(w, "/sales", {}, async (page) => {
+    const tags = page.locator('[data-testid="quote-kind"]');
+    await tags.first().waitFor({ state: "visible", timeout: 5000 });
+    assert.equal(await tags.count(), 2, "2 of the 8 quotations of the mock are for a company");
+  }));
+}
