@@ -63,10 +63,10 @@ func TestK4_AnUnknownKindOrConditionsOnAPersonQuotationAreRefused(t *testing.T) 
 	api, admin := newReadyAPI(t)
 	_, cake, _ := bakery(t, api)
 	cases := map[string]map[string]any{
-		"unknown kind":              kindQuote("Ana", "empresa", nil, ql(cake, 1, "")),
-		"date on a person":          kindQuote("Ana", "person", map[string]any{"delivery_date": "2099-12-24"}, ql(cake, 1, "")),
-		"terms on a person":         kindQuote("Ana", "", map[string]any{"payment_terms": "Contado"}, ql(cake, 1, "")),
-		"days on a person":          kindQuote("Ana", "person", map[string]any{"valid_days": 5}, ql(cake, 1, "")),
+		"unknown kind":      kindQuote("Ana", "empresa", nil, ql(cake, 1, "")),
+		"date on a person":  kindQuote("Ana", "person", map[string]any{"delivery_date": "2099-12-24"}, ql(cake, 1, "")),
+		"terms on a person": kindQuote("Ana", "", map[string]any{"payment_terms": "Contado"}, ql(cake, 1, "")),
+		"days on a person":  kindQuote("Ana", "person", map[string]any{"valid_days": 5}, ql(cake, 1, "")),
 	}
 	for name, body := range cases {
 		if status, raw := api.do("POST", "/quotations", body); status != http.StatusBadRequest {
