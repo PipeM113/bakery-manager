@@ -86,3 +86,12 @@ Los sprints 0 a 4 usan la numeración antigua y son anteriores al registro de ac
 - [ ] **Etapa 1:** identidad única con Supabase Auth (Google), verificación JWKS ES256.
 - [ ] **Etapa 2:** `recipe_id` opcional en el producto del sitio; precio sugerido solo de referencia.
 - [ ] **Etapa 3:** pedidos del sitio crean cotizaciones `pending`. Antes, verificar la Ley 21.719 (las cotizaciones guardan nombres de clientes).
+
+
+## Sprint 18, cotizaciones para persona y para empresa (cerrado en código)
+
+- [x] Tipo de cotización (persona o empresa) al crearla; el PDF de persona muestra solo precios finales y el de
+  empresa el detalle y las condiciones del pedido (fecha de entrega, forma de pago, validez).
+- [ ] Aceptar en la app real (crear una de cada tipo y revisar los PDF).
+- Ideas: razón social y RUT del cliente en las de empresa; IVA (neto, IVA y total) si la pastelería emite
+  factura; poder editar el tipo y las condiciones de una cotización ya guardada.

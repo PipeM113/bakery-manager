@@ -72,7 +72,19 @@ type Business struct {
 	Holder, RUT, Email         string
 }
 
+// The two versions of the quotation. A person sees only final prices; a company sees the detail and the
+// conditions of the order. Anything else (the quotations made before the kinds existed) keeps the detail.
+const (
+	KindPerson  = "person"
+	KindCompany = "company"
+)
+
 type QuoteData struct {
+	// Kind is KindPerson or KindCompany; the three fields below are the conditions of a company quotation.
+	Kind         string
+	DeliveryDate *time.Time
+	PaymentTerms string
+	ValidDays    int
 	ClientName   string
 	Date         time.Time
 	Lines        []QuoteLine
@@ -93,6 +105,8 @@ const (
 	rowPlainH    = 10.0
 	// The block after the lines (totals, transfer data, notice) must fit on one page.
 	closingH = 100.0
+	// What the conditions of a company quotation add to that block.
+	conditionsH = 28.0
 )
 
 // GenerateQuotePDF builds the A4 quotation: logo and client, one row per line, totals, transfer
@@ -126,7 +140,13 @@ func GenerateQuotePDF(data QuoteData) (*bytes.Buffer, error) {
 		pdf.Rect(0, 0, pageW, pageH, "F")
 	})
 
-	photos := fetchPhotos(data.Lines, data.PhotoBase)
+	simple := data.Kind == KindPerson        // only final prices
+	single := simple && len(data.Lines) == 1 // one product: just the delivery and the total
+	company := data.Kind == KindCompany
+	photos := make([]*photo, len(data.Lines))
+	if !single {
+		photos = fetchPhotos(data.Lines, data.PhotoBase)
+	}
 	registered := map[string]bool{}
 	hasPhotos := false
 	for _, p := range photos {
@@ -178,12 +198,19 @@ func GenerateQuotePDF(data QuoteData) (*bytes.Buffer, error) {
 			y += 40*414.0/1000.0 + 6
 		}
 		rule(y, oro, 0.4)
+		if single {
+			return y + 6
+		}
 		y += 4
 		text(fontMedium, 7.5, oro)
 		cell(nameX, y, nameW, 5, "PRODUCTO", "L")
 		cell(qtyX, y, qtyW, 5, "CANTIDAD", "R")
-		cell(unitX, y, unitW, 5, "PRECIO UNIT.", "R")
-		cell(subX, y, subW, 5, "SUBTOTAL", "R")
+		if simple {
+			cell(subX, y, subW, 5, "PRECIO", "R")
+		} else {
+			cell(unitX, y, unitW, 5, "PRECIO UNIT.", "R")
+			cell(subX, y, subW, 5, "SUBTOTAL", "R")
+		}
 		y += 6
 		rule(y, lino, 0.2)
 		return y + 2
@@ -192,7 +219,24 @@ func GenerateQuotePDF(data QuoteData) (*bytes.Buffer, error) {
 	pdf.AddPage()
 	y := pageHeader(true)
 
+	if single {
+		// One product: its name and quantity, no prices (the total says it all) and no table.
+		l := data.Lines[0]
+		label := l.Name
+		if l.Quantity > 1 || l.SoldAs == "portion" {
+			label += " × " + strconv.Itoa(l.Quantity)
+			if l.SoldAs == "portion" {
+				label += " porciones"
+			}
+		}
+		text(fontTitle, 13, negro)
+		cell(lm, y, contentW, 7, fit(pdf, label, contentW), "L")
+		y += 10
+	}
 	for i, l := range data.Lines {
+		if single {
+			break // already written above
+		}
 		rowH := rowPlainH
 		if hasPhotos {
 			rowH = rowPhotoH
@@ -226,20 +270,36 @@ func GenerateQuotePDF(data QuoteData) (*bytes.Buffer, error) {
 		text(fontLight, 10, negro)
 		cell(qtyX, mid, qtyW, 5, qty, "R")
 		text(fontNormal, 10, negro)
-		cell(unitX, mid, unitW, 5, clp(l.UnitPrice), "R")
+		if !simple {
+			cell(unitX, mid, unitW, 5, clp(l.UnitPrice), "R")
+		}
 		cell(subX, mid, subW, 5, clp(l.LineTotal), "R")
 		y += rowH
 		rule(y-1, lino, 0.15)
 	}
 
 	// Closing block: totals, transfer data, contact, notice.
-	if y+closingH > pageBottom {
+	closing := closingH
+	if company {
+		closing += conditionsH
+	}
+	if y+closing > pageBottom {
 		pdf.AddPage()
 		y = pageHeader(false)
 	}
 	y += 6
 	labelX, valueX, valueW := lm+contentW-90, lm+contentW-40, 40.0
-	if data.DeliveryCost > 0 {
+	if simple {
+		// Only final prices: no subtotal, so nothing is counted twice.
+		text(fontLight, 10, negro)
+		cell(labelX, y, 50, 6, "Envío", "L")
+		delivery := "Sin costo"
+		if data.DeliveryCost > 0 {
+			delivery = clp(data.DeliveryCost)
+		}
+		cell(valueX, y, valueW, 6, delivery, "R")
+		y += 8
+	} else if data.DeliveryCost > 0 {
 		text(fontLight, 10, negro)
 		cell(labelX, y, 50, 6, "Subtotal", "L")
 		cell(valueX, y, valueW, 6, clp(data.Total-data.DeliveryCost), "R")
@@ -257,6 +317,33 @@ func GenerateQuotePDF(data QuoteData) (*bytes.Buffer, error) {
 	text(fontTitle, 22, oro)
 	cell(valueX-20, y, valueW+20, 12, clp(data.Total), "R")
 	y += 22
+
+	if company {
+		// Conditions of the order: only what has a value; the validity always.
+		rule(y, oro, 0.4)
+		y += 6
+		text(fontMedium, 8, oro)
+		cell(lm, y, contentW, 5, "CONDICIONES", "L")
+		y += 7
+		condition := func(label, value string) {
+			text(fontLight, 10, negro)
+			cell(lm, y, 45, 5.5, label, "L")
+			cell(lm+45, y, contentW-45, 5.5, value, "L")
+			y += 5.5
+		}
+		if data.DeliveryDate != nil {
+			condition("Fecha de entrega", data.DeliveryDate.Format("02/01/2006"))
+		}
+		if data.PaymentTerms != "" {
+			condition("Forma de pago", data.PaymentTerms)
+		}
+		days := data.ValidDays
+		if days < 1 {
+			days = 7
+		}
+		condition("Validez", fmt.Sprintf("%d días (hasta el %s)", days, data.Date.AddDate(0, 0, days).Format("02/01/2006")))
+		y += 4
+	}
 
 	rule(y, oro, 0.4)
 	y += 6
@@ -281,7 +368,15 @@ func GenerateQuotePDF(data QuoteData) (*bytes.Buffer, error) {
 	pdf.SetFillColor(lino[0], lino[1], lino[2])
 	pdf.Rect(lm, y, contentW, 12, "F")
 	text(fontLight, 9, negro)
-	cell(lm+4, y+3.5, contentW-8, 5, "Esta cotización debe confirmarse dentro de 48 horas para reservar tu pedido.", "L")
+	notice := "Esta cotización debe confirmarse dentro de 48 horas para reservar tu pedido."
+	if company {
+		days := data.ValidDays
+		if days < 1 {
+			days = 7
+		}
+		notice = fmt.Sprintf("Esta cotización es válida hasta el %s. Confírmala dentro de ese plazo para reservar tu pedido.", data.Date.AddDate(0, 0, days).Format("02/01/2006"))
+	}
+	cell(lm+4, y+3.5, contentW-8, 5, notice, "L")
 
 	var buf bytes.Buffer
 	if err := pdf.Output(&buf); err != nil {

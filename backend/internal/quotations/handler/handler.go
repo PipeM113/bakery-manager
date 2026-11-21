@@ -62,6 +62,63 @@ type createRequest struct {
 	ClientName   string        `json:"client_name"`
 	DeliveryCost int64         `json:"delivery_cost"`
 	Lines        []lineRequest `json:"lines"`
+	// Kind is "person" (the default) or "company"; the conditions are for companies only.
+	Kind         string  `json:"kind"`
+	DeliveryDate *string `json:"delivery_date"`
+	PaymentTerms *string `json:"payment_terms"`
+	ValidDays    *int    `json:"valid_days"`
+}
+
+const (
+	defaultValidDays = 7
+	maxValidDays     = 90
+	maxPaymentTerms  = 120
+)
+
+// conditions checks the kind and the conditions of the order and fills in what a quotation needs: a person
+// has none, a company is valid for seven days unless told otherwise.
+func (req createRequest) conditions(today string) (kind string, date *string, terms string, days *int, err error) {
+	kind = req.Kind
+	if kind == "" {
+		kind = "person"
+	}
+	terms = ""
+	if req.PaymentTerms != nil {
+		terms = strings.TrimSpace(*req.PaymentTerms)
+	}
+	hasDate := req.DeliveryDate != nil && *req.DeliveryDate != ""
+	switch kind {
+	case "person":
+		if hasDate || terms != "" || req.ValidDays != nil {
+			return "", nil, "", nil, bad("la fecha de entrega, la forma de pago y la validez son solo para cotizaciones de empresa")
+		}
+		return kind, nil, "", nil, nil
+	case "company":
+	default:
+		return "", nil, "", nil, bad("el tipo debe ser \"person\" o \"company\"")
+	}
+	if hasDate {
+		d, perr := time.Parse("2006-01-02", *req.DeliveryDate)
+		if perr != nil {
+			return "", nil, "", nil, bad("la fecha de entrega debe tener el formato AAAA-MM-DD y ser una fecha real")
+		}
+		if d.Format("2006-01-02") < today {
+			return "", nil, "", nil, bad("la fecha de entrega no puede estar en el pasado")
+		}
+		v := d.Format("2006-01-02")
+		date = &v
+	}
+	if len([]rune(terms)) > maxPaymentTerms {
+		return "", nil, "", nil, bad("la forma de pago no puede superar %d caracteres", maxPaymentTerms)
+	}
+	n := defaultValidDays
+	if req.ValidDays != nil {
+		n = *req.ValidDays
+	}
+	if n < 1 || n > maxValidDays {
+		return "", nil, "", nil, bad("la validez debe estar entre 1 y %d días", maxValidDays)
+	}
+	return kind, date, terms, &n, nil
 }
 
 var uuidRE = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
@@ -198,7 +255,16 @@ func (h *QuotationHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	in := quoteRepo.SaveInput{CreatedBy: userID(r), ClientName: req.ClientName, DeliveryCost: req.DeliveryCost, CreatedAt: h.clk()}
+	now := h.clk()
+	kind, date, terms, days, cerr := req.conditions(now.In(clock.Santiago).Format("2006-01-02"))
+	if cerr != nil {
+		httputil.JSONError(w, cerr.Error(), http.StatusBadRequest)
+		return
+	}
+	in := quoteRepo.SaveInput{
+		CreatedBy: userID(r), ClientName: req.ClientName, DeliveryCost: req.DeliveryCost, CreatedAt: now,
+		Kind: kind, DeliveryDate: date, PaymentTerms: terms, ValidDays: days,
+	}
 	recipes := &recipeCache{svc: h.costSvc, byID: map[string]costSvc.Recipe{}}
 	for i, l := range req.Lines {
 		priced, err := h.priceLine(r, recipes, i+1, l)
@@ -289,12 +355,21 @@ func (h *QuotationHandler) PDF(w http.ResponseWriter, r *http.Request) {
 
 	data := quoteSvc.QuoteData{
 		ClientName: q.ClientName, DeliveryCost: q.DeliveryCost, Total: q.Total,
+		Kind: q.Kind, PaymentTerms: q.PaymentTerms,
 		Date: q.CreatedAt.In(clock.Santiago), PhotoBase: h.photoBase,
 		Business: quoteSvc.Business{
 			Phone: profile.Phone, Bank: profile.Bank,
 			AccountType: profile.AccountType, Holder: profile.Holder, Email: profile.Email,
 			Account: h.env.Account, RUT: h.env.RUT,
 		},
+	}
+	if q.DeliveryDate != nil {
+		if d, err := time.Parse("2006-01-02", *q.DeliveryDate); err == nil {
+			data.DeliveryDate = &d
+		}
+	}
+	if q.ValidDays != nil {
+		data.ValidDays = *q.ValidDays
 	}
 	for _, l := range q.Lines {
 		data.Lines = append(data.Lines, quoteSvc.QuoteLine{

@@ -89,6 +89,7 @@ export const quotations = Array.from({ length: 8 }, (_, i) => {
     client_name: clientNames[i % 3], delivery_cost: delivery, lines,
     total: lines.reduce((a, l) => a + l.line_total, 0) + delivery,
     status: ["pending", "pending", "confirmed", "cancelled"][i % 4], created_at: iso, updated_at: iso,
+    kind: i % 4 === 0 ? "company" : "person", delivery_date: null, payment_terms: "", valid_days: i % 4 === 0 ? 7 : null,
   };
 });
 

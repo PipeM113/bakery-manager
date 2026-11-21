@@ -19,6 +19,9 @@ export interface IQuotationLine {
   extra_charge: number;
 }
 
+/** A quotation is for a person (only final prices in the PDF) or for a company (the detail and the conditions). */
+export type QuotationKind = "person" | "company";
+
 export interface IQuotation {
   id: string;
   /** Who registered it; empty if that user was deleted. */
@@ -28,6 +31,11 @@ export interface IQuotation {
   /** The lines plus the delivery, in whole pesos. */
   total: number;
   status: "pending" | "confirmed" | "cancelled";
+  kind: QuotationKind;
+  /** The conditions of a company quotation (null / empty for a person). */
+  delivery_date: string | null;
+  payment_terms: string;
+  valid_days: number | null;
   lines: IQuotationLine[];
   created_at: string;
   updated_at: string;
@@ -48,6 +56,11 @@ export interface QuotationRequest {
   client_name: string;
   delivery_cost: number;
   lines: QuotationLineRequest[];
+  kind?: QuotationKind;
+  /** Company only: YYYY-MM-DD, free text up to 120 characters, and 1 to 90 days. */
+  delivery_date?: string;
+  payment_terms?: string;
+  valid_days?: number;
 }
 
 const fold = (s: string) =>

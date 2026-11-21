@@ -674,7 +674,7 @@ export default function SalesPage() {
                   <div key={q.id} data-card className="border border-linea p-4 space-y-3">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className={`text-sm font-light break-words ${q.status === "cancelled" ? "line-through text-negro/70" : "text-negro"}`}>{q.client_name}</p>
+                        <p className={`text-sm font-light break-words ${q.status === "cancelled" ? "line-through text-negro/70" : "text-negro"}`}>{q.client_name}{q.kind === "company" && <span data-testid="quote-kind" className="ml-2 align-middle text-[11px] tracking-wider uppercase border border-oro text-oro px-1.5 py-0.5">Empresa</span>}</p>
                         <p className="text-xs text-negro/70 font-light break-words">{productsOf(q)}</p>
                         <p className="text-xs text-negro/70 font-light">{new Date(q.created_at).toLocaleDateString("es-CL")}</p>
                       </div>
@@ -731,6 +731,7 @@ export default function SalesPage() {
                       </td>
                       <td className={`px-6 py-4 font-light ${q.status === "cancelled" ? "line-through text-negro/70" : "text-negro"}`}>
                         {q.client_name}
+                        {q.kind === "company" && <span data-testid="quote-kind" className="ml-2 align-middle text-[11px] tracking-wider uppercase border border-oro text-oro px-1.5 py-0.5">Empresa</span>}
                       </td>
                       <td className={`px-6 py-4 font-light ${q.status === "cancelled" ? "line-through text-negro/70" : "text-negro/70"}`}>
                         {productsOf(q)}
