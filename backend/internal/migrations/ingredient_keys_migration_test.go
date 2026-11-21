@@ -42,7 +42,8 @@ func TestE1_TheNewColumnsExistAndDefaultToNothing(t *testing.T) {
 	}
 }
 
-func TestE1_TheKeyIsNameBrandAndSupplierWithoutCase(t *testing.T) {
+// ADR-005 (sprint 18): migration 31 makes the key name + brand; this test of the key was rewritten for it.
+func TestE1_TheKeyIsNameAndBrandWithoutCase(t *testing.T) {
 	ingredientKeysMigrationExists(t)
 	pool := pgtest.NewDatabase(t)
 	pgtest.Migrate(t, pool, migrationsDir, "up")
@@ -51,14 +52,16 @@ func TestE1_TheKeyIsNameBrandAndSupplierWithoutCase(t *testing.T) {
 		_, err := pool.Exec(ctx, `insert into ingredients (name, brand, supplier, default_unit, price_per_unit, package_size, package_price) values ($1, $2, $3, 'gr', 4, 250, 1000)`, name, brand, supplier)
 		return err
 	}
-	for _, c := range [][3]string{{"Mantequilla", "Soprole", "La Vega"}, {"Mantequilla", "Soprole", "Líder"}, {"Mantequilla", "Colún", "La Vega"}} {
+	for _, c := range [][3]string{{"Mantequilla", "Soprole", "La Vega"}, {"Mantequilla", "Colún", "La Vega"}, {"Mantecas", "Soprole", "Líder"}} {
 		if err := add(c[0], c[1], c[2]); err != nil {
 			t.Fatalf("%v should be allowed: %v", c, err)
 		}
 	}
-	err := add("MANTEQUILLA", "soprole", "la vega")
-	if err == nil || !strings.Contains(err.Error(), "23505") {
-		t.Errorf("the same three with other case must be a unique violation, got %v", err)
+	for _, supplier := range []string{"la vega", "Líder", ""} {
+		err := add("MANTEQUILLA", "soprole", supplier)
+		if err == nil || !strings.Contains(err.Error(), "23505") {
+			t.Errorf("the same name and brand (%q) with other case must be a unique violation, got %v", supplier, err)
+		}
 	}
 	if err := add("Mantequilla", "", ""); err != nil {
 		t.Errorf("without brand and supplier is its own ingredient: %v", err)

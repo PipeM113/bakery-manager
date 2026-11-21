@@ -71,29 +71,31 @@ func ingredientsTotal(t *testing.T, api *client, recipe string) float64 {
 
 // --- E1, E2: the key is name + brand + supplier ---
 
-func TestE1_SameNameWithAnotherBrandOrSupplierIsAnotherIngredient(t *testing.T) {
+// ADR-005 (sprint 18): the key is name + brand, so these three E1 tests were rewritten for it (approved by Felipe).
+func TestE1_SameNameWithAnotherBrandIsAnotherIngredient(t *testing.T) {
 	api, _ := newPricingAPI(t)
 	ing(t, api, "Mantequilla", "Soprole", "La Vega", map[string]any{"package_price": 2500})
-	ing(t, api, "Mantequilla", "Soprole", "Líder", map[string]any{"package_price": 2900})
 	ing(t, api, "Mantequilla", "Colún", "La Vega", nil)
-	ing(t, api, "Mantequilla", "Soprole", "", nil)
+	ing(t, api, "Mantequilla", "Mantecol", "", nil)
+	ing(t, api, "Mantequilla", "Anchor", "Líder", nil)
 	if got := len(getList(t, api, "/ingredients")); got != 4 {
-		t.Errorf("ingredients = %d, want 4 (butter of 4 different origins)", got)
+		t.Errorf("ingredients = %d, want 4 (butter of 4 different brands)", got)
 	}
 }
 
-func TestE1_TheSameThreeAreADuplicateAndTheMessageSaysSo(t *testing.T) {
+func TestE1_TheSameNameAndBrandAreADuplicateAndTheMessageSaysSo(t *testing.T) {
 	api, _ := newPricingAPI(t)
 	ing(t, api, "Mantequilla", "Soprole", "La Vega", nil)
 	for _, c := range []struct{ name, brand, supplier string }{
 		{"Mantequilla", "Soprole", "La Vega"},
 		{"  mantequilla ", "SOPROLE", "la vega"}, // case and spaces do not make it another one
+		{"Mantequilla", "Soprole", "Líder"},      // another supplier is not another ingredient (ADR-005)
 	} {
 		status, raw := api.do("POST", "/ingredients", map[string]any{"name": c.name, "brand": c.brand, "supplier": c.supplier,
 			"default_unit": "gr", "package_size": 1000, "package_price": 1})
 		msg := strings.ToLower(string(raw))
-		if status != http.StatusConflict || !strings.Contains(msg, "marca") || !strings.Contains(msg, "proveedor") {
-			t.Errorf("%+v: status = %d, body %s; want 409 naming the name, brand and supplier", c, status, raw)
+		if status != http.StatusConflict || !strings.Contains(msg, "marca") {
+			t.Errorf("%+v: status = %d, body %s; want 409 naming the name and the brand", c, status, raw)
 		}
 	}
 }
@@ -101,12 +103,12 @@ func TestE1_TheSameThreeAreADuplicateAndTheMessageSaysSo(t *testing.T) {
 func TestE1_RenamingOntoAnotherOneIsAConflictNotAnError(t *testing.T) {
 	api, _ := newPricingAPI(t)
 	ing(t, api, "Mantequilla", "Soprole", "La Vega", nil)
-	other := ing(t, api, "Mantequilla", "Soprole", "Líder", nil)
-	if status, raw := putIng(t, api, other, map[string]any{"supplier": "La Vega"}); status != http.StatusConflict {
+	other := ing(t, api, "Mantequilla", "Colún", "Líder", nil)
+	if status, raw := putIng(t, api, other, map[string]any{"brand": "Soprole"}); status != http.StatusConflict {
 		t.Errorf("status = %d, want 409: %s", status, raw)
 	}
 	if status, raw := putIng(t, api, other, map[string]any{"supplier": "Jumbo"}); status != http.StatusOK {
-		t.Errorf("a free combination: status = %d, want 200: %s", status, raw)
+		t.Errorf("the supplier is free: status = %d, want 200: %s", status, raw)
 	}
 }
 
@@ -159,32 +161,33 @@ func importFile(t *testing.T, api *client, rows [][]string) (int, map[string]any
 	return rec.Code, out
 }
 
-func TestE3_ImportMatchesByNameBrandAndSupplier(t *testing.T) {
+// ADR-005 (sprint 18): the import matches by name and brand; the supplier of the row is the supplier of the last purchase.
+func TestE3_ImportMatchesByNameAndBrand(t *testing.T) {
 	api, _ := newPricingAPI(t)
 	header := []string{"Nombre", "Marca", "Unidad", "Tamaño", "Precio", "Proveedor"}
 	status, res := importFile(t, api, [][]string{header,
 		{"Mantequilla", "Soprole", "gr", "250", "2500", "La Vega"},
-		{"Mantequilla", "Soprole", "gr", "250", "2900", "Líder"},
-		{"Mantequilla", "Soprole", "gr", "250", "3000", "la vega"}, // the same as row 2 of the file
+		{"Mantequilla", "Colún", "gr", "250", "2900", "Líder"},
+		{"mantequilla", "SOPROLE", "gr", "250", "3000", "Jumbo"}, // the same as row 2 of the file
 	})
 	if status != http.StatusOK {
 		t.Fatalf("status = %d: %v", status, res)
 	}
 	if number(t, res, "imported") != 2 {
-		t.Errorf("imported = %v, want 2 (two suppliers)", res["imported"])
+		t.Errorf("imported = %v, want 2 (two brands)", res["imported"])
 	}
 	if errs, _ := res["errors"].([]any); len(errs) != 1 {
 		t.Errorf("errors = %v, want the repeated row only", res["errors"])
 	}
 
-	// Importing again updates the one with the same three, and only that one.
-	_, res = importFile(t, api, [][]string{header, {"mantequilla", "soprole", "gr", "250", "2600", "LÍDER"}})
+	// Importing again updates the one with the same name and brand, and only that one.
+	_, res = importFile(t, api, [][]string{header, {"mantequilla", "colún", "gr", "250", "2600", "LÍDER"}})
 	if number(t, res, "updated") != 1 || number(t, res, "imported") != 0 {
 		t.Errorf("second import = %v, want 1 updated and none new", res)
 	}
 	for _, i := range getList(t, api, "/ingredients") {
 		want := 2500.0
-		if i["supplier"] == "Líder" {
+		if strings.EqualFold(i["brand"].(string), "Colún") { // the import writes the brand as the file spells it
 			want = 2600
 		}
 		if number(t, i, "package_price") != want {
@@ -248,17 +251,17 @@ func TestE4_ListsAreAlphabeticalWithoutCaseOrAccents(t *testing.T) {
 		t.Errorf("ingredients = %v, want %s", got, want)
 	}
 
-	// Same name: by brand, then by supplier.
+	// Same name: by brand (the supplier is no longer part of the key, ADR-005).
 	ing(t, api, "Leche", "Soprole", "Z", nil)
 	ing(t, api, "Leche", "Colún", "B", nil)
-	ing(t, api, "Leche", "Colún", "A", nil)
+	ing(t, api, "Leche", "Anchor", "A", nil)
 	var milk []string
 	for _, i := range getList(t, api, "/ingredients") {
 		if i["name"] == "Leche" {
 			milk = append(milk, fmt.Sprintf("%v/%v", i["brand"], i["supplier"]))
 		}
 	}
-	if want := "Colún/A,Colún/B,Soprole/Z"; strings.Join(milk, ",") != want {
+	if want := "Anchor/A,Colún/B,Soprole/Z"; strings.Join(milk, ",") != want {
 		t.Errorf("milk = %v, want %s", milk, want)
 	}
 }

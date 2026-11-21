@@ -41,6 +41,11 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		Unit            string   `json:"unit"`
 		Note            string   `json:"note"`
 		AdjustedOn      string   `json:"adjusted_on"`
+		// A purchase may carry where it was bought and the package paid for (ADR-005).
+		Supplier     *string  `json:"supplier"`
+		PackageSize  *float64 `json:"package_size"`
+		PackageUnit  string   `json:"package_unit"`
+		PackagePrice *float64 `json:"package_price"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		httputil.JSONError(w, "request inválido", http.StatusBadRequest)
@@ -65,6 +70,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		CreatedBy: userID(r), IngredientID: id, Reason: body.Reason,
 		Quantity: body.Quantity, CountedQuantity: body.CountedQuantity, QuantityDelta: body.QuantityDelta,
 		Unit: body.Unit, Note: body.Note, AdjustedOn: body.AdjustedOn,
+		Supplier: body.Supplier, PackageSize: body.PackageSize, PackageUnit: body.PackageUnit, PackagePrice: body.PackagePrice,
 	})
 	var invalid *repository.ValidationError
 	switch {

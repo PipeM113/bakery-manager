@@ -17,8 +17,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// ErrDuplicate is returned when another ingredient has the same name, brand and supplier.
-var ErrDuplicate = errors.New("ingredient with the same name, brand and supplier already exists")
+// ErrDuplicate is returned when another ingredient has the same name and brand (ADR-005: the supplier is not part of the key).
+var ErrDuplicate = errors.New("ingredient with the same name and brand already exists")
 
 // EquivalenceNeededError says that a recipe would stop working with the unit or the equivalences
 // the ingredient is being given: it uses the ingredient in another family of units.

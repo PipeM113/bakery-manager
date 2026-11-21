@@ -281,7 +281,7 @@ export default function IngredientsPage() {
                   <div className="grid grid-cols-2 gap-2">
                     <button onClick={() => setQuickStock(i)} data-testid="stock-quick"
                       className="border border-linea text-xs text-negro hover:text-oro tracking-wider transition-colors">
-                      + Stock
+                      + Compra
                     </button>
                     <button onClick={() => setAdjusting(i)}
                       className="border border-linea text-xs text-negro/70 hover:text-oro tracking-wider transition-colors">
@@ -329,7 +329,7 @@ export default function IngredientsPage() {
                       <td className="px-3 py-3">
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 justify-end min-w-[8.5rem]">
                           <button onClick={() => setQuickStock(i)} data-testid="stock-quick"
-                            className="text-xs text-negro hover:text-oro tracking-wider transition-colors">+ Stock</button>
+                            className="text-xs text-negro hover:text-oro tracking-wider transition-colors">+ Compra</button>
                           <button onClick={() => setAdjusting(i)}
                             className="text-xs text-negro/70 hover:text-oro tracking-wider transition-colors">Ajustar stock</button>
                           <button onClick={() => openEdit(i)}
@@ -351,8 +351,9 @@ export default function IngredientsPage() {
       {quickStock && (
         <QuickStockModal
           ingredient={ingredients.find((x) => x.id === quickStock.id) ?? quickStock}
+          suppliers={[...new Set(ingredients.map((i) => i.supplier).filter(Boolean))].sort((a, b) => sortKey(a).localeCompare(sortKey(b)))}
           onClose={() => setQuickStock(null)}
-          onSaved={() => { toast.success("Stock actualizado", quickStock.name); load(); }}
+          onSaved={(what) => { toast.success(what === "purchase" ? "Compra registrada" : "Stock actualizado", quickStock.name); load(); }}
         />
       )}
 
@@ -437,7 +438,7 @@ export default function IngredientsPage() {
             </div>
 
             <div>
-              <label className="block text-xs tracking-widest uppercase text-negro/70 mb-1 font-light">Proveedor (opcional)</label>
+              <label className="block text-xs tracking-widest uppercase text-negro/70 mb-1 font-light">Proveedor (última compra)</label>
               <input type="text" value={form.supplier} placeholder="ej. La Vega, Líder" maxLength={100}
                 onChange={(e) => setForm({ ...form, supplier: e.target.value })}
                 className="w-full bg-crema border border-linea text-negro
