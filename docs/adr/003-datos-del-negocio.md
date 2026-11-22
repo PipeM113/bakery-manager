@@ -1,6 +1,6 @@
 # ADR-003: los datos del negocio se reparten entre el código, la base y las variables de entorno
 
-- **Estado:** Propuesto (borrador de Claude, 2026-11-01; recoge lo decidido por Felipe en los sprints 12 y 13)
+- **Estado:** Aceptado (2026-11-22, aprobado por Felipe; borrador de Claude del 2026-11-01, recoge lo decidido en los sprints 12 y 13)
 - **Fecha:** 2026-11-01
 
 ## Contexto
