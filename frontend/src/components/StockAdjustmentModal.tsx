@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { stockAdjustmentService } from "../api/stockAdjustmentService";
 import type { IIngredient } from "../types/ingredient";
 import type { AdjustmentReason, IStockAdjustment, StockAdjustmentForm } from "../types/stockAdjustment";
@@ -35,10 +35,12 @@ export default function StockAdjustmentModal({ ingredient, onClose, onSaved }: P
   const [error, setError]       = useState("");
   const [history, setHistory]   = useState<IStockAdjustment[]>([]);
 
-  const loadHistory = () =>
-    stockAdjustmentService.forIngredient(ingredient.id).then(setHistory).catch(() => setError("Error cargando el historial"));
+  const loadHistory = useCallback(
+    () => stockAdjustmentService.forIngredient(ingredient.id).then(setHistory).catch(() => setError("Error cargando el historial")),
+    [ingredient.id],
+  );
 
-  useEffect(() => { loadHistory(); }, [ingredient.id]);
+  useEffect(() => { loadHistory(); }, [loadHistory]);
 
   const units = UNITS_OF[ingredient.default_unit] ?? [ingredient.default_unit];
 

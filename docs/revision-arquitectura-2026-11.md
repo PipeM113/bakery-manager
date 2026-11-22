@@ -73,10 +73,10 @@ Se revisó la interfaz (con `direccion-visual` y `make-interfaces-feel-better`),
 
 **Anotado para después (no se hizo aquí)** — ver `docs/backlog.md`
 - ~~**Sin identificador de solicitud en los registros**~~ **Resuelto el 2026-11-22:** `pkg/middleware/requestid.go` pone un identificador propio (el del cliente se ignora) en el encabezado `X-Request-Id` y en el contexto que imprime el `Logger` de chi.
-- **Listas sin tope ni paginación** (`ingredients`, `quotations`, `sales`, `expenses`): hoy son decenas de filas; con años de uso las cotizaciones y las ventas van a crecer. Conviene paginar o limitar por mes antes de que se note.
-- **Título del navegador igual en todas las pantallas**: un título por pantalla ayuda a lectores de pantalla y a quien tiene varias pestañas.
-- **8 avisos del lint** (`react-hooks/exhaustive-deps` y una directiva sobrante): efectos con dependencias que se omiten a propósito; revisarlos cuando se haga la tarea de la regla `react-hooks` 7.1.
-- **El CI aún corre los pasos por separado** y no `./scripts/check.sh` (no revisa formato ni secretos).
+- ~~**Listas sin tope ni paginación**~~ **Resuelto el 2026-11-22 para las que crecen:** cotizaciones y ventas se leen en páginas (`limit` 1 a 1000, 200 por defecto; `offset`; `X-Has-More`). Los gastos ya se leen por mes; ingredientes y recetas son catálogos de decenas de filas. Pendiente: que la pantalla avise cuando hay más de 200.
+- ~~**Título del navegador igual en todas las pantallas**~~ **Resuelto el 2026-11-22** (`utils/titles.ts`).
+- ~~**8 avisos del lint**~~ **Resuelto el 2026-11-22:** seis corregidos y dos intencionales documentados; el lint queda sin avisos.
+- ~~**El CI no revisaba formato ni secretos**~~ **Resuelto el 2026-11-22:** paso `gofmt` en el job del backend y job `repo-checks` (búsqueda de secretos).
 - **La captura de la pantalla que más se usa a 360 px** sigue sin pasar por una persona real: la prueba con alguien que no conozca el sistema (paso 6.7 de `direccion-visual`) está pendiente.
 
 **Veredicto:** no hay defectos de severidad alta. La deuda es de observabilidad y de crecimiento de datos, no de corrección ni de seguridad.

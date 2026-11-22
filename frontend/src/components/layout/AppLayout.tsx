@@ -1,8 +1,15 @@
-import { Outlet } from "react-router-dom";
+import { useEffect } from "react";
+import { Outlet, useLocation } from "react-router-dom";
+import { titleFor } from "../../utils/titles";
 import Sidebar from "./Sidebar";
 import BottomNav from "./BottomNav";
 
 export default function AppLayout() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    document.title = titleFor(pathname);
+  }, [pathname]);
+
   return (
     <div className="min-h-screen">
       <a

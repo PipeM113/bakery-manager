@@ -3,6 +3,7 @@
 #
 #   ./scripts/check.sh          revisión rápida (la que va antes de cada commit)
 #   ./scripts/check.sh --full   además las pruebas de navegador (responsive y CSP; tardan varios minutos)
+#   ./scripts/check.sh --only backend|frontend|secrets   solo un grupo (así lo usa el CI, un job por grupo)
 #
 # Para las pruebas de base de datos exporta TEST_DATABASE_URL (ver README). Sin ella esas pruebas se saltan
 # y el script lo avisa: en el CI su ausencia es un error.
@@ -10,8 +11,17 @@ set -uo pipefail
 cd "$(dirname "$0")/.."
 
 FULL=0
-[ "${1:-}" = "--full" ] && FULL=1
+ONLY=""
+case "${1:-}" in
+  --full) FULL=1 ;;
+  --only)
+    ONLY="${2:-}"
+    case "$ONLY" in backend|frontend|secrets) ;; *) echo "uso: --only backend|frontend|secrets" >&2; exit 2 ;; esac ;;
+  "") ;;
+  *) echo "uso: ./scripts/check.sh [--full | --only backend|frontend|secrets]" >&2; exit 2 ;;
+esac
 failed=()
+want() { [ -z "$ONLY" ] || [ "$ONLY" = "$1" ]; }   # ¿corre este grupo?
 
 step() { # step "name" command...
   local name="$1"; shift
@@ -37,19 +47,23 @@ no_secrets() {
   if [ -n "$hits$urls" ]; then printf 'posible secreto en lo versionado:\n%s\n%s\n' "$hits" "$urls" >&2; return 1; fi
 }
 
-if [ -z "${TEST_DATABASE_URL:-}" ]; then
+if want backend && [ -z "${TEST_DATABASE_URL:-}" ]; then
   echo "aviso: TEST_DATABASE_URL no está definida; las pruebas de base de datos se saltarán." >&2
 fi
 
-step "gofmt (backend)"      gofmt_clean
-step "go vet"               bash -c 'cd backend && go vet ./...'
-step "go test"              bash -c 'cd backend && go test -count=1 ./...'
-step "eslint (frontend)"    bash -c 'cd frontend && npm run lint --silent'
-step "tipos (tsc -b)"       bash -c 'cd frontend && npx tsc -b'
-step "npm test"             bash -c 'cd frontend && VITE_API_URL="${VITE_API_URL:-https://api.example.test}" npm test --silent'
-step "build del frontend"   bash -c 'cd frontend && VITE_API_URL="${VITE_API_URL:-https://api.example.test}" npm run build --silent'
-step "npm audit (producción)" bash -c 'cd frontend && npm audit --omit=dev --audit-level=high'
-step "secretos"             no_secrets
+if want backend; then
+  step "gofmt (backend)"      gofmt_clean
+  step "go vet"               bash -c 'cd backend && go vet ./...'
+  step "go test"              bash -c 'cd backend && go test -count=1 ./...'
+fi
+if want frontend; then
+  step "eslint (frontend)"    bash -c 'cd frontend && npm run lint --silent'
+  step "tipos (tsc -b)"       bash -c 'cd frontend && npx tsc -b'
+  step "npm test"             bash -c 'cd frontend && VITE_API_URL="${VITE_API_URL:-https://api.example.test}" npm test --silent'
+  step "build del frontend"   bash -c 'cd frontend && VITE_API_URL="${VITE_API_URL:-https://api.example.test}" npm run build --silent'
+  step "npm audit (producción)" bash -c 'cd frontend && npm audit --omit=dev --audit-level=high'
+fi
+want secrets && step "secretos" no_secrets
 
 if [ "$FULL" = 1 ]; then
   : "${CHROMIUM_PATH:?define CHROMIUM_PATH con el navegador que usan las pruebas (ver docs/operacion.md)}"

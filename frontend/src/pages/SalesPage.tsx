@@ -151,6 +151,8 @@ export default function SalesPage() {
     loadQuotations();
     businessService.get().then((b) => setBusinessMissing(b.missing)).catch(() => undefined);
     loadOrders();
+    // The screen loads everything once, when it opens; the loaders are re-created on every render on purpose.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Recompute stock issues whenever recipe or quantity changes
