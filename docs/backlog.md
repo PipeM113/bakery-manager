@@ -113,7 +113,7 @@ Los sprints 0 a 4 usan la numeración antigua y son anteriores al registro de ac
 ## Iteración 0, forma de trabajo y operación (cerrada)
 
 - [x] `CLAUDE.md` con las reglas del proyecto, `scripts/check.sh` (un comando de calidad, con formato y búsqueda de secretos) y `docs/operacion.md` (cómo se corre, se publica, se respalda y qué hacer si algo falla).
-- [ ] Confirmar o ajustar los niveles de servicio propuestos en `docs/operacion.md`.
+- [x] Niveles de servicio confirmados por Felipe (2026-11-22): `docs/operacion.md`.
 - [x] El CI revisa también el formato de Go (`gofmt`) y la búsqueda de secretos (job `repo-checks`, con `check.sh --only secrets`). Los demás pasos siguen explícitos en el workflow porque las pruebas de `hygiene` y de seguridad leen `ci.yml`.
 
 ## Revisión del 2026-11-22: lo que quedó anotado (ver `docs/revision-arquitectura-2026-11.md`)
@@ -121,5 +121,10 @@ Los sprints 0 a 4 usan la numeración antigua y son anteriores al registro de ac
 - [x] Identificador de solicitud: cada respuesta trae `X-Request-Id` y el registro lo imprime en la línea de la solicitud (`pkg/middleware/requestid.go`); el que mande el cliente se ignora.
 - [x] Las listas que crecen (cotizaciones y ventas) vienen en páginas: `?limit=` (1 a 1000, 200 por defecto) y `?offset=`, más recientes primero, con `X-Has-More`. Gastos ya se lee por mes. La pantalla de Ventas avisa cuando una lista llega a 200 («Se muestran las 200 más recientes»).
 - [x] Título del navegador por pantalla (`utils/titles.ts`).
-- [x] Los 8 avisos del lint: seis se arreglaron (dependencias de efectos) y dos casos intencionales (guardar al cerrar, cargar una sola vez) quedaron con su motivo escrito. Lint sin avisos. La regla `react-hooks` 7.1 sigue pendiente (4 efectos que llaman `setState`).
+- [x] Los 8 avisos del lint: seis se arreglaron (dependencias de efectos) y dos casos intencionales (guardar al cerrar, cargar una sola vez) quedaron con su motivo escrito. Lint sin avisos. La regla `react-hooks` 7.1 también quedó resuelta (2026-11-22): los 4 efectos se reescribieron (estado inicial desde la receta con `key`, cálculo derivado con `useMemo`) y el plugin sube a 7.1.
 - [ ] Prueba de uso con una persona que no conozca el sistema: la pauta está en `docs/prueba-de-uso.md`; falta hacerla.
+
+## Revisión del 2026-11-22, segunda tanda (cerrada en código)
+
+- [x] `eslint-plugin-react-hooks` 7.1: reescritos los 4 efectos que llamaban `setState` (`RecipeForm`, `QuotationGenerator`, `SalesPage`); `RecipeForm` y `QuotationGenerator` se vuelven a montar por receta (`key`).
+- [x] Los avisos de error del servidor (5xx) muestran el código de la solicitud («… (código d0ff621e1b63e18a)»), para buscarlo en los logs.

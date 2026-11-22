@@ -47,7 +47,6 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
   const [extraCharge, setExtraCharge] = useState(String(recipe.extra_charge ?? 0));
   const [deliveryCost, setDeliveryCost] = useState(String(recipe.delivery_cost ?? 0));
   const [breakdown, setBreakdown]     = useState<CostBreakdown | null>(null);
-  const [, setLoading]                = useState(false);
   const [clientName, setClientName]   = useState("");
   const [downloading, setDownloading] = useState(false);
   const [clientError, setClientError] = useState(false);
@@ -71,7 +70,9 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
     extraCharge:  recipe.extra_charge ?? 0,
     deliveryCost: recipe.delivery_cost ?? 0,
   });
-  onSaveDoneRef.current = onDeferredSaveDone;
+  useEffect(() => {
+    onSaveDoneRef.current = onDeferredSaveDone; // the latest callback, read when the screen closes
+  }, [onDeferredSaveDone]);
 
   // Save on unmount when deferredSave=true. The refs are read at unmount ON PURPOSE: they hold the latest
   // values, and the effect must not re-run (and save) every time they change.
@@ -124,7 +125,6 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
   };
 
   const fetchBreakdown = () => {
-    setLoading(true);
     const params = new URLSearchParams({
       indirect_cost_pct: String(indirectNum),
       labor_cost_pct:    String(laborNum),
@@ -134,23 +134,15 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
     });
     api.get<CostBreakdown>(`/recipes/${recipe.id}/cost?${params}`)
       .then(({ data }) => setBreakdown(data))
-      .finally(() => setLoading(false));
+
   };
 
+  // The screen is remounted for each recipe (key={recipe.id} where it is used), so the fields start from the
+  // recipe and the breakdown is asked once, when it opens.
   useEffect(() => {
-    const newIndirect  = String(Math.round(recipe.indirect_cost_pct * 100));
-    const newLabor     = String(Math.round(recipe.labor_cost_pct * 100));
-    const newMargin    = String(Math.round(recipe.margin_pct * 100));
-    const newExtra     = String(recipe.extra_charge ?? 0);
-    const newDelivery  = String(recipe.delivery_cost ?? 0);
-    setIndirectPct(newIndirect);
-    setLaborPct(newLabor);
-    setMargin(newMargin);
-    setExtraCharge(newExtra);
-    setDeliveryCost(newDelivery);
-    setPortions(String(Math.round(recipe.yield)));
     fetchBreakdown();
-  }, [recipe.id]); // eslint-disable-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const recalcDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -160,7 +152,6 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
   ) => {
     if (recalcDebounceRef.current) clearTimeout(recalcDebounceRef.current);
     recalcDebounceRef.current = setTimeout(() => {
-      setLoading(true);
       // The backend prices the recipe for the portions asked; without them it uses its own yield.
       const scaled = portionsForPrice !== Math.round(recipe.yield);
       const params = new URLSearchParams({
@@ -173,7 +164,7 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
       });
       api.get<CostBreakdown>(`/recipes/${recipe.id}/cost?${params}`)
         .then(({ data }) => setBreakdown(data))
-        .finally(() => setLoading(false));
+  
     }, 400);
   };
 

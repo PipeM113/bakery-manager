@@ -31,7 +31,7 @@ El CI corre lo mismo que la revisión rápida. Un PR no se mergea con el CI en r
 ## Qué hacer si algo falla
 | Síntoma | Primero mira | Después |
 |---|---|---|
-| Cualquier error que vea tu mamá | El identificador de la solicitud: cada respuesta lo trae en el encabezado `X-Request-Id`, y la línea del registro de Vercel lo lleva entre corchetes | Buscar ese identificador en los logs del proyecto `bakery-manager-back` |
+| Cualquier error que vea tu mamá | El código de la solicitud: los avisos de error del servidor lo muestran («… (código d0ff621e1b63e18a)»); es el encabezado `X-Request-Id` de la respuesta y la línea del registro de Vercel lo lleva entre corchetes | Buscar ese identificador en los logs del proyecto `bakery-manager-back` |
 | El login da 500 | Dueños de las tablas del esquema (consulta de `docs/despliegue.md`, sección 2): tiene que ser `manager_app` | `alter table manager.<tabla> owner to manager_app;` |
 | Una pantalla no carga o da error | Los errores de ejecución del backend en Vercel (logs del proyecto `bakery-manager-back`) | Si empezó después de un deploy, revertir ese deploy en Vercel (rollback) |
 | Se aplicó una migración y algo se rompió | **No toques la base.** Revisa `select version, dirty from manager.schema_migrations;` | Restaurar el último respaldo en una base local para comparar; el `down` no deshace una fusión de datos |
@@ -39,11 +39,12 @@ El CI corre lo mismo que la revisión rápida. Un PR no se mergea con el CI en r
 | No se suben fotos | Variables del bucket y la CSP del frontend (`frontend/vercel.json`) | Ver `docs/despliegue.md` |
 | La base no responde tras días sin uso | El proyecto de Supabase puede estar pausado (plan Free) | Reactivarlo desde el panel |
 
-## Niveles de servicio (propuesta, por confirmar con Felipe)
-Una herramienta interna de una usuaria, sin guardia. Estos números son una **propuesta**, no una medición:
-- **Disponibilidad:** se espera en horario de trabajo; una caída de un día es molesta, no grave.
-- **Datos:** no se pierde más de una semana de trabajo (por eso el respaldo semanal); cada migración tiene respaldo propio.
+## Niveles de servicio (confirmados por Felipe el 2026-11-22)
+Una herramienta interna de una usuaria, sin guardia. Estos números son el acuerdo, no una medición:
+- **Disponibilidad:** se espera en horario de trabajo; una caída de un día es molesta, no grave (la dueña puede volver al papel ese día).
+- **Datos:** no se pierde más de **una semana** de trabajo. Eso solo se cumple si el respaldo semanal se hace de verdad (hoy depende de que Felipe corra `backup.sh`); cada migración tiene además su respaldo propio.
 - **Cambios:** una corrección urgente puede salir el mismo día; lo demás, por sprint.
+- **Qué lo haría cambiar:** si la dueña necesita la app para vender un día concreto, o si perder un día de datos pasa a ser grave, hay que respaldar a diario (programado) o pasar a un plan con respaldos automáticos, y sacar la base del plan gratis (que además se pausa tras una semana sin uso).
 
 ## Pendientes de operación
 - [ ] Correr `backup.sh` contra Supabase y restaurarlo en local (`docs/backlog.md`).

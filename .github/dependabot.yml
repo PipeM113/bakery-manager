@@ -23,9 +23,6 @@ updates:
       # The types follow the Node version the project runs (22), not the latest major.
       - dependency-name: "@types/node"
         update-types: ["version-update:semver-major"]
-      # 7.1 turns on rules (set-state-in-effect, refs) that flag 4 existing effects: a task of its own.
-      - dependency-name: "eslint-plugin-react-hooks"
-        versions: [">=7.1.0"]
   - package-ecosystem: "gomod"
     directory: "/backend"
     schedule:

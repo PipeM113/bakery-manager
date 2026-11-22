@@ -225,7 +225,7 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onSaved }: Props
               </p>
               <div className="flex-1 h-px bg-lino" />
             </div>
-            <QuotationGenerator recipe={recipe} />
+            <QuotationGenerator key={recipe.id} recipe={recipe} />
           </div>
 
           <div className="flex gap-3 pt-2">

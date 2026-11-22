@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import type { IRecipe, IRecipeType, IIngredientOption, RecipeFormData } from "../types/recipe";
 import { emptyRecipeForm } from "../types/recipe";
 import RecipePhotoUpload from "./RecipePhotoUpload";
@@ -21,7 +21,20 @@ interface Props {
 const NEW_TYPE = "__new__";
 
 export default function RecipeForm({ editing, ingredients, types, onCreateType, onSave, onSaveAs, onClose }: Props) {
-  const [form, setForm] = useState<RecipeFormData>(emptyRecipeForm);
+  // The form starts from the recipe being edited (or empty). The screen is remounted for each recipe
+  // (key={editing?.id} where it is used), so nothing has to be reset by hand when the recipe changes.
+  const [form, setForm] = useState<RecipeFormData>(() =>
+    editing
+      ? {
+          name: editing.name,
+          category_id: editing.category_id ?? null,
+          description: editing.description || "",
+          yield: editing.yield,
+          yield_unit: editing.yield_unit,
+          ingredients: editing.ingredients.map((i) => ({ ingredient_id: i.ingredient_id, quantity: i.quantity, unit: i.unit })),
+        }
+      : emptyRecipeForm,
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [descriptionTouched, setDescriptionTouched] = useState(false);
@@ -76,30 +89,6 @@ export default function RecipeForm({ editing, ingredients, types, onCreateType, 
   const [ingSearch, setIngSearch] = useState("");
   const [pickerSelected, setPickerSelected] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    if (editing) {
-      setForm({
-        name: editing.name,
-        category_id: editing.category_id ?? null,
-        description: editing.description || "",
-        yield: editing.yield,
-        yield_unit: editing.yield_unit,
-        ingredients: editing.ingredients.map((i) => ({
-          ingredient_id: i.ingredient_id,
-          quantity: i.quantity,
-          unit: i.unit,
-        })),
-      });
-    } else {
-      setForm(emptyRecipeForm);
-    }
-    setError("");
-    setCreatingType(false);
-    setNewTypeName("");
-    setTypeError("");
-    setDescriptionTouched(false);
-    setIsDirty(false);
-  }, [editing]);
 
   // Fix 2: gate close behind dirty check
   const requestClose = () => {

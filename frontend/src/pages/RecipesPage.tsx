@@ -183,6 +183,7 @@ export default function RecipesPage() {
 
       {showForm && (
         <RecipeForm
+          key={editing?.id ?? "new"}
           editing={editing}
           ingredients={ingredients}
           types={types}
