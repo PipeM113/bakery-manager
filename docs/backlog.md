@@ -108,3 +108,10 @@ Los sprints 0 a 4 usan la numeración antigua y son anteriores al registro de ac
 - Ideas: mostrar junto al último precio el más alto de los últimos 90 días y avisar cuando la última compra fue
   una oferta (el costo de reponer sería mayor); costo por proveedor en una receta si la dueña lo pide; poder
   corregir una compra mal anotada.
+
+
+## Iteración 0, forma de trabajo y operación (cerrada)
+
+- [x] `CLAUDE.md` con las reglas del proyecto, `scripts/check.sh` (un comando de calidad, con formato y búsqueda de secretos) y `docs/operacion.md` (cómo se corre, se publica, se respalda y qué hacer si algo falla).
+- [ ] Confirmar o ajustar los niveles de servicio propuestos en `docs/operacion.md`.
+- [ ] Que el CI corra `./scripts/check.sh` (hoy corre los mismos pasos por separado, sin la búsqueda de secretos ni el formato).

@@ -13,6 +13,10 @@ docs/      ADR, fuentes verificadas y backlog
 infra/     Postgres local solo para los tests
 ```
 
+## Revisión rápida
+
+`./scripts/check.sh` corre lo mismo que el CI (formato, `go vet`, tests Go, lint, tipos, tests del frontend, build y `npm audit`) más una búsqueda de secretos; con `--full` suma las pruebas de navegador. Las reglas del proyecto están en [`CLAUDE.md`](CLAUDE.md) y la operación en [`docs/operacion.md`](docs/operacion.md).
+
 ## Probar el backend
 
 Los tests usan un Postgres local desechable y se niegan a correr contra cualquier otro servidor (por ejemplo Supabase). Sin `TEST_DATABASE_URL` los tests de base de datos se saltan en tu máquina; en CI su ausencia es un error.
