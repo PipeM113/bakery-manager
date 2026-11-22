@@ -73,8 +73,9 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
   });
   onSaveDoneRef.current = onDeferredSaveDone;
 
-  // Save on unmount when deferredSave=true
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // Save on unmount when deferredSave=true. The refs are read at unmount ON PURPOSE: they hold the latest
+  // values, and the effect must not re-run (and save) every time they change.
+  /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
     if (!deferredSave) return;
     return () => {
@@ -90,6 +91,7 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
         .catch(() => onSaveDoneRef.current?.(false));
     };
   }, []); // intentional empty deps — relies on refs
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   const indirectNum     = parseFloat(indirectPct || "0") / 100;
   const laborNum        = parseFloat(laborPct    || "0") / 100;

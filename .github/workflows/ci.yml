@@ -37,6 +37,8 @@ jobs:
       # pdftotext reads the quotation PDF in its tests; without it they would be skipped.
       - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends poppler-utils
       - run: go version
+      # gofmt prints the files it would change; any output fails the job.
+      - run: test -z "$(gofmt -l .)"
       - run: go vet ./...
       - run: go test -count=1 ./...
 
@@ -60,3 +62,11 @@ jobs:
       - run: npm audit --omit=dev --audit-level=high
       - run: npm test
       - run: npm run build
+
+  repo-checks:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # Nothing secret in what is versioned (private keys, service keys, database URLs with a real password).
+      # The same search `./scripts/check.sh` runs on a person's machine.
+      - run: ./scripts/check.sh --only secrets

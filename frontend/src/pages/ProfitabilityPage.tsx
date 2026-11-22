@@ -169,7 +169,7 @@ export default function ProfitabilityPage() {
   const yearOptions = useMemo(() => {
     const y = now.year;
     return [y - 2, y - 1, y];
-  }, []);
+  }, [now.year]);
 
   useEffect(() => {
     Promise.all([

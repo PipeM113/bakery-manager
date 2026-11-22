@@ -1,7 +1,7 @@
 import { RowsSkeleton } from "../components/Skeleton";
 import { useToast } from "../hooks/useToast";
 import { useConfirm } from "../hooks/useConfirm";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { fixedCostService } from "../api/fixedCostService";
 import type { IFixedCost } from "../types/fixedCost";
 import { todayInSantiago } from "../utils/businessDate";
@@ -23,11 +23,11 @@ export default function FixedCostsPage() {
 
   const [listLoading, setListLoading] = useState(true);
 
-  const load = () => {
+  const load = useCallback(() => {
     return fixedCostService.getAll(month).then(setCosts).catch(() => setError("Error cargando costos fijos")).finally(() => setListLoading(false));
-  };
+  }, [month]);
 
-  useEffect(() => { load(); }, [month]);
+  useEffect(() => { load(); }, [load]);
 
   const totalActive = costs
     .filter((c) => c.is_active)

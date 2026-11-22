@@ -18,8 +18,8 @@ func (s *SaleService) RegisterSale(ctx context.Context, input repository.Registe
 	return s.repo.RegisterSale(ctx, input)
 }
 
-func (s *SaleService) GetAll(ctx context.Context, from, to string) ([]repository.Sale, error) {
-	return s.repo.GetAll(ctx, from, to)
+func (s *SaleService) GetAll(ctx context.Context, from, to string, limit, offset int) ([]repository.Sale, bool, error) {
+	return s.repo.GetAll(ctx, from, to, limit, offset)
 }
 
 func (s *SaleService) DeleteSale(ctx context.Context, id string) error {

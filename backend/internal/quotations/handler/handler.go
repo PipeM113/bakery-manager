@@ -394,11 +394,17 @@ func (h *QuotationHandler) List(w http.ResponseWriter, r *http.Request) {
 		httputil.JSONError(w, "estado inválido", http.StatusBadRequest)
 		return
 	}
-	quotations, err := h.repo.List(r.Context(), status)
+	limit, offset, perr := httputil.Page(r)
+	if perr != nil {
+		httputil.JSONError(w, perr.Error(), http.StatusBadRequest)
+		return
+	}
+	quotations, more, err := h.repo.List(r.Context(), status, limit, offset)
 	if err != nil {
 		httputil.JSONError(w, "error listando cotizaciones", http.StatusInternalServerError)
 		return
 	}
+	httputil.SetHasMore(w, more)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(quotations) //nolint:errcheck
 }
