@@ -68,6 +68,7 @@ func New(cfg config.Config, db *pgxpool.Pool, photos PhotoUploader) http.Handler
 // NewWithClock is New with the clock the handlers use for "today" and "this month".
 func NewWithClock(cfg config.Config, db *pgxpool.Pool, photos PhotoUploader, clk clock.Clock) http.Handler {
 	r := chi.NewRouter()
+	r.Use(mid.RequestID) // before the logger: its lines carry the identifier
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	// JSON bodies are small; only the multipart uploads (a recipe photo, the ingredient import), each with its own limit, may be bigger.
@@ -84,7 +85,7 @@ func NewWithClock(cfg config.Config, db *pgxpool.Pool, photos PhotoUploader, clk
 			AllowedOrigins:   cfg.CORSOrigins,
 			AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 			AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
-			ExposedHeaders:   []string{"Retry-After"}, // the login page shows how long to wait
+			ExposedHeaders:   []string{"Retry-After", "X-Request-Id"}, // the login page shows how long to wait; the id is what a person reads out when something fails
 			AllowCredentials: false,
 			MaxAge:           600,
 		}))

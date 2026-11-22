@@ -118,7 +118,7 @@ Los sprints 0 a 4 usan la numeración antigua y son anteriores al registro de ac
 
 ## Revisión del 2026-11-22: lo que quedó anotado (ver `docs/revision-arquitectura-2026-11.md`)
 
-- [ ] Identificador de solicitud en los registros del backend (`middleware.RequestID` antes del `Logger`), con su prueba.
+- [x] Identificador de solicitud: cada respuesta trae `X-Request-Id` y el registro lo imprime en la línea de la solicitud (`pkg/middleware/requestid.go`); el que mande el cliente se ignora.
 - [ ] Paginar o limitar por período las listas que crecen (cotizaciones, ventas, gastos).
 - [ ] Título del navegador por pantalla.
 - [ ] Revisar los 8 avisos del lint junto con la regla `react-hooks` 7.1.
