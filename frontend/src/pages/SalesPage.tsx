@@ -1,7 +1,7 @@
 import { RowsSkeleton } from "../components/Skeleton";
 import { useIsPhone } from "../hooks/useIsPhone";
 import RecipeOptions from "../components/RecipeOptions";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useToast } from "../hooks/useToast";
 import { PAGE_SIZE, mayHaveMore } from "../utils/pages";
 import { useConfirm } from "../hooks/useConfirm";
@@ -69,7 +69,6 @@ export default function SalesPage() {
   const [formError, setFormError] = useState("");
 
   // Live stock check (computed reactively)
-  const [stockIssues, setStockIssues] = useState<IngredientPreview[]>([]);
 
   // Confirmation step
   const [preview, setPreview]     = useState<IngredientPreview[] | null>(null);
@@ -156,13 +155,13 @@ export default function SalesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Recompute stock issues whenever recipe or quantity changes
-  useEffect(() => {
-    if (!recipeId || !ingredients.length) { setStockIssues([]); return; }
+  // The ingredients that would run short, worked out from the recipe and the quantity (not stored: it cannot go stale).
+  const stockIssues = useMemo<IngredientPreview[]>(() => {
+    if (!recipeId || !ingredients.length) { return []; }
     const recipe = recipes.find((r) => r.id === recipeId);
-    if (!recipe) { setStockIssues([]); return; }
+    if (!recipe) { return []; }
     const qty = parseInt(quantity, 10) || 0;
-    if (qty <= 0) { setStockIssues([]); return; }
+    if (qty <= 0) { return []; }
     const share = soldAs === "portion" && recipe.yield > 0 ? 1 / recipe.yield : 1;
 
     const stockMap = new Map(ingredients.map((i) => [i.id, i.stock_quantity]));
@@ -173,7 +172,7 @@ export default function SalesPage() {
         return { name: ing.name, quantity_used: needed, unit: ing.unit, available, insufficient: available < needed };
       })
       .filter((p) => p.insufficient);
-    setStockIssues(issues);
+    return issues;
   }, [recipeId, quantity, soldAs, ingredients, recipes]);
 
   const priceFor = (id: string, as: SoldAs, wholeRecipePrice: number): number => {
@@ -189,7 +188,6 @@ export default function SalesPage() {
   // When recipe changes: fetch cost to pre-fill unit price with suggested price (margin applied, rounded to 500)
   const handleRecipeChange = async (id: string) => {
     setRecipeId(id);
-    setStockIssues([]);
     if (!id) { setUnitPrice(""); setRecipeMargin(null); setSuggestedPrice(null); return; }
     try {
       const DEFAULT_MARGIN = 0.30;

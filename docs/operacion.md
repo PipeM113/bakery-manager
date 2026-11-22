@@ -31,7 +31,7 @@ El CI corre lo mismo que la revisión rápida. Un PR no se mergea con el CI en r
 ## Qué hacer si algo falla
 | Síntoma | Primero mira | Después |
 |---|---|---|
-| Cualquier error que vea tu mamá | El identificador de la solicitud: cada respuesta lo trae en el encabezado `X-Request-Id`, y la línea del registro de Vercel lo lleva entre corchetes | Buscar ese identificador en los logs del proyecto `bakery-manager-back` |
+| Cualquier error que vea tu mamá | El código de la solicitud: los avisos de error del servidor lo muestran («… (código d0ff621e1b63e18a)»); es el encabezado `X-Request-Id` de la respuesta y la línea del registro de Vercel lo lleva entre corchetes | Buscar ese identificador en los logs del proyecto `bakery-manager-back` |
 | El login da 500 | Dueños de las tablas del esquema (consulta de `docs/despliegue.md`, sección 2): tiene que ser `manager_app` | `alter table manager.<tabla> owner to manager_app;` |
 | Una pantalla no carga o da error | Los errores de ejecución del backend en Vercel (logs del proyecto `bakery-manager-back`) | Si empezó después de un deploy, revertir ese deploy en Vercel (rollback) |
 | Se aplicó una migración y algo se rompió | **No toques la base.** Revisa `select version, dirty from manager.schema_migrations;` | Restaurar el último respaldo en una base local para comparar; el `down` no deshace una fusión de datos |
