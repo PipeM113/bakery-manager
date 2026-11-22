@@ -73,7 +73,7 @@ export default function StockAdjustmentModal({ ingredient, onClose, onSaved }: P
   };
 
   const help = REASONS.find((r) => r.value === reason)!.help;
-  const field = "w-full bg-crema border border-linea text-negro px-3 py-1.5 text-sm font-light focus:outline-none focus:border-oro transition-all";
+  const field = "w-full bg-crema border border-linea text-negro px-3 py-1.5 text-sm font-light focus:outline-none focus:border-oro transition-colors";
   const label = "block text-xs tracking-widest uppercase text-negro/70 mb-1 font-light";
 
   return (
@@ -84,7 +84,7 @@ export default function StockAdjustmentModal({ ingredient, onClose, onSaved }: P
         <div className="space-y-2">
           {error && <p className="text-peligro text-xs">{error}</p>}
           <button type="submit" form="stock-adjustment-form" disabled={saving} data-primary-action
-            className="w-full bg-negro text-crema text-xs tracking-widest uppercase font-medium px-6 py-2.5 hover:bg-black transition-all disabled:opacity-50">
+            className="w-full bg-negro text-crema text-xs tracking-widest uppercase font-medium px-6 py-2.5 hover:bg-black transition-[color,background-color,border-color,opacity] disabled:opacity-50">
             {saving ? "Guardando..." : "Guardar ajuste"}
           </button>
         </div>

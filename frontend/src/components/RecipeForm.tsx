@@ -218,7 +218,7 @@ export default function RecipeForm({ editing, ingredients, types, onCreateType, 
   };
 
   const inputCls =
-    "w-full bg-crema border border-linea text-negro px-3 py-2 text-sm font-light focus:outline-none focus:border-oro transition-all";
+    "w-full bg-crema border border-linea text-negro px-3 py-2 text-sm font-light focus:outline-none focus:border-oro transition-colors";
 
   return (
     // Fix 3: no onClick on backdrop (removed backdrop-click-to-close)
@@ -283,7 +283,7 @@ export default function RecipeForm({ editing, ingredients, types, onCreateType, 
               <button
                 type="button"
                 onClick={() => { void createTypeNow(); }}
-                className="border border-linea text-negro text-xs tracking-widest uppercase font-medium px-4 hover:border-oro hover:text-oro transition-all shrink-0"
+                className="border border-linea text-negro text-xs tracking-widest uppercase font-medium px-4 hover:border-oro hover:text-oro transition-colors shrink-0"
               >
                 Crear
               </button>
@@ -307,7 +307,7 @@ export default function RecipeForm({ editing, ingredients, types, onCreateType, 
             }}
             onBlur={() => { setDescriptionTouched(true); if (!form.description.trim()) setError("La descripción es obligatoria para generar cotización"); }}
             rows={2}
-            className={`w-full bg-crema border text-negro px-3 py-2 text-sm font-light focus:outline-none transition-all resize-none ${descriptionTouched && !form.description.trim() ? "border-peligro focus:border-peligro" : "border-linea focus:border-oro"}`}
+            className={`w-full bg-crema border text-negro px-3 py-2 text-sm font-light focus:outline-none transition-colors resize-none ${descriptionTouched && !form.description.trim() ? "border-peligro focus:border-peligro" : "border-linea focus:border-oro"}`}
           />
           <div className="flex justify-between items-start mt-1">
             {descriptionTouched && !form.description.trim() ? (
@@ -362,7 +362,7 @@ export default function RecipeForm({ editing, ingredients, types, onCreateType, 
                   aria-label="Ingrediente"
                   value={ing.ingredient_id}
                   onChange={(e) => updateIngredient(idx, "ingredient_id", e.target.value)}
-                  className="flex-1 bg-crema border border-linea text-negro px-3 py-2 text-xs font-light focus:outline-none focus:border-oro transition-all min-w-0"
+                  className="flex-1 bg-crema border border-linea text-negro px-3 py-2 text-xs font-light focus:outline-none focus:border-oro transition-colors min-w-0"
                 >
                   {([["ingredient", "Ingredientes"], ["supply", "Insumos (cajas, cartones)"]] as const).map(([kind, label]) => (
                     <optgroup key={kind} label={label}>
@@ -379,13 +379,13 @@ export default function RecipeForm({ editing, ingredients, types, onCreateType, 
                   value={ing.quantity === 0 ? "" : ing.quantity}
                   placeholder="Qty"
                   onChange={(e) => updateIngredient(idx, "quantity", parseFloat(e.target.value) || 0)}
-                  className="w-20 bg-crema border border-linea text-negro px-3 py-2 text-xs font-light focus:outline-none focus:border-oro transition-all"
+                  className="w-20 bg-crema border border-linea text-negro px-3 py-2 text-xs font-light focus:outline-none focus:border-oro transition-colors"
                 />
                 <select
                   aria-label="Unidad"
                   value={ing.unit}
                   onChange={(e) => updateIngredient(idx, "unit", e.target.value)}
-                  className="w-20 bg-crema border border-linea text-negro px-2 py-2 text-xs font-light focus:outline-none focus:border-oro transition-all"
+                  className="w-20 bg-crema border border-linea text-negro px-2 py-2 text-xs font-light focus:outline-none focus:border-oro transition-colors"
                 >
                   {unitsFor(ingredients.find((i) => i.id === ing.ingredient_id)?.default_unit ?? ing.unit).concat(
                     unitsFor(ing.unit).includes(ing.unit) ? [] : [ing.unit]).map((u) => (
@@ -432,14 +432,14 @@ export default function RecipeForm({ editing, ingredients, types, onCreateType, 
             <button
               onClick={openVersionModal}
               disabled={saving || savingAs}
-              className="flex-1 border border-linea text-negro/70 text-xs tracking-widest uppercase font-medium py-3 hover:border-oro hover:text-oro transition-all disabled:opacity-50"
+              className="flex-1 border border-linea text-negro/70 text-xs tracking-widest uppercase font-medium py-3 hover:border-oro hover:text-oro transition-[color,background-color,border-color,opacity] disabled:opacity-50"
             >
               Guardar como...
             </button>
             <button
               onClick={handleSave}
               disabled={saving || savingAs}
-              className="flex-1 bg-negro text-crema text-xs tracking-widest uppercase font-medium py-3 hover:bg-black transition-all disabled:opacity-50"
+              className="flex-1 bg-negro text-crema text-xs tracking-widest uppercase font-medium py-3 hover:bg-black transition-[color,background-color,border-color,opacity] disabled:opacity-50"
             >
               {saving ? "Guardando..." : "Guardar"}
             </button>
@@ -448,7 +448,7 @@ export default function RecipeForm({ editing, ingredients, types, onCreateType, 
           <button
             onClick={handleSave}
             disabled={saving}
-            className="w-full bg-negro text-crema text-xs tracking-widest uppercase font-medium py-3 hover:bg-black transition-all disabled:opacity-50"
+            className="w-full bg-negro text-crema text-xs tracking-widest uppercase font-medium py-3 hover:bg-black transition-[color,background-color,border-color,opacity] disabled:opacity-50"
           >
             {saving ? "Guardando..." : editing ? "Guardar cambios" : "Guardar receta"}
           </button>
@@ -478,7 +478,7 @@ export default function RecipeForm({ editing, ingredients, types, onCreateType, 
                 onChange={(e) => setIngSearch(e.target.value)}
                 placeholder="Buscar ingrediente..."
                 autoFocus
-                className="w-full bg-crema border border-linea text-negro px-3 py-2 text-sm font-light focus:outline-none focus:border-oro transition-all"
+                className="w-full bg-crema border border-linea text-negro px-3 py-2 text-sm font-light focus:outline-none focus:border-oro transition-colors"
               />
             </div>
 
@@ -519,14 +519,14 @@ export default function RecipeForm({ editing, ingredients, types, onCreateType, 
             <div className="flex gap-2 p-4 border-t border-linea">
               <button
                 onClick={() => setShowIngPicker(false)}
-                className="flex-1 border border-linea text-negro/70 text-xs tracking-widest uppercase font-medium py-2.5 hover:bg-lino transition-all"
+                className="flex-1 border border-linea text-negro/70 text-xs tracking-widest uppercase font-medium py-2.5 hover:bg-lino transition-colors"
               >
                 Cancelar
               </button>
               <button
                 onClick={confirmIngPicker}
                 disabled={pickerSelected.size === 0}
-                className="flex-1 bg-negro text-crema text-xs tracking-widest uppercase font-medium py-2.5 hover:bg-black transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex-1 bg-negro text-crema text-xs tracking-widest uppercase font-medium py-2.5 hover:bg-black transition-[color,background-color,border-color,opacity] disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Confirmar ({pickerSelected.size})
               </button>
@@ -562,7 +562,7 @@ export default function RecipeForm({ editing, ingredients, types, onCreateType, 
                 value={versionName}
                 onChange={(e) => { setVersionName(e.target.value); if (versionError) setVersionError(""); }}
                 placeholder="ej. 12 porciones, sin gluten, versión verano"
-                className="w-full bg-crema border border-linea text-negro px-3 py-2 text-sm font-light focus:outline-none focus:border-oro transition-all"
+                className="w-full bg-crema border border-linea text-negro px-3 py-2 text-sm font-light focus:outline-none focus:border-oro transition-colors"
                 autoFocus
                 onKeyDown={(e) => { if (e.key === "Enter") handleConfirmSaveAs(); }}
               />
@@ -575,7 +575,7 @@ export default function RecipeForm({ editing, ingredients, types, onCreateType, 
             <button
               onClick={handleConfirmSaveAs}
               disabled={savingAs}
-              className="w-full bg-negro text-crema text-xs tracking-widest uppercase font-medium py-3 hover:bg-black transition-all disabled:opacity-50"
+              className="w-full bg-negro text-crema text-xs tracking-widest uppercase font-medium py-3 hover:bg-black transition-[color,background-color,border-color,opacity] disabled:opacity-50"
             >
               {savingAs ? "Creando versión..." : "Crear versión"}
             </button>
@@ -594,13 +594,13 @@ export default function RecipeForm({ editing, ingredients, types, onCreateType, 
             <div className="flex gap-2">
               <button
                 onClick={() => setShowCloseConfirm(false)}
-                className="flex-1 border border-linea text-negro/70 text-xs tracking-widest uppercase font-medium py-2.5 hover:border-oro hover:text-oro transition-all"
+                className="flex-1 border border-linea text-negro/70 text-xs tracking-widest uppercase font-medium py-2.5 hover:border-oro hover:text-oro transition-colors"
               >
                 Continuar editando
               </button>
               <button
                 onClick={() => { setShowCloseConfirm(false); onClose(); }}
-                className="flex-1 bg-peligro text-crema text-xs tracking-widest uppercase font-medium py-2.5 hover:opacity-90 transition-all"
+                className="flex-1 bg-peligro text-crema text-xs tracking-widest uppercase font-medium py-2.5 hover:opacity-90 transition-[color,background-color,border-color,opacity]"
               >
                 Salir sin guardar
               </button>

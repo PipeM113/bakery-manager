@@ -96,7 +96,7 @@ export default function OrderForm({ recipes, onClose, onCreated }: Props) {
     }
   };
 
-  const field = "w-full bg-crema border border-linea text-negro px-3 py-1.5 text-sm font-light focus:outline-none focus:border-oro transition-all";
+  const field = "w-full bg-crema border border-linea text-negro px-3 py-1.5 text-sm font-light focus:outline-none focus:border-oro transition-colors";
   const label = "block text-xs tracking-widest uppercase text-negro/70 mb-1 font-light";
 
   return (
@@ -108,7 +108,7 @@ export default function OrderForm({ recipes, onClose, onCreated }: Props) {
         <div className="space-y-2">
           {error && <p className="text-peligro text-xs">{error}</p>}
           <button type="submit" form="order-form" disabled={saving} data-primary-action
-            className="w-full bg-negro text-crema text-xs tracking-widest uppercase font-medium px-6 py-2.5 hover:bg-black transition-all disabled:opacity-50">
+            className="w-full bg-negro text-crema text-xs tracking-widest uppercase font-medium px-6 py-2.5 hover:bg-black transition-[color,background-color,border-color,opacity] disabled:opacity-50">
             {saving ? "Registrando..." : "Registrar pedido"}
           </button>
         </div>
@@ -154,7 +154,7 @@ export default function OrderForm({ recipes, onClose, onCreated }: Props) {
             </div>
           ))}
           <button type="button" onClick={() => setLines((ls) => [...ls, newLine()])}
-            className="w-full border border-dashed border-linea text-negro/70 text-xs tracking-widest uppercase hover:border-oro hover:text-oro transition-all">
+            className="w-full border border-dashed border-linea text-negro/70 text-xs tracking-widest uppercase hover:border-oro hover:text-oro transition-colors">
             Agregar producto
           </button>
         </div>

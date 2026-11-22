@@ -378,7 +378,7 @@ export default function SalesPage() {
           <h1 className="font-display text-4xl text-negro">Ventas</h1>
         </div>
         <button onClick={() => setShowOrderForm(true)}
-          className="bg-negro text-crema text-xs tracking-widest uppercase font-medium px-5 py-3 hover:bg-black transition-all">
+          className="bg-negro text-crema text-xs tracking-widest uppercase font-medium px-5 py-3 hover:bg-black transition-colors">
           Nuevo pedido
         </button>
       </div>
@@ -432,7 +432,7 @@ export default function SalesPage() {
               <button
                 onClick={() => { setConfirming(false); setPreview(null); }}
                 className="text-xs tracking-widest uppercase font-medium px-5 py-2.5
-                           border border-linea text-negro/70 hover:border-oro transition-all"
+                           border border-linea text-negro/70 hover:border-oro transition-colors"
               >
                 Cancelar
               </button>
@@ -440,7 +440,7 @@ export default function SalesPage() {
                 onClick={handleConfirm}
                 disabled={loading}
                 className="bg-negro text-crema text-xs tracking-widest uppercase font-medium
-                           px-5 py-2.5 hover:bg-black transition-all disabled:opacity-50"
+                           px-5 py-2.5 hover:bg-black transition-[color,background-color,border-color,opacity] disabled:opacity-50"
               >
                 {loading ? "Registrando..." : "Confirmar"}
               </button>
@@ -466,7 +466,7 @@ export default function SalesPage() {
               value={recipeId}
               onChange={(e) => handleRecipeChange(e.target.value)}
               className="w-full bg-crema border border-linea text-negro
-                         px-4 py-2.5 text-sm font-light focus:outline-none focus:border-oro transition-all"
+                         px-4 py-2.5 text-sm font-light focus:outline-none focus:border-oro transition-colors"
             >
               <option value="">Seleccionar receta...</option>
               <RecipeOptions recipes={recipes} />
@@ -482,7 +482,7 @@ export default function SalesPage() {
               value={soldAs}
               onChange={(e) => handleSoldAsChange(e.target.value as SoldAs)}
               className="w-full bg-crema border border-linea text-negro
-                         px-4 py-2.5 text-sm font-light focus:outline-none focus:border-oro transition-all"
+                         px-4 py-2.5 text-sm font-light focus:outline-none focus:border-oro transition-colors"
             >
               <option value="recipe">Receta completa</option>
               <option value="portion">Porción</option>
@@ -501,7 +501,7 @@ export default function SalesPage() {
               onChange={(e) => setQuantity(e.target.value)}
               placeholder="ej. 10"
               className="w-full bg-crema border border-linea text-negro
-                         px-4 py-2.5 text-sm font-light focus:outline-none focus:border-oro transition-all"
+                         px-4 py-2.5 text-sm font-light focus:outline-none focus:border-oro transition-colors"
             />
           </div>
 
@@ -517,7 +517,7 @@ export default function SalesPage() {
               onChange={(e) => setUnitPrice(e.target.value)}
               placeholder="ej. 2500"
               className="w-full bg-crema border border-linea text-negro
-                         px-4 py-2.5 text-sm font-light focus:outline-none focus:border-oro transition-all"
+                         px-4 py-2.5 text-sm font-light focus:outline-none focus:border-oro transition-colors"
             />
             {recipeMargin !== null && (
               <p className="text-negro/70 text-xs mt-1 font-light">
@@ -536,7 +536,7 @@ export default function SalesPage() {
               value={saleDate}
               onChange={(e) => setSaleDate(e.target.value)}
               className="w-full bg-crema border border-linea text-negro
-                         px-4 py-2.5 text-sm font-light focus:outline-none focus:border-oro transition-all"
+                         px-4 py-2.5 text-sm font-light focus:outline-none focus:border-oro transition-colors"
             />
           </div>
 
@@ -551,7 +551,7 @@ export default function SalesPage() {
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Opcional"
               className="w-full bg-crema border border-linea text-negro
-                         px-4 py-2.5 text-sm font-light focus:outline-none focus:border-oro transition-all"
+                         px-4 py-2.5 text-sm font-light focus:outline-none focus:border-oro transition-colors"
             />
           </div>
         </div>
@@ -590,7 +590,7 @@ export default function SalesPage() {
           type="submit"
 
           className="bg-negro text-crema text-xs tracking-widest uppercase font-medium
-                     px-6 py-2.5 hover:bg-black transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                     px-6 py-2.5 hover:bg-black transition-[color,background-color,border-color,opacity] disabled:opacity-40 disabled:cursor-not-allowed"
         >
           Registrar Venta
         </button>
@@ -600,7 +600,7 @@ export default function SalesPage() {
       <div className="flex border-b border-linea mb-6">
         <button
           onClick={() => setQuotationTab("quotations")}
-          className={`px-5 py-2.5 text-xs tracking-widest uppercase font-medium transition-all
+          className={`px-5 py-2.5 text-xs tracking-widest uppercase font-medium transition-colors
             ${quotationTab === "quotations"
               ? "border-b-2 border-oro text-oro"
               : "text-negro/70 hover:text-negro"}`}
@@ -609,7 +609,7 @@ export default function SalesPage() {
         </button>
         <button
           onClick={() => setQuotationTab("orders")}
-          className={`px-5 py-2.5 text-xs tracking-widest uppercase font-medium transition-all
+          className={`px-5 py-2.5 text-xs tracking-widest uppercase font-medium transition-colors
             ${quotationTab === "orders"
               ? "border-b-2 border-oro text-oro"
               : "text-negro/70 hover:text-negro"}`}
@@ -618,7 +618,7 @@ export default function SalesPage() {
         </button>
         <button
           onClick={() => setQuotationTab("sales")}
-          className={`px-5 py-2.5 text-xs tracking-widest uppercase font-medium transition-all
+          className={`px-5 py-2.5 text-xs tracking-widest uppercase font-medium transition-colors
             ${quotationTab === "sales"
               ? "border-b-2 border-oro text-oro"
               : "text-negro/70 hover:text-negro"}`}
@@ -634,7 +634,7 @@ export default function SalesPage() {
             <h2 className="font-display text-xl text-negro mr-auto">Cotizaciones</h2>
             <button
               onClick={() => setShowNewQuote(true)}
-              className="text-xs tracking-widest uppercase font-medium px-4 py-2 bg-negro text-crema hover:bg-black transition-all"
+              className="text-xs tracking-widest uppercase font-medium px-4 py-2 bg-negro text-crema hover:bg-black transition-colors"
             >
               Nueva cotización
             </button>
@@ -644,7 +644,7 @@ export default function SalesPage() {
                 <button
                   key={s}
                   onClick={() => handleQuotationFilterChange(s)}
-                  className={`text-xs tracking-widest uppercase font-medium px-3 py-1.5 border transition-all
+                  className={`text-xs tracking-widest uppercase font-medium px-3 py-1.5 border transition-colors
                     ${quotationFilter === s
                       ? "bg-negro text-crema border-oro"
                       : "border-linea text-negro/70 hover:border-oro hover:text-oro"}`}
@@ -686,24 +686,24 @@ export default function SalesPage() {
                       </div>
                     </div>
                     <button data-testid="quote-download" onClick={() => handleDownloadQuotation(q)}
-                      className="w-full text-xs tracking-widest uppercase font-medium border border-oro text-oro hover:bg-lino transition-all">
+                      className="w-full text-xs tracking-widest uppercase font-medium border border-oro text-oro hover:bg-lino transition-colors">
                       Descargar PDF
                     </button>
                     {q.status === "pending" && (
                       <div className="grid grid-cols-2 gap-2">
                         <button onClick={() => handleConfirmQuotation(q.id)}
-                          className="text-xs tracking-widest uppercase font-medium bg-negro text-crema hover:bg-black transition-all">
+                          className="text-xs tracking-widest uppercase font-medium bg-negro text-crema hover:bg-black transition-colors">
                           Confirmar venta
                         </button>
                         <button onClick={() => handleCancelQuotation(q.id)}
-                          className="text-xs tracking-widest uppercase font-medium border border-linea text-negro/70 hover:border-peligro hover:text-peligro transition-all">
+                          className="text-xs tracking-widest uppercase font-medium border border-linea text-negro/70 hover:border-peligro hover:text-peligro transition-colors">
                           Cancelar
                         </button>
                       </div>
                     )}
                     {q.status !== "confirmed" && (
                       <button data-testid="quote-delete" onClick={() => handleDeleteQuotation(q.id)}
-                        className="w-full text-xs tracking-widest uppercase font-medium text-peligro hover:underline transition-all">
+                        className="w-full text-xs tracking-widest uppercase font-medium text-peligro hover:underline transition-colors">
                         Eliminar
                       </button>
                     )}
@@ -747,7 +747,7 @@ export default function SalesPage() {
                       <td className="px-4 py-4 text-right">
                         <div className="flex flex-wrap gap-2 justify-end">
                         <button data-testid="quote-download" onClick={() => handleDownloadQuotation(q)}
-                          className="text-xs tracking-widest uppercase font-medium px-3 py-1.5 border border-oro text-oro hover:bg-lino transition-all">
+                          className="text-xs tracking-widest uppercase font-medium px-3 py-1.5 border border-oro text-oro hover:bg-lino transition-colors">
                           Descargar PDF
                         </button>
                         {q.status === "pending" && (
@@ -755,14 +755,14 @@ export default function SalesPage() {
                             <button
                               onClick={() => handleConfirmQuotation(q.id)}
                               className="text-xs tracking-widest uppercase font-medium px-3 py-1.5
-                                         bg-negro text-crema hover:bg-black transition-all"
+                                         bg-negro text-crema hover:bg-black transition-colors"
                             >
                               Confirmar venta
                             </button>
                             <button
                               onClick={() => handleCancelQuotation(q.id)}
                               className="text-xs tracking-widest uppercase font-medium px-3 py-1.5
-                                         border border-linea text-negro/70 hover:border-peligro hover:text-peligro transition-all"
+                                         border border-linea text-negro/70 hover:border-peligro hover:text-peligro transition-colors"
                             >
                               Cancelar
                             </button>
@@ -770,7 +770,7 @@ export default function SalesPage() {
                         )}
                         {q.status !== "confirmed" && (
                           <button data-testid="quote-delete" onClick={() => handleDeleteQuotation(q.id)}
-                            className="text-xs tracking-widest uppercase font-medium px-3 py-1.5 text-peligro hover:underline transition-all">
+                            className="text-xs tracking-widest uppercase font-medium px-3 py-1.5 text-peligro hover:underline transition-colors">
                             Eliminar
                           </button>
                         )}
@@ -809,7 +809,7 @@ export default function SalesPage() {
                 value={filterFrom}
                 onChange={(e) => setFilterFrom(e.target.value)}
                 className="bg-crema border border-linea text-negro/70 px-3 py-1.5
-                           text-xs font-light focus:outline-none focus:border-oro transition-all"
+                           text-xs font-light focus:outline-none focus:border-oro transition-colors"
               />
               <span className="text-negro/70 text-xs">–</span>
               <input
@@ -817,12 +817,12 @@ export default function SalesPage() {
                 value={filterTo}
                 onChange={(e) => setFilterTo(e.target.value)}
                 className="bg-crema border border-linea text-negro/70 px-3 py-1.5
-                           text-xs font-light focus:outline-none focus:border-oro transition-all"
+                           text-xs font-light focus:outline-none focus:border-oro transition-colors"
               />
               <button
                 onClick={handleFilter}
                 className="text-xs tracking-widest uppercase font-medium px-4 py-1.5
-                           border border-linea text-negro/70 hover:border-oro hover:text-oro transition-all"
+                           border border-linea text-negro/70 hover:border-oro hover:text-oro transition-colors"
               >
                 Filtrar
               </button>

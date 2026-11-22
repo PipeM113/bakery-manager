@@ -115,3 +115,11 @@ Los sprints 0 a 4 usan la numeración antigua y son anteriores al registro de ac
 - [x] `CLAUDE.md` con las reglas del proyecto, `scripts/check.sh` (un comando de calidad, con formato y búsqueda de secretos) y `docs/operacion.md` (cómo se corre, se publica, se respalda y qué hacer si algo falla).
 - [ ] Confirmar o ajustar los niveles de servicio propuestos en `docs/operacion.md`.
 - [ ] Que el CI corra `./scripts/check.sh` (hoy corre los mismos pasos por separado, sin la búsqueda de secretos ni el formato).
+
+## Revisión del 2026-11-22: lo que quedó anotado (ver `docs/revision-arquitectura-2026-11.md`)
+
+- [ ] Identificador de solicitud en los registros del backend (`middleware.RequestID` antes del `Logger`), con su prueba.
+- [ ] Paginar o limitar por período las listas que crecen (cotizaciones, ventas, gastos).
+- [ ] Título del navegador por pantalla.
+- [ ] Revisar los 8 avisos del lint junto con la regla `react-hooks` 7.1.
+- [ ] Prueba de uso con una persona que no conozca el sistema (la tarea principal, sin ayuda).

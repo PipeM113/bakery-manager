@@ -49,3 +49,34 @@ Pendientes de ADR, si quieres formalizarlos más adelante: reloj inyectable y ho
 1. Hoy: respaldo con `pg_dump`, restauración de prueba y programación (H1).
 2. Un sprint pequeño (15): H2 + H9 (409 al borrar y lista de hosts de fotos), H3 (una sola regla de "necesidades de una receta"), y las pruebas e2e de flujos de H4.
 3. Decidir H5 con lo que veas en el piloto, y si hay que cambiarlo, hacerlo antes de que haya muchos datos.
+
+## Revisión del 2026-11-22 (diseño, arquitectura y buenas prácticas, tras los sprints 17 a 19)
+
+Se revisó la interfaz (con `direccion-visual` y `make-interfaces-feel-better`), la arquitectura contra los ADR aceptados (001, 002, 003, 005 y las equivalencias del 004) y las buenas prácticas del backend y del frontend. Lo que cumple, y lo que se corrigió en el mismo PR, y lo que queda anotado.
+
+**Cumple (con evidencia)**
+- Las consultas con texto concatenado solo concatenan listas de columnas constantes (`orderColumns`, `quotationColumns`, `recipeColumns`, `expenseColumns`); los valores van siempre como parámetros.
+- Los clientes HTTP salientes tienen timeout (`storage/supabase.go`, 20 s; descarga de fotos del PDF, 5 s) y las fotos del PDF solo salen del bucket del proyecto.
+- Los cuerpos JSON tienen tope global (`mid.MaxBody`) y las cargas grandes, el suyo.
+- Las listas de cotizaciones, líneas y recetas cargan sus detalles en una sola consulta (sin N+1).
+- Las dependencias apuntan hacia adentro: el costo, las ventas y las cotizaciones usan `recipeneeds` y `kernel.Convert` en vez de copiar la regla.
+- Paleta, tipografía y contraste siguen el manual de marca y están protegidos por `brand.test.mjs`.
+
+**Corregido en este PR**
+| Hallazgo | Corrección |
+|---|---|
+| 125 usos de `transition-all` (animan propiedades que no cambian y pueden saltar en pantallas lentas) | Ahora nombran lo que cambia (`transition-colors`, o color y opacidad donde el control cambia de opacidad) |
+| `console.log` con los gastos y sus montos en la consola del navegador (`ExpensesPage`) | Quitados; quedan solo los `console.error` |
+| Sin enlace para saltar la navegación; los dos `<nav>` sin nombre | «Saltar al contenido» (visible al enfocar con el teclado) y `aria-label="Navegación principal"` |
+| Titulares con líneas desparejas, párrafos con palabras sueltas, cifras que no se alinean en columnas, fotos que se funden con el fondo crema | `text-wrap: balance` y `pretty`, cifras tabulares en tablas y cifras grandes, y un contorno fino en las fotos |
+| `docs/despliegue.md` decía Go 1.25.0 y `go.mod` pide 1.26.0 | Corregido (lo histórico de `docs/fuentes.md` queda como observación fechada) |
+
+**Anotado para después (no se hizo aquí)** — ver `docs/backlog.md`
+- **Sin identificador de solicitud en los registros** (hallazgo de observabilidad): el registro es el de `chi` sin `middleware.RequestID`, así que a las 3 de la mañana no se puede seguir una solicitud. Poner `RequestID` antes del `Logger` es un cambio de una línea con su prueba.
+- **Listas sin tope ni paginación** (`ingredients`, `quotations`, `sales`, `expenses`): hoy son decenas de filas; con años de uso las cotizaciones y las ventas van a crecer. Conviene paginar o limitar por mes antes de que se note.
+- **Título del navegador igual en todas las pantallas**: un título por pantalla ayuda a lectores de pantalla y a quien tiene varias pestañas.
+- **8 avisos del lint** (`react-hooks/exhaustive-deps` y una directiva sobrante): efectos con dependencias que se omiten a propósito; revisarlos cuando se haga la tarea de la regla `react-hooks` 7.1.
+- **El CI aún corre los pasos por separado** y no `./scripts/check.sh` (no revisa formato ni secretos).
+- **La captura de la pantalla que más se usa a 360 px** sigue sin pasar por una persona real: la prueba con alguien que no conozca el sistema (paso 6.7 de `direccion-visual`) está pendiente.
+
+**Veredicto:** no hay defectos de severidad alta. La deuda es de observabilidad y de crecimiento de datos, no de corrección ni de seguridad.

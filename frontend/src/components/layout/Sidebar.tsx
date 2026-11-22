@@ -40,13 +40,13 @@ export default function Sidebar() {
         </p>
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-4 py-8 [@media(max-height:760px)]:py-3 space-y-1 [@media(max-height:760px)]:space-y-0.5">
+      <nav aria-label="Navegación principal" className="flex-1 overflow-y-auto px-4 py-8 [@media(max-height:760px)]:py-3 space-y-1 [@media(max-height:760px)]:space-y-0.5">
         {links.map(({ to, icon, label }) => (
           <NavLink
             key={to}
             to={to}
             className={({ isActive }) =>
-              `flex items-center gap-3 px-4 py-3 [@media(max-height:760px)]:py-2 focus-visible:outline-offset-[-2px] transition-all duration-200 text-sm tracking-wider ${
+              `flex items-center gap-3 px-4 py-3 [@media(max-height:760px)]:py-2 focus-visible:outline-offset-[-2px] transition-colors duration-200 text-sm tracking-wider ${
                 isActive
                   ? "bg-crema text-oro border-l-2 border-oro"
                   : "text-negro/70 hover:text-negro hover:bg-lino"

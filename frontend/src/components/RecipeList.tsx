@@ -33,7 +33,7 @@ function RecipeRow({ r, onView, onEdit, onDelete }: { r: IRecipe } & Pick<Props,
     <div
       data-testid="recipe-card"
       onClick={() => onView(r)}
-      className="bg-white border border-linea hover:border-oro transition-all duration-200 cursor-pointer"
+      className="bg-white border border-linea hover:border-oro transition-colors duration-200 cursor-pointer"
     >
       <div className="flex gap-3 p-4">
         <Thumbnail recipe={r} />

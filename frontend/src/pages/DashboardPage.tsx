@@ -57,7 +57,7 @@ export default function DashboardPage() {
           { label: "Total recetas", value: recipes.length     },
           { label: "Alertas",       value: alerts.length      },
         ].map(({ label, value }) => (
-          <div key={label} className="bg-white border border-linea p-5 hover:border-oro transition-all">
+          <div key={label} className="bg-white border border-linea p-5 hover:border-oro transition-colors">
             <p data-kpi className="font-display text-3xl text-oro mb-1">{value}</p>
             <p className="text-xs tracking-widest uppercase text-negro/70 font-light">{label}</p>
           </div>
@@ -77,7 +77,7 @@ export default function DashboardPage() {
             {recipes.slice(0, 5).map((r) => (
               <div key={r.id}
                 className="flex items-center justify-between p-4 bg-white border border-linea
-                           hover:border-oro transition-all duration-200">
+                           hover:border-oro transition-colors duration-200">
                 <div>
                   <p className="text-negro text-sm font-light">{r.name}</p>
                   <p className="text-negro/70 text-xs mt-0.5">{r.yield} {r.yield_unit}</p>

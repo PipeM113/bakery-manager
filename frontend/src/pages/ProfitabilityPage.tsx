@@ -142,7 +142,7 @@ function KpiCard({ label, value, accent = "neutral", large = false }: KpiCardPro
     neutral:    "text-oro",
   };
   return (
-    <div className={`bg-white border border-linea p-4 hover:border-oro transition-all ${large ? "min-[480px]:col-span-2 xl:col-span-1" : ""}`}>
+    <div className={`bg-white border border-linea p-4 hover:border-oro transition-colors ${large ? "min-[480px]:col-span-2 xl:col-span-1" : ""}`}>
       <p data-kpi className={`font-display text-2xl ${colorMap[accent]} mb-1 leading-tight whitespace-nowrap tabular-nums`}>
         {value}
       </p>

@@ -79,3 +79,10 @@ select:not([multiple]) {
   background-repeat: no-repeat;
   background-position: right 0.875rem center;
 }
+
+/* Finishing details (review of 2026-11-22): balanced headings, no orphans in paragraphs, figures that line up
+   in columns, and a faint outline on photos so they do not melt into the cream ground. */
+h1, h2, h3 { text-wrap: balance; }
+p { text-wrap: pretty; }
+td, th, [data-kpi] { font-variant-numeric: tabular-nums; }
+img:not([src$=".svg"]) { outline: 1px solid oklch(0 0 0 / 0.1); outline-offset: -1px; }

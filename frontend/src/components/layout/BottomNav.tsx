@@ -20,7 +20,7 @@ const more: { to: string; icon: IconName; label: string }[] = [
 ];
 
 const item = (active: boolean) =>
-  `flex-1 min-w-0 flex flex-col items-center justify-center gap-0.5 min-h-[56px] px-1 transition-all duration-200 ${
+  `flex-1 min-w-0 flex flex-col items-center justify-center gap-0.5 min-h-[56px] px-1 transition-colors duration-200 ${
     active ? "text-oro" : "text-negro/70"
   }`;
 
@@ -31,7 +31,7 @@ export default function BottomNav() {
   const moreActive = more.some((l) => pathname.startsWith(l.to));
 
   return (
-    <nav data-testid="bottom-nav" className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-linea md:hidden shadow-sm">
+    <nav aria-label="Navegación principal" data-testid="bottom-nav" className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-linea md:hidden shadow-sm">
       {open && (
         <div data-testid="nav-more-menu" className="border-b border-linea bg-white">
           {more.map(({ to, icon, label }) => (

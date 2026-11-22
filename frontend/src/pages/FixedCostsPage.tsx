@@ -159,7 +159,7 @@ export default function FixedCostsPage() {
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
               placeholder="ej. Arriendo"
               className="w-full bg-crema border border-linea text-negro
-                         px-4 py-2.5 text-sm font-light focus:outline-none focus:border-oro transition-all"
+                         px-4 py-2.5 text-sm font-light focus:outline-none focus:border-oro transition-colors"
             />
           </div>
           <div className="sm:w-44">
@@ -171,7 +171,7 @@ export default function FixedCostsPage() {
               value={form.from}
               onChange={(e) => setForm((f) => ({ ...f, from: e.target.value }))}
               className="w-full bg-crema border border-linea text-negro
-                         px-4 py-2.5 text-sm font-light focus:outline-none focus:border-oro transition-all"
+                         px-4 py-2.5 text-sm font-light focus:outline-none focus:border-oro transition-colors"
             />
           </div>
           <div className="sm:w-48">
@@ -184,7 +184,7 @@ export default function FixedCostsPage() {
               onChange={(e) => setForm((f) => ({ ...f, monthly_amount: e.target.value }))}
               placeholder="ej. 100000"
               className="w-full bg-crema border border-linea text-negro
-                         px-4 py-2.5 text-sm font-light focus:outline-none focus:border-oro transition-all"
+                         px-4 py-2.5 text-sm font-light focus:outline-none focus:border-oro transition-colors"
             />
           </div>
         </div>
@@ -198,7 +198,7 @@ export default function FixedCostsPage() {
             type="submit"
             disabled={loading}
             className="bg-negro text-crema text-xs tracking-widest uppercase font-medium
-                       px-6 py-2.5 hover:bg-black transition-all disabled:opacity-50"
+                       px-6 py-2.5 hover:bg-black transition-[color,background-color,border-color,opacity] disabled:opacity-50"
           >
             {loading ? "Guardando..." : editingId ? "Actualizar" : "Agregar"}
           </button>
@@ -207,7 +207,7 @@ export default function FixedCostsPage() {
               type="button"
               onClick={cancelEdit}
               className="text-xs tracking-widest uppercase font-medium px-6 py-2.5
-                         border border-linea text-negro/70 hover:border-oro transition-all"
+                         border border-linea text-negro/70 hover:border-oro transition-colors"
             >
               Cancelar
             </button>
@@ -251,7 +251,7 @@ export default function FixedCostsPage() {
                   <td className="px-6 py-4 text-center">
                     <button
                       onClick={() => handleToggle(fc)}
-                      className={`text-xs tracking-widest uppercase font-medium px-3 py-1 border transition-all
+                      className={`text-xs tracking-widest uppercase font-medium px-3 py-1 border transition-colors
                         ${fc.is_active
                           ? "border-oro text-oro bg-crema"
                           : "border-linea text-negro/70 hover:border-oro"}`}

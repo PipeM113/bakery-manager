@@ -125,13 +125,13 @@ export default function RecipesPage() {
         <div className="flex gap-2">
           <button
             onClick={() => setShowTypes(true)}
-            className="border border-linea text-negro/70 text-xs tracking-widest uppercase font-medium px-4 py-3 hover:border-oro hover:text-oro transition-all duration-200"
+            className="border border-linea text-negro/70 text-xs tracking-widest uppercase font-medium px-4 py-3 hover:border-oro hover:text-oro transition-colors duration-200"
           >
             Tipos
           </button>
           <button
             onClick={openCreate}
-            className="bg-negro text-crema text-xs tracking-widest uppercase font-medium px-5 py-3 hover:bg-black transition-all duration-200"
+            className="bg-negro text-crema text-xs tracking-widest uppercase font-medium px-5 py-3 hover:bg-black transition-colors duration-200"
           >
             + Nueva
           </button>
@@ -146,7 +146,7 @@ export default function RecipesPage() {
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         className="w-full bg-white border border-linea text-negro text-sm px-4 py-3 mb-4 font-light tracking-wide
-                   placeholder-negro/70 focus:outline-none focus:border-oro transition-all"
+                   placeholder-negro/70 focus:outline-none focus:border-oro transition-colors"
       />
 
       {chipsShown && (
@@ -156,7 +156,7 @@ export default function RecipesPage() {
               key={c.id ?? "all"}
               onClick={() => setActiveType(c.id)}
               aria-pressed={activeType === c.id}
-              className={`text-xs tracking-wide font-medium px-4 py-2 border transition-all duration-200
+              className={`text-xs tracking-wide font-medium px-4 py-2 border transition-colors duration-200
                 ${activeType === c.id ? "bg-negro text-crema border-oro" : "border-linea text-negro/70 hover:border-oro hover:text-oro"}`}
             >
               {c.name} <span className="opacity-70">{c.count}</span>

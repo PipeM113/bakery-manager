@@ -78,7 +78,7 @@ export default function QuickStockModal({ ingredient, suppliers, onClose, onSave
     }
   };
 
-  const field = "w-full bg-crema border border-linea text-negro px-3 py-1.5 text-sm font-light focus:outline-none focus:border-oro transition-all";
+  const field = "w-full bg-crema border border-linea text-negro px-3 py-1.5 text-sm font-light focus:outline-none focus:border-oro transition-colors";
   const label = "block text-xs tracking-widest uppercase text-negro/70 mb-1 font-light";
   const units = UNITS_OF[ingredient.default_unit] ?? [ingredient.default_unit];
   const oldPrice = ingredient.price_per_unit;
@@ -91,7 +91,7 @@ export default function QuickStockModal({ ingredient, suppliers, onClose, onSave
         <div className="space-y-2">
           {error && <p className="text-peligro text-xs">{error}</p>}
           <button type="submit" form="quick-stock-form" disabled={saving} data-primary-action
-            className="w-full bg-negro text-crema text-xs tracking-widest uppercase font-medium px-6 py-2.5 hover:bg-black transition-all disabled:opacity-50">
+            className="w-full bg-negro text-crema text-xs tracking-widest uppercase font-medium px-6 py-2.5 hover:bg-black transition-[color,background-color,border-color,opacity] disabled:opacity-50">
             {saving ? "Guardando..." : mode === "purchase" ? "Registrar compra" : "Guardar conteo"}
           </button>
         </div>
@@ -103,7 +103,7 @@ export default function QuickStockModal({ ingredient, suppliers, onClose, onSave
       <div className="grid grid-cols-2 gap-2">
         {([["purchase", "Compra"], ["count", "Contar"]] as const).map(([m, text]) => (
           <button key={m} type="button" onClick={() => setMode(m)} aria-pressed={mode === m}
-            className={`text-xs tracking-widest uppercase font-medium px-4 py-2 border transition-all
+            className={`text-xs tracking-widest uppercase font-medium px-4 py-2 border transition-colors
               ${mode === m ? "bg-negro text-crema border-oro" : "border-linea text-negro/70 hover:border-oro hover:text-oro"}`}>
             {text}
           </button>
