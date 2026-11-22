@@ -119,7 +119,7 @@ Los sprints 0 a 4 usan la numeración antigua y son anteriores al registro de ac
 ## Revisión del 2026-11-22: lo que quedó anotado (ver `docs/revision-arquitectura-2026-11.md`)
 
 - [x] Identificador de solicitud: cada respuesta trae `X-Request-Id` y el registro lo imprime en la línea de la solicitud (`pkg/middleware/requestid.go`); el que mande el cliente se ignora.
-- [x] Las listas que crecen (cotizaciones y ventas) vienen en páginas: `?limit=` (1 a 1000, 200 por defecto) y `?offset=`, más recientes primero, con `X-Has-More`. Gastos ya se lee por mes. **Falta** que la pantalla avise cuando hay más de 200 (hoy mostraría las 200 más recientes sin decirlo).
+- [x] Las listas que crecen (cotizaciones y ventas) vienen en páginas: `?limit=` (1 a 1000, 200 por defecto) y `?offset=`, más recientes primero, con `X-Has-More`. Gastos ya se lee por mes. La pantalla de Ventas avisa cuando una lista llega a 200 («Se muestran las 200 más recientes»).
 - [x] Título del navegador por pantalla (`utils/titles.ts`).
 - [x] Los 8 avisos del lint: seis se arreglaron (dependencias de efectos) y dos casos intencionales (guardar al cerrar, cargar una sola vez) quedaron con su motivo escrito. Lint sin avisos. La regla `react-hooks` 7.1 sigue pendiente (4 efectos que llaman `setState`).
 - [ ] Prueba de uso con una persona que no conozca el sistema: la pauta está en `docs/prueba-de-uso.md`; falta hacerla.

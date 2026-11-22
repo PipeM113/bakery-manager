@@ -3,6 +3,7 @@ import { useIsPhone } from "../hooks/useIsPhone";
 import RecipeOptions from "../components/RecipeOptions";
 import { useEffect, useState } from "react";
 import { useToast } from "../hooks/useToast";
+import { PAGE_SIZE, mayHaveMore } from "../utils/pages";
 import { useConfirm } from "../hooks/useConfirm";
 import { apiErrorMessage } from "../utils/apiError";
 import { saleService } from "../api/saleService";
@@ -663,6 +664,11 @@ export default function SalesPage() {
               <Link to="/business" className="underline">Ir a Datos del negocio</Link>
             </p>
           )}
+          {mayHaveMore(quotations) && (
+            <p data-testid="more-notice" className="px-6 py-3 text-xs font-light text-negro bg-lino border-b border-linea">
+              Se muestran las {PAGE_SIZE} más recientes. Las anteriores no aparecen en esta lista.
+            </p>
+          )}
           {!quotationsLoaded ? (
             <RowsSkeleton label="Cargando cotizaciones…" />
           ) : displayedQuotations.length === 0 ? (
@@ -837,6 +843,11 @@ export default function SalesPage() {
             )}
           </div>
 
+          {mayHaveMore(sales) && (
+            <p data-testid="more-notice" className="px-6 py-3 text-xs font-light text-negro bg-lino border-b border-linea">
+              Se muestran las {PAGE_SIZE} más recientes. Para ver las anteriores, acota las fechas con el filtro de arriba.
+            </p>
+          )}
           {!salesLoaded ? (
             <RowsSkeleton label="Cargando ventas…" />
           ) : sales.length === 0 ? (
