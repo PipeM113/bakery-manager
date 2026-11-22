@@ -113,7 +113,7 @@ Los sprints 0 a 4 usan la numeración antigua y son anteriores al registro de ac
 ## Iteración 0, forma de trabajo y operación (cerrada)
 
 - [x] `CLAUDE.md` con las reglas del proyecto, `scripts/check.sh` (un comando de calidad, con formato y búsqueda de secretos) y `docs/operacion.md` (cómo se corre, se publica, se respalda y qué hacer si algo falla).
-- [ ] Confirmar o ajustar los niveles de servicio propuestos en `docs/operacion.md`.
+- [x] Niveles de servicio confirmados por Felipe (2026-11-22): `docs/operacion.md`.
 - [x] El CI revisa también el formato de Go (`gofmt`) y la búsqueda de secretos (job `repo-checks`, con `check.sh --only secrets`). Los demás pasos siguen explícitos en el workflow porque las pruebas de `hygiene` y de seguridad leen `ci.yml`.
 
 ## Revisión del 2026-11-22: lo que quedó anotado (ver `docs/revision-arquitectura-2026-11.md`)

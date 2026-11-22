@@ -39,11 +39,12 @@ El CI corre lo mismo que la revisión rápida. Un PR no se mergea con el CI en r
 | No se suben fotos | Variables del bucket y la CSP del frontend (`frontend/vercel.json`) | Ver `docs/despliegue.md` |
 | La base no responde tras días sin uso | El proyecto de Supabase puede estar pausado (plan Free) | Reactivarlo desde el panel |
 
-## Niveles de servicio (propuesta, por confirmar con Felipe)
-Una herramienta interna de una usuaria, sin guardia. Estos números son una **propuesta**, no una medición:
-- **Disponibilidad:** se espera en horario de trabajo; una caída de un día es molesta, no grave.
-- **Datos:** no se pierde más de una semana de trabajo (por eso el respaldo semanal); cada migración tiene respaldo propio.
+## Niveles de servicio (confirmados por Felipe el 2026-11-22)
+Una herramienta interna de una usuaria, sin guardia. Estos números son el acuerdo, no una medición:
+- **Disponibilidad:** se espera en horario de trabajo; una caída de un día es molesta, no grave (la dueña puede volver al papel ese día).
+- **Datos:** no se pierde más de **una semana** de trabajo. Eso solo se cumple si el respaldo semanal se hace de verdad (hoy depende de que Felipe corra `backup.sh`); cada migración tiene además su respaldo propio.
 - **Cambios:** una corrección urgente puede salir el mismo día; lo demás, por sprint.
+- **Qué lo haría cambiar:** si la dueña necesita la app para vender un día concreto, o si perder un día de datos pasa a ser grave, hay que respaldar a diario (programado) o pasar a un plan con respaldos automáticos, y sacar la base del plan gratis (que además se pausa tras una semana sin uso).
 
 ## Pendientes de operación
 - [ ] Correr `backup.sh` contra Supabase y restaurarlo en local (`docs/backlog.md`).
