@@ -106,7 +106,7 @@ export default function BusinessPage() {
           <button
             type="submit"
             disabled={saving}
-            className="bg-negro text-crema text-xs tracking-widest uppercase font-medium px-6 py-3 hover:bg-black transition-all disabled:opacity-50"
+            className="bg-negro text-crema text-xs tracking-widest uppercase font-medium px-6 py-3 hover:bg-black transition-[color,background-color,border-color,opacity] disabled:opacity-50"
           >
             {saving ? "Guardando…" : "Guardar"}
           </button>

@@ -35,7 +35,7 @@ export default function OrdersList({ orders, onCancel }: Props) {
             </ul>
             {o.notes && <p className="text-xs text-negro/70 font-light break-words">{o.notes}</p>}
             <button onClick={() => onCancel(o)}
-              className="w-full text-xs tracking-widest uppercase font-medium border border-linea text-negro/70 hover:border-peligro hover:text-peligro transition-all">
+              className="w-full text-xs tracking-widest uppercase font-medium border border-linea text-negro/70 hover:border-peligro hover:text-peligro transition-colors">
               Anular pedido
             </button>
           </div>

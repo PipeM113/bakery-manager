@@ -11,7 +11,7 @@ interface Props {
   onChanged: () => void;
 }
 
-const field = "w-full bg-crema border border-linea text-negro px-3 py-2 text-base font-light focus:outline-none focus:border-oro transition-all";
+const field = "w-full bg-crema border border-linea text-negro px-3 py-2 text-base font-light focus:outline-none focus:border-oro transition-colors";
 const link = "text-xs text-negro/70 hover:text-oro tracking-wider transition-colors";
 
 /** The window that manages the types of recipe: create, rename and delete (the recipes of a deleted type stay, without type). */
@@ -78,7 +78,7 @@ export default function RecipeCategoriesModal({ onClose, onChanged }: Props) {
       onClose={onClose}
       footer={
         <button onClick={onClose} data-primary-action
-          className="w-full bg-negro text-crema text-xs tracking-widest uppercase font-medium py-2.5 hover:bg-black transition-all">
+          className="w-full bg-negro text-crema text-xs tracking-widest uppercase font-medium py-2.5 hover:bg-black transition-colors">
           Listo
         </button>
       }
@@ -135,7 +135,7 @@ export default function RecipeCategoriesModal({ onClose, onChanged }: Props) {
               onChange={(e) => setNewName(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") create(); }} />
             <button disabled={busy} onClick={create}
-              className="border border-linea text-negro text-xs tracking-widest uppercase font-medium px-4 hover:border-oro hover:text-oro transition-all shrink-0">
+              className="border border-linea text-negro text-xs tracking-widest uppercase font-medium px-4 hover:border-oro hover:text-oro transition-colors shrink-0">
               Crear
             </button>
           </div>

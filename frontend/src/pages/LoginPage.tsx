@@ -70,7 +70,7 @@ export default function LoginPage() {
             placeholder="tu@correo.com"
             className="w-full bg-white border border-linea text-negro
                        px-4 py-3 text-sm font-light tracking-wide
-                       focus:outline-none focus:border-oro transition-all duration-200"
+                       focus:outline-none focus:border-oro transition-colors duration-200"
           />
         </div>
 
@@ -86,7 +86,7 @@ export default function LoginPage() {
             placeholder="••••••••"
             className="w-full bg-white border border-linea text-negro
                        px-4 py-3 text-sm font-light tracking-wide
-                       focus:outline-none focus:border-oro transition-all duration-200"
+                       focus:outline-none focus:border-oro transition-colors duration-200"
           />
         </div>
 
@@ -98,7 +98,7 @@ export default function LoginPage() {
           type="submit"
           disabled={loading}
           className="w-full bg-negro text-crema font-medium text-sm tracking-[0.2em] uppercase
-                     py-3.5 mt-2 transition-all duration-200
+                     py-3.5 mt-2 transition-colors duration-200
                      hover:bg-black disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? "Ingresando..." : "Ingresar"}

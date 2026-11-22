@@ -95,7 +95,7 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onSaved }: Props
               />
               <button
                 onClick={() => setShowPhotoUpload(true)}
-                className="absolute bottom-2 right-2 bg-white border border-linea text-negro/70 text-xs px-2 py-1 hover:border-oro hover:text-oro transition-all"
+                className="absolute bottom-2 right-2 bg-white border border-linea text-negro/70 text-xs px-2 py-1 hover:border-oro hover:text-oro transition-colors"
               >
                 Reemplazar foto
               </button>
@@ -147,7 +147,7 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onSaved }: Props
                   const v = parseFloat(e.target.value);
                   if (v > 0) setTargetYield(v);
                 }}
-                className="w-20 bg-white border border-linea text-negro px-3 py-1.5 text-sm font-light focus:outline-none focus:border-oro transition-all text-center"
+                className="w-20 bg-white border border-linea text-negro px-3 py-1.5 text-sm font-light focus:outline-none focus:border-oro transition-colors text-center"
               />
               <span className="text-negro/70 text-xs shrink-0 w-16 truncate">
                 {recipe.yield_unit}
@@ -158,7 +158,7 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onSaved }: Props
                 <p className="text-xs text-oro font-light">Factor ×{factor.toFixed(2)}</p>
                 <button
                   onClick={openSaveModal}
-                  className="text-xs bg-negro text-crema px-3 py-1.5 tracking-widest uppercase font-medium hover:bg-black transition-all"
+                  className="text-xs bg-negro text-crema px-3 py-1.5 tracking-widest uppercase font-medium hover:bg-black transition-colors"
                 >
                   Guardar escalada
                 </button>
@@ -231,13 +231,13 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onSaved }: Props
           <div className="flex gap-3 pt-2">
             <button
               onClick={() => onEdit(recipe)}
-              className="flex-1 border border-linea text-negro/70 text-xs tracking-widest uppercase font-medium py-2.5 hover:border-oro hover:text-oro transition-all"
+              className="flex-1 border border-linea text-negro/70 text-xs tracking-widest uppercase font-medium py-2.5 hover:border-oro hover:text-oro transition-colors"
             >
               Editar
             </button>
             <button
               onClick={onClose}
-              className="flex-1 bg-negro text-crema text-xs tracking-widest uppercase font-medium py-2.5 hover:bg-black transition-all"
+              className="flex-1 bg-negro text-crema text-xs tracking-widest uppercase font-medium py-2.5 hover:bg-black transition-colors"
             >
               Cerrar
             </button>
@@ -274,7 +274,7 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onSaved }: Props
                 type="text"
                 value={saveName}
                 onChange={(e) => setSaveName(e.target.value)}
-                className="w-full bg-crema border border-linea text-negro px-3 py-2 text-sm font-light focus:outline-none focus:border-oro transition-all"
+                className="w-full bg-crema border border-linea text-negro px-3 py-2 text-sm font-light focus:outline-none focus:border-oro transition-colors"
                 autoFocus
               />
             </div>
@@ -291,7 +291,7 @@ export default function RecipeDetail({ recipe, onClose, onEdit, onSaved }: Props
               <button
                 onClick={handleSaveScaled}
                 disabled={saving}
-                className="w-full bg-negro text-crema text-xs tracking-widest uppercase font-medium py-3 hover:bg-black transition-all disabled:opacity-50"
+                className="w-full bg-negro text-crema text-xs tracking-widest uppercase font-medium py-3 hover:bg-black transition-[color,background-color,border-color,opacity] disabled:opacity-50"
               >
                 {saving ? "Guardando..." : "Guardar"}
               </button>

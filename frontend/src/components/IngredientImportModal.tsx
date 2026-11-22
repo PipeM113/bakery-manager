@@ -81,7 +81,7 @@ export default function IngredientImportModal({ onClose, onSuccess }: Props) {
               disabled={!file || importing}
               data-primary-action
               className="flex-1 bg-negro text-crema text-xs tracking-widest uppercase font-medium
-                         py-2.5 hover:bg-black transition-all disabled:opacity-50"
+                         py-2.5 hover:bg-black transition-[color,background-color,border-color,opacity] disabled:opacity-50"
             >
               {importing ? "Importando..." : "Importar"}
             </button>
@@ -90,7 +90,7 @@ export default function IngredientImportModal({ onClose, onSuccess }: Props) {
             onClick={onClose}
             {...(succeeded ? { "data-primary-action": true } : {})}
             className="flex-1 border border-linea text-negro/70 text-xs tracking-widest uppercase
-                       font-medium py-2.5 hover:border-oro hover:text-oro transition-all"
+                       font-medium py-2.5 hover:border-oro hover:text-oro transition-colors"
           >
             {succeeded ? "Cerrar" : "Cancelar"}
           </button>
@@ -110,7 +110,7 @@ export default function IngredientImportModal({ onClose, onSuccess }: Props) {
           <button
             onClick={() => inputRef.current?.click()}
             className="w-full border border-dashed border-linea text-negro/70 text-xs tracking-widest uppercase
-                       py-4 hover:border-oro hover:text-oro transition-all font-light"
+                       py-4 hover:border-oro hover:text-oro transition-colors font-light"
           >
             {file ? file.name : "Seleccionar archivo .xlsx"}
           </button>

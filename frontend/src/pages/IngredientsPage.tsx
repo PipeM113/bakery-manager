@@ -205,17 +205,17 @@ export default function IngredientsPage() {
         <div className="flex flex-wrap gap-2">
           <button onClick={handleExport} disabled={exporting}
             className="border border-linea text-negro/70 text-xs tracking-widest uppercase font-medium px-4 py-3
-                       hover:border-oro hover:text-oro transition-all duration-200 disabled:opacity-50">
+                       hover:border-oro hover:text-oro transition-[color,background-color,border-color,opacity] duration-200 disabled:opacity-50">
             {exporting ? "Exportando..." : "Exportar Excel"}
           </button>
           <button onClick={() => setShowImport(true)}
             className="border border-linea text-negro/70 text-xs tracking-widest uppercase font-medium px-4 py-3
-                       hover:border-oro hover:text-oro transition-all duration-200">
+                       hover:border-oro hover:text-oro transition-colors duration-200">
             Importar Excel
           </button>
           <button onClick={openCreate}
             className="bg-negro text-crema text-xs tracking-widest uppercase font-medium px-5 py-3
-                       hover:bg-black transition-all duration-200">
+                       hover:bg-black transition-colors duration-200">
             + Nuevo
           </button>
         </div>
@@ -225,7 +225,7 @@ export default function IngredientsPage() {
       <div className="flex flex-wrap gap-2 mb-4">
         {([["ingredient", "Ingredientes"], ["supply", "Insumos (cajas, cartones)"]] as const).map(([k, label]) => (
           <button key={k} onClick={() => setTab(k)}
-            className={`text-xs tracking-widest uppercase font-medium px-4 py-2 border transition-all duration-200
+            className={`text-xs tracking-widest uppercase font-medium px-4 py-2 border transition-colors duration-200
               ${tab === k ? "bg-negro text-crema border-oro" : "border-linea text-negro/70 hover:border-oro hover:text-oro"}`}>
             {label}
           </button>
@@ -240,7 +240,7 @@ export default function IngredientsPage() {
         onChange={(e) => setSearch(e.target.value)}
         className="w-full bg-white border border-linea text-negro text-sm
                    px-4 py-3 mb-4 font-light tracking-wide placeholder-negro/70
-                   focus:outline-none focus:border-oro transition-all"
+                   focus:outline-none focus:border-oro transition-colors"
       />
 
       <div className="flex items-center gap-2 mb-6">
@@ -384,7 +384,7 @@ export default function IngredientsPage() {
               {error && <p className="text-peligro text-xs tracking-wide">{error}</p>}
               <button onClick={handleSave} disabled={saving} data-primary-action
                 className="w-full bg-negro text-crema text-xs tracking-widest uppercase font-medium
-                           py-2 hover:bg-black transition-all disabled:opacity-50">
+                           py-2 hover:bg-black transition-[color,background-color,border-color,opacity] disabled:opacity-50">
                 {saving ? "Guardando..." : "Guardar"}
               </button>
             </div>
@@ -395,7 +395,7 @@ export default function IngredientsPage() {
               <select value={form.kind}
                 onChange={(e) => setForm({ ...form, kind: e.target.value as IngredientKind })}
                 className="w-full bg-crema border border-linea text-negro
-                           px-3 py-1.5 text-sm font-light focus:outline-none focus:border-oro transition-all">
+                           px-3 py-1.5 text-sm font-light focus:outline-none focus:border-oro transition-colors">
                 <option value="ingredient">Ingrediente</option>
                 <option value="supply">Insumo (caja, cartón)</option>
               </select>
@@ -406,7 +406,7 @@ export default function IngredientsPage() {
               <input type="text" value={form.name} placeholder="ej. Manjar Colun"
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 className="w-full bg-crema border border-linea text-negro
-                           px-3 py-1.5 text-sm font-light focus:outline-none focus:border-oro transition-all" />
+                           px-3 py-1.5 text-sm font-light focus:outline-none focus:border-oro transition-colors" />
             </div>
 
             <div>
@@ -414,7 +414,7 @@ export default function IngredientsPage() {
               <select value={form.default_unit}
                 onChange={(e) => setForm({ ...form, default_unit: e.target.value })}
                 className="w-full bg-crema border border-linea text-negro
-                           px-3 py-1.5 text-sm font-light focus:outline-none focus:border-oro transition-all">
+                           px-3 py-1.5 text-sm font-light focus:outline-none focus:border-oro transition-colors">
                 {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
               </select>
             </div>
@@ -425,7 +425,7 @@ export default function IngredientsPage() {
                 <input type="number" value={(form as unknown as Record<string, string | number>)[key]} placeholder={placeholder}
                   onChange={(e) => setForm({ ...form, [key]: e.target.value === "" ? "" : parseFloat(e.target.value) })}
                   className="w-full bg-crema border border-linea text-negro
-                             px-3 py-1.5 text-sm font-light focus:outline-none focus:border-oro transition-all" />
+                             px-3 py-1.5 text-sm font-light focus:outline-none focus:border-oro transition-colors" />
               </div>
             ))}
 
@@ -434,7 +434,7 @@ export default function IngredientsPage() {
               <input type="text" value={form.brand} placeholder="ej. Colun, Lider, Santa Isabel"
                 onChange={(e) => setForm({ ...form, brand: e.target.value })}
                 className="w-full bg-crema border border-linea text-negro
-                           px-3 py-1.5 text-sm font-light focus:outline-none focus:border-oro transition-all" />
+                           px-3 py-1.5 text-sm font-light focus:outline-none focus:border-oro transition-colors" />
             </div>
 
             <div>
@@ -442,7 +442,7 @@ export default function IngredientsPage() {
               <input type="text" value={form.supplier} placeholder="ej. La Vega, Líder" maxLength={100}
                 onChange={(e) => setForm({ ...form, supplier: e.target.value })}
                 className="w-full bg-crema border border-linea text-negro
-                           px-3 py-1.5 text-sm font-light focus:outline-none focus:border-oro transition-all" />
+                           px-3 py-1.5 text-sm font-light focus:outline-none focus:border-oro transition-colors" />
             </div>
 
             <details open={showEq} onToggle={(e) => setShowEq((e.target as HTMLDetailsElement).open)}>
@@ -458,7 +458,7 @@ export default function IngredientsPage() {
                   <input type="number" step="any" min={0} value={form[key]} placeholder={hint}
                     onChange={(e) => setForm({ ...form, [key]: e.target.value === "" ? "" : parseFloat(e.target.value) })}
                     className="w-full bg-crema border border-linea text-negro
-                               px-3 py-1.5 text-sm font-light focus:outline-none focus:border-oro transition-all" />
+                               px-3 py-1.5 text-sm font-light focus:outline-none focus:border-oro transition-colors" />
                 </div>
               ))}
             </details>

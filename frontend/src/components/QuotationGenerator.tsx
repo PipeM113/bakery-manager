@@ -311,14 +311,14 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
                 value={saveAsName}
                 onChange={(e) => setSaveAsName(e.target.value)}
                 className="w-full bg-crema border border-linea text-negro
-                           px-3 py-2.5 text-sm font-light focus:outline-none focus:border-oro transition-all"
+                           px-3 py-2.5 text-sm font-light focus:outline-none focus:border-oro transition-colors"
               />
             </div>
             <div className="flex gap-2 pt-1">
               <button
                 onClick={() => setShowSaveModal(false)}
                 className="flex-1 border border-linea text-negro/70 text-xs tracking-widest uppercase
-                           font-medium py-2.5 hover:bg-lino transition-all"
+                           font-medium py-2.5 hover:bg-lino transition-colors"
               >
                 Cancelar
               </button>
@@ -326,7 +326,7 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
                 onClick={handleSaveAs}
                 disabled={!saveAsName.trim() || saving}
                 className="flex-1 bg-negro text-crema text-xs tracking-widest uppercase font-medium
-                           py-2.5 hover:bg-black transition-all
+                           py-2.5 hover:bg-black transition-colors
                            disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {saving ? "Guardando..." : "Crear versión"}
@@ -353,7 +353,7 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
               step="1"
               onChange={(e) => handlePortionsChange(e.target.value)}
               className="w-full bg-white border border-linea text-negro
-                         px-3 py-2.5 text-sm font-light focus:outline-none focus:border-oro transition-all"
+                         px-3 py-2.5 text-sm font-light focus:outline-none focus:border-oro transition-colors"
             />
             <p className="text-negro/70 text-xs mt-1 font-light">
               Original: {Math.round(recipe.yield)} {recipe.yield_unit}
@@ -363,7 +363,7 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
             <button
               onClick={openSaveModal}
               className="bg-negro text-crema text-xs tracking-widest uppercase font-medium
-                         px-4 py-2.5 hover:bg-black transition-all whitespace-nowrap"
+                         px-4 py-2.5 hover:bg-black transition-colors whitespace-nowrap"
             >
               Guardar escalado
             </button>
@@ -478,7 +478,7 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
           placeholder="ej. María González"
           onChange={(e) => { setClientName(e.target.value); if (clientError) setClientError(false); }}
           className={`w-full bg-crema border text-negro px-3 py-2.5 text-sm font-light
-                      focus:outline-none transition-all
+                      focus:outline-none transition-colors
                       ${clientError ? "border-peligro focus:border-peligro" : "border-linea focus:border-oro"}`}
         />
         {clientError && (
@@ -502,7 +502,7 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
               placeholder="ej. 15"
               onChange={(e) => handleIndirectChange(e.target.value)}
               className="w-full bg-crema border border-linea text-negro
-                         px-3 py-2.5 text-sm font-light focus:outline-none focus:border-oro transition-all"
+                         px-3 py-2.5 text-sm font-light focus:outline-none focus:border-oro transition-colors"
             />
           </div>
           <div>
@@ -516,7 +516,7 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
               placeholder="ej. 30"
               onChange={(e) => handleLaborChange(e.target.value)}
               className="w-full bg-crema border border-linea text-negro
-                         px-3 py-2.5 text-sm font-light focus:outline-none focus:border-oro transition-all"
+                         px-3 py-2.5 text-sm font-light focus:outline-none focus:border-oro transition-colors"
             />
           </div>
           <div>
@@ -530,7 +530,7 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
               placeholder="ej. 30"
               onChange={(e) => handleMarginChange(e.target.value)}
               className="w-full bg-crema border border-linea text-negro
-                         px-3 py-2.5 text-sm font-light focus:outline-none focus:border-oro transition-all"
+                         px-3 py-2.5 text-sm font-light focus:outline-none focus:border-oro transition-colors"
             />
           </div>
         </div>
@@ -551,7 +551,7 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
                 placeholder="ej. 3000"
                 onChange={(e) => handleExtraChargeChange(e.target.value)}
                 className="w-full bg-white border border-linea text-negro
-                           px-3 py-2 text-sm font-light focus:outline-none focus:border-oro transition-all"
+                           px-3 py-2 text-sm font-light focus:outline-none focus:border-oro transition-colors"
               />
               <p className="text-negro/70 text-xs mt-1 font-light">No visible en cotización</p>
             </div>
@@ -567,7 +567,7 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
                 placeholder="ej. 2000"
                 onChange={(e) => handleDeliveryCostChange(e.target.value)}
                 className="w-full bg-white border border-linea text-negro
-                           px-3 py-2 text-sm font-light focus:outline-none focus:border-oro transition-all"
+                           px-3 py-2 text-sm font-light focus:outline-none focus:border-oro transition-colors"
               />
               <p className="text-negro/70 text-xs mt-1 font-light">Múltiplos de 500</p>
             </div>
@@ -578,7 +578,7 @@ export default function QuotationGenerator({ recipe, deferredSave = false, onDef
           onClick={handleDownload}
           disabled={!margin || downloading}
           className="w-full bg-negro text-crema text-xs tracking-widest uppercase font-medium
-                     py-3 hover:bg-black transition-all
+                     py-3 hover:bg-black transition-colors
                      disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {downloading ? "Generando PDF..." : "Descargar PDF"}

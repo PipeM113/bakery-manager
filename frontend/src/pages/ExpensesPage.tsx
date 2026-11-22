@@ -47,7 +47,6 @@ export default function ExpensesPage() {
     expenseService
       .getByMonth(month, year)
       .then((data) => {
-        console.log("Expenses loaded:", data);
         setExpenses(data);
       })
       .catch((err) => {
@@ -161,17 +160,14 @@ export default function ExpensesPage() {
       category_id: form.category_id,
       expense_date: form.expense_date,
     };
-    console.log("Expense form submitted:", payload);
     try {
       if (editingId) {
         const updated = await expenseService.update(editingId, payload);
-        console.log("API response (update):", updated);
         setExpenses((prev) => prev.map((e) => (e.id === editingId ? updated : e)));
         toast.success("Gasto actualizado", payload.description || undefined);
         cancelEdit();
       } else {
         const created = await expenseService.create(payload);
-        console.log("API response (create):", created);
         // Only add to list if it matches current filter
         const [cy, cm] = created.expense_date.split("-").map(Number);
         if (cm === filterMonth && cy === filterYear) {
@@ -249,7 +245,7 @@ export default function ExpensesPage() {
               onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
               placeholder="ej. Gas mensual"
               className="w-full bg-crema border border-linea text-negro
-                         px-4 py-2.5 text-sm font-light focus:outline-none focus:border-oro transition-all"
+                         px-4 py-2.5 text-sm font-light focus:outline-none focus:border-oro transition-colors"
             />
           </div>
 
@@ -266,7 +262,7 @@ export default function ExpensesPage() {
               onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
               placeholder="ej. 50000"
               className="w-full bg-crema border border-linea text-negro
-                         px-4 py-2.5 text-sm font-light focus:outline-none focus:border-oro transition-all"
+                         px-4 py-2.5 text-sm font-light focus:outline-none focus:border-oro transition-colors"
             />
           </div>
 
@@ -279,7 +275,7 @@ export default function ExpensesPage() {
               value={form.category_id}
               onChange={(e) => setForm((f) => ({ ...f, category_id: e.target.value }))}
               className="w-full bg-crema border border-linea text-negro
-                         px-4 py-2.5 text-sm font-light focus:outline-none focus:border-oro transition-all"
+                         px-4 py-2.5 text-sm font-light focus:outline-none focus:border-oro transition-colors"
             >
               <option value="" disabled>Elige una categoría</option>
               {categories.map((c) => (
@@ -294,14 +290,14 @@ export default function ExpensesPage() {
                 onChange={(e) => setNewCategory(e.target.value)}
                 placeholder="Nueva categoría (ej. Mantención)"
                 className="flex-1 bg-crema border border-linea text-negro
-                           px-3 py-2 text-xs font-light focus:outline-none focus:border-oro transition-all"
+                           px-3 py-2 text-xs font-light focus:outline-none focus:border-oro transition-colors"
               />
               <button
                 type="button"
                 onClick={handleCreateCategory}
                 disabled={!newCategory.trim()}
                 className="text-xs tracking-widest uppercase text-oro hover:text-negro
-                           disabled:opacity-40 transition-all px-2"
+                           disabled:opacity-40 transition-[color,background-color,border-color,opacity] px-2"
               >
                 Agregar
               </button>
@@ -347,7 +343,7 @@ export default function ExpensesPage() {
               max={today()}
               onChange={(e) => setForm((f) => ({ ...f, expense_date: e.target.value }))}
               className="w-full bg-crema border border-linea text-negro
-                         px-4 py-2.5 text-sm font-light focus:outline-none focus:border-oro transition-all"
+                         px-4 py-2.5 text-sm font-light focus:outline-none focus:border-oro transition-colors"
             />
           </div>
         </div>
@@ -359,7 +355,7 @@ export default function ExpensesPage() {
             type="submit"
             disabled={loading}
             className="bg-negro text-crema text-xs tracking-widest uppercase font-medium
-                       px-6 py-2.5 hover:bg-black transition-all disabled:opacity-50"
+                       px-6 py-2.5 hover:bg-black transition-[color,background-color,border-color,opacity] disabled:opacity-50"
           >
             {loading ? "Guardando..." : editingId ? "Actualizar" : "Registrar Gasto"}
           </button>
@@ -368,7 +364,7 @@ export default function ExpensesPage() {
               type="button"
               onClick={cancelEdit}
               className="text-xs tracking-widest uppercase font-medium px-6 py-2.5
-                         border border-linea text-negro/70 hover:border-oro transition-all"
+                         border border-linea text-negro/70 hover:border-oro transition-colors"
             >
               Cancelar
             </button>
@@ -391,7 +387,7 @@ export default function ExpensesPage() {
               value={filterMonth}
               onChange={(e) => setFilterMonth(Number(e.target.value))}
               className="bg-crema border border-linea text-negro/70 px-3 py-1.5
-                         text-xs font-light focus:outline-none focus:border-oro transition-all"
+                         text-xs font-light focus:outline-none focus:border-oro transition-colors"
             >
               {MONTHS.map((m, i) => (
                 <option key={i + 1} value={i + 1}>{m}</option>
@@ -401,7 +397,7 @@ export default function ExpensesPage() {
               value={filterYear}
               onChange={(e) => setFilterYear(Number(e.target.value))}
               className="bg-crema border border-linea text-negro/70 px-3 py-1.5
-                         text-xs font-light focus:outline-none focus:border-oro transition-all"
+                         text-xs font-light focus:outline-none focus:border-oro transition-colors"
             >
               {yearOptions.map((y) => (
                 <option key={y} value={y}>{y}</option>

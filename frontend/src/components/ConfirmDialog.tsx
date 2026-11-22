@@ -51,7 +51,7 @@ function Dialog({ options, onAnswer }: { options: ConfirmOptions; onAnswer: (ok:
             autoFocus
             type="button"
             onClick={() => onAnswer(false)}
-            className="text-xs tracking-widest uppercase font-medium px-5 py-3 border border-linea text-negro hover:bg-lino transition-all"
+            className="text-xs tracking-widest uppercase font-medium px-5 py-3 border border-linea text-negro hover:bg-lino transition-colors"
           >
             Cancelar
           </button>
@@ -60,7 +60,7 @@ function Dialog({ options, onAnswer }: { options: ConfirmOptions; onAnswer: (ok:
             data-primary-action
             data-testid="confirm-yes"
             onClick={() => onAnswer(true)}
-            className={`text-xs tracking-widest uppercase font-medium px-5 py-3 text-crema transition-all ${options.danger ? "bg-peligro hover:bg-black" : "bg-negro hover:bg-black"}`}
+            className={`text-xs tracking-widest uppercase font-medium px-5 py-3 text-crema transition-colors ${options.danger ? "bg-peligro hover:bg-black" : "bg-negro hover:bg-black"}`}
           >
             {options.confirmLabel}
           </button>

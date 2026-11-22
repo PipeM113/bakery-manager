@@ -36,7 +36,7 @@ export default function CostsPage() {
           value={selected}
           onChange={(e) => setSelected(e.target.value)}
           className="w-full bg-white border border-linea text-negro
-                     px-4 py-3 text-sm font-light focus:outline-none focus:border-oro transition-all"
+                     px-4 py-3 text-sm font-light focus:outline-none focus:border-oro transition-colors"
         >
           <option value="">— Elige una receta —</option>
           <RecipeOptions recipes={recipes} />

@@ -9,7 +9,7 @@ El ensayo local de este procedimiento (rol, esquema, migraciones, primer usuario
 ## 0. Antes de empezar
 
 - Proyecto de Supabase con acceso al SQL editor como `postgres` y a "Connect" (cadenas de conexión).
-- Go instalado en tu máquina (el repo pide `go 1.25.0`; Go baja el toolchain solo).
+- Go instalado en tu máquina (el repo pide `go 1.26.0` (la línea `go` de `backend/go.mod`); Go baja el toolchain solo).
 - Dos tipos de conexión, que no se mezclan:
   - **pooler de sesión** (puerto 5432, IPv4): lo usas para migrar y para el respaldo.
   - **pooler de transacciones** (puerto 6543): lo usa la aplicación en Vercel. No admite sentencias preparadas; el backend ya lo maneja.
@@ -106,7 +106,7 @@ Ya existe un proyecto de Vercel para el frontend. El backend es un **segundo pro
 
 1. Crea el proyecto, elige el repo y en **Root Directory** pon `backend`.
 2. **Framework Preset: Other.** Vercel detecta Go solo y propone el preset "Go", que espera un servidor (`main.go` escuchando en `PORT`) y no la función de `api/`: con ese preset el build falla con `unused_function`. Cámbialo en Settings, Build & Development Settings, y haz Redeploy. No cambies el comando de build.
-3. El archivo `backend/vercel.json` envía todas las rutas a `api/index.go`. La versión de Go la fija `go.mod` (1.25.0); Vercel la descarga en el build.
+3. El archivo `backend/vercel.json` envía todas las rutas a `api/index.go`. La versión de Go la fija `go.mod` (hoy 1.26.0); Vercel la descarga en el build.
 4. En Settings, Deployment Protection, **desactiva Vercel Authentication** (hace lo mismo en el proyecto del frontend). Activa, la API pide iniciar sesión en Vercel y el navegador recibe un 401. La API sigue protegida por su propio login con JWT.
 
 ## 5. Variables de entorno
@@ -144,7 +144,7 @@ Despliega los dos proyectos.
 
 ## 6. Verificación
 
-1. En el log de build del backend aparece la versión de Go que usó Vercel (el equivalente de `go version`, en la línea `Downloading go: ...`); con `go.mod` en 1.25.0 baja esa.
+1. En el log de build del backend aparece la versión de Go que usó Vercel (el equivalente de `go version`, en la línea `Downloading go: ...`); con `go.mod` en 1.26.0 (hoy) baja esa.
 2. Abre `https://<tu-backend>.vercel.app/health`: debe responder `200`.
 3. Abre el frontend, inicia sesión con el usuario del paso 3 y crea un insumo.
 4. Si `/health` responde `500` con "configuración del servidor inválida", falta o está mal una variable (el log de la función dice cuál, sin mostrar valores).

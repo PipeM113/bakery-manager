@@ -132,13 +132,13 @@ export default function RecipePhotoUpload({ recipeId, currentPhotoUrl, onUploade
         <div className="flex gap-2">
           <button
             onClick={handleUpload}
-            className="flex-1 bg-negro text-crema text-xs tracking-widest uppercase font-medium py-2.5 hover:bg-black transition-all"
+            className="flex-1 bg-negro text-crema text-xs tracking-widest uppercase font-medium py-2.5 hover:bg-black transition-colors"
           >
             Subir foto
           </button>
           <button
             onClick={handleCancel}
-            className="px-4 border border-linea text-negro/70 text-xs tracking-widest uppercase font-medium py-2.5 hover:border-oro transition-all"
+            className="px-4 border border-linea text-negro/70 text-xs tracking-widest uppercase font-medium py-2.5 hover:border-oro transition-colors"
           >
             Cancelar
           </button>
