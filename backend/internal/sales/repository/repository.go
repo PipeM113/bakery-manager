@@ -265,7 +265,8 @@ func (r *SaleRepository) RegisterSale(ctx context.Context, input RegisterSaleInp
 }
 
 // GetAll returns sales for a user optionally filtered by date range.
-func (r *SaleRepository) GetAll(ctx context.Context, from, to string) ([]Sale, error) {
+// GetAll returns one page of sales, the newest first, and whether more exist beyond it.
+func (r *SaleRepository) GetAll(ctx context.Context, from, to string, limit, offset int) ([]Sale, bool, error) {
 	query := `
 		SELECT s.id, s.created_by, s.recipe_id, rec.name, s.quantity_sold, s.unit_price,
 		       s.line_total AS total_price,
@@ -283,11 +284,12 @@ func (r *SaleRepository) GetAll(ctx context.Context, from, to string) ([]Sale, e
 		args = append(args, to)
 		query += fmt.Sprintf(" AND s.sale_date <= $%d", len(args))
 	}
-	query += " ORDER BY s.sale_date DESC, s.created_at DESC"
+	args = append(args, limit+1, offset) // one more than asked, to know whether there is a next page
+	query += fmt.Sprintf(" ORDER BY s.sale_date DESC, s.created_at DESC, s.id LIMIT $%d OFFSET $%d", len(args)-1, len(args))
 
 	rows, err := r.db.Query(ctx, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("get all sales: %w", err)
+		return nil, false, fmt.Errorf("get all sales: %w", err)
 	}
 	defer rows.Close()
 
@@ -296,12 +298,19 @@ func (r *SaleRepository) GetAll(ctx context.Context, from, to string) ([]Sale, e
 		var s Sale
 		if err := rows.Scan(&s.ID, &s.CreatedBy, &s.RecipeID, &s.RecipeName,
 			&s.QuantitySold, &s.UnitPrice, &s.TotalPrice, &s.SoldAs, &s.OrderID, &s.SaleDate, &s.Notes, &s.CreatedAt); err != nil {
-			return nil, fmt.Errorf("scan sale: %w", err)
+			return nil, false, fmt.Errorf("scan sale: %w", err)
 		}
 		s.StockShortfalls = []Shortfall{}
 		sales = append(sales, s)
 	}
-	return sales, nil
+	if err := rows.Err(); err != nil {
+		return nil, false, fmt.Errorf("read sales: %w", err)
+	}
+	more := len(sales) > limit
+	if more {
+		sales = sales[:limit]
+	}
+	return sales, more, nil
 }
 
 // DeleteSale removes a sale and reverts ingredient stock.

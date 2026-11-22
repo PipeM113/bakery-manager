@@ -98,11 +98,17 @@ func (h *SaleHandler) List(w http.ResponseWriter, r *http.Request) {
 	from := r.URL.Query().Get("from")
 	to := r.URL.Query().Get("to")
 
-	sales, err := h.svc.GetAll(r.Context(), from, to)
+	limit, offset, perr := httputil.Page(r)
+	if perr != nil {
+		httputil.JSONError(w, perr.Error(), http.StatusBadRequest)
+		return
+	}
+	sales, more, err := h.svc.GetAll(r.Context(), from, to, limit, offset)
 	if err != nil {
 		httputil.JSONError(w, "error obteniendo ventas", http.StatusInternalServerError)
 		return
 	}
+	httputil.SetHasMore(w, more)
 	if sales == nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte("[]"))

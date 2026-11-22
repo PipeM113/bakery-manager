@@ -185,35 +185,41 @@ func (r *QuotationRepository) Get(ctx context.Context, id string) (Quotation, er
 	return list[0], nil
 }
 
-func (r *QuotationRepository) List(ctx context.Context, status string) ([]Quotation, error) {
+// List returns one page of quotations, the newest first, and whether more exist beyond it.
+func (r *QuotationRepository) List(ctx context.Context, status string, limit, offset int) ([]Quotation, bool, error) {
 	query := `SELECT ` + quotationColumns + ` FROM quotations WHERE TRUE`
 	args := []any{}
 	if status != "" {
 		query += ` AND status = $1`
 		args = append(args, status)
 	}
-	query += ` ORDER BY created_at DESC`
+	args = append(args, limit+1, offset) // one more than asked, to know whether there is a next page
+	query += fmt.Sprintf(` ORDER BY created_at DESC, id LIMIT $%d OFFSET $%d`, len(args)-1, len(args))
 
 	rows, err := r.db.Query(ctx, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("list quotations: %w", err)
+		return nil, false, fmt.Errorf("list quotations: %w", err)
 	}
 	defer rows.Close()
 	result := []Quotation{}
 	for rows.Next() {
 		q, err := scanQuotation(rows)
 		if err != nil {
-			return nil, fmt.Errorf("scan quotation: %w", err)
+			return nil, false, fmt.Errorf("scan quotation: %w", err)
 		}
 		result = append(result, q)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("read quotations: %w", err)
+		return nil, false, fmt.Errorf("read quotations: %w", err)
+	}
+	more := len(result) > limit
+	if more {
+		result = result[:limit]
 	}
 	if err := r.loadLines(ctx, result); err != nil {
-		return nil, err
+		return nil, false, err
 	}
-	return result, nil
+	return result, more, nil
 }
 
 func (r *QuotationRepository) UpdateStatus(ctx context.Context, id, status string) error {
