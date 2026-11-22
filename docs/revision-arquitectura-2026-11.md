@@ -72,7 +72,7 @@ Se revisó la interfaz (con `direccion-visual` y `make-interfaces-feel-better`),
 | `docs/despliegue.md` decía Go 1.25.0 y `go.mod` pide 1.26.0 | Corregido (lo histórico de `docs/fuentes.md` queda como observación fechada) |
 
 **Anotado para después (no se hizo aquí)** — ver `docs/backlog.md`
-- **Sin identificador de solicitud en los registros** (hallazgo de observabilidad): el registro es el de `chi` sin `middleware.RequestID`, así que a las 3 de la mañana no se puede seguir una solicitud. Poner `RequestID` antes del `Logger` es un cambio de una línea con su prueba.
+- ~~**Sin identificador de solicitud en los registros**~~ **Resuelto el 2026-11-22:** `pkg/middleware/requestid.go` pone un identificador propio (el del cliente se ignora) en el encabezado `X-Request-Id` y en el contexto que imprime el `Logger` de chi.
 - **Listas sin tope ni paginación** (`ingredients`, `quotations`, `sales`, `expenses`): hoy son decenas de filas; con años de uso las cotizaciones y las ventas van a crecer. Conviene paginar o limitar por mes antes de que se note.
 - **Título del navegador igual en todas las pantallas**: un título por pantalla ayuda a lectores de pantalla y a quien tiene varias pestañas.
 - **8 avisos del lint** (`react-hooks/exhaustive-deps` y una directiva sobrante): efectos con dependencias que se omiten a propósito; revisarlos cuando se haga la tarea de la regla `react-hooks` 7.1.
